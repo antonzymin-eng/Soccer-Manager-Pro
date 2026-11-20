@@ -58,9 +58,11 @@ public sealed class CareerProbe : MonoBehaviour
     IEnumerator Start()
     {
         yield return Frames(10);
+        LogSaves("start");
         IEnumerator run = _mode == "item6" ? Item6() : _mode == "layout" ? Layout() : _mode == "pm1" ? Pm1() : null;
         if (run == null) { Log("unknown mode"); Application.Quit(1); yield break; }
         yield return Guard(run);
+        LogSaves("end");
         lock (_errorLines)
             Log("SUMMARY pass=" + _pass + " fail=" + _fail + " consoleErrors=" + _errors + (_errorLines.Count > 0 ? " :: " + string.Join(" || ", _errorLines.Take(20)) : ""));
         File.WriteAllText(Path.Combine(_dir, "done.flag"), _fail == 0 && _errors == 0 ? "PASS" : "FAIL");
@@ -197,6 +199,16 @@ public sealed class CareerProbe : MonoBehaviour
             return BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").Substring(0, 16).ToLowerInvariant();
     }
     string SlotState(string stem) => stem + "{save=" + Sha(SlotFile(stem, ".tdsave")) + " slot=" + Sha(SlotFile(stem, ".slot")) + "}";
+    // Lists every file in the saves folder, so each run's starting and final save state is on record.
+    void LogSaves(string when)
+    {
+        if (!Directory.Exists(SavesDir)) { Log("saves at " + when + ": folder absent"); return; }
+        string[] files = Directory.GetFiles(SavesDir).OrderBy(f => f, StringComparer.Ordinal).ToArray();
+        Log("saves at " + when + ": " + files.Length + " file(s)");
+        foreach (string f in files)
+            Log("  " + Path.GetFileName(f) + " " + new FileInfo(f).Length + " B sha256/16=" + Sha(f)
+                + (f.EndsWith(".slot", StringComparison.Ordinal) ? " :: " + File.ReadAllText(f).Replace("\n", " ").Replace("\r", "") : ""));
+    }
     string SidecarText(string stem) { string p = SlotFile(stem, ".slot"); return File.Exists(p) ? File.ReadAllText(p).Replace("\n", " ").Replace("\r", "") : "absent"; }
 
     IEnumerator NewCareer(int clubIndex)
@@ -610,35 +622,104 @@ public sealed class CareerProbe : MonoBehaviour
         }
         Check(clip == 0, tag + " " + part + ": no clipped, truncated, best-fit or missing-glyph text");
         Check(offscreen == 0 && unreachable == 0, tag + " " + part + ": every control is on screen or inside a scroll view");
-        yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-top");
-        // Scroll the page to the bottom so the end of the standings and the score block are captured.
+        yield return Shot(ShotName(tag) + "-" + part + "-top");
+        if (revealLast != null && revealLast.gameObject.activeInHierarchy) yield return RevealScores(tag, part, revealLast);
+        // Scroll the page to the bottom so the end of the standings is captured.
         ScrollRect page = FindObjectsByType<ScrollRect>(FindObjectsSortMode.None).Where(s => s.gameObject.activeInHierarchy && s.content != null)
             .OrderByDescending(s => s.content.rect.height).FirstOrDefault();
         if (page != null && page.content.rect.height > page.viewport.rect.height + 1f)
         {
-            if (revealLast != null && revealLast.gameObject.activeInHierarchy)
-            {
-                // Reveal the score block's last line inside the viewport.
-                page.verticalNormalizedPosition = 1f;
-                Canvas.ForceUpdateCanvases();
-                bool readable = false;
-                for (float p = 1f; p >= -0.001f; p -= 0.05f)
-                {
-                    page.verticalNormalizedPosition = Mathf.Max(0, p);
-                    Canvas.ForceUpdateCanvases();
-                    Rect s = WorldRect(revealLast.rectTransform), vp = WorldRect(page.viewport);
-                    if (s.yMin >= vp.yMin - 1 && s.yMax <= vp.yMax + 1) { readable = true; break; }
-                }
-                bool tall = WorldRect(revealLast.rectTransform).height > WorldRect(page.viewport).height;
-                Check(readable || tall, tag + " " + part + ": the whole score block fits the viewport at some scroll position" + (tall ? " (taller than the viewport; scrolled through)" : ""));
-                yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-scores");
-            }
             page.verticalNormalizedPosition = 0f;
             yield return Frames(2);
-            yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-bottom");
+            yield return Shot(ShotName(tag) + "-" + part + "-bottom");
             page.verticalNormalizedPosition = 1f;
             yield return Frames(2);
         }
+    }
+
+    static string ShotName(string tag) => tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-");
+
+    // Scrolls the score block's own scroll view from top to bottom in overlapping steps (60% of the viewport) and
+    // records, for each logical line (the heading and each fixture), a position at which every rendered (wrapped)
+    // line of it lies fully inside the visible area: the intersection of the screen and every mask above the block.
+    // A line that is never fully visible, or that maps to no rendered line, fails. On Career Home ("home") every
+    // position at which any score line is visible is captured as a screenshot.
+    IEnumerator RevealScores(string tag, string part, Text scores)
+    {
+        Canvas.ForceUpdateCanvases();
+        ScrollRect scroll = scores.GetComponentInParent<ScrollRect>();
+        string text = scores.text;
+        var logical = new List<int[]>();
+        int s0 = 0;
+        for (int i = 0; i <= text.Length; i++)
+            if (i == text.Length || text[i] == '\n')
+            {
+                if (text.Substring(s0, i - s0).Trim().Length > 0) logical.Add(new[] { s0, i });
+                s0 = i + 1;
+            }
+        var gen = new TextGenerator();
+        gen.Populate(text, scores.GetGenerationSettings(scores.rectTransform.rect.size));
+        IList<UILineInfo> glines = gen.lines;
+        float ppu = scores.pixelsPerUnit;
+        int n = logical.Count;
+        int[] seenAt = Enumerable.Repeat(-1, n).ToArray();
+        int[] rendered = new int[n];
+        for (int L = 0; L < n; L++)
+            for (int k = 0; k < glines.Count; k++)
+                if (glines[k].startCharIdx >= logical[L][0] && glines[k].startCharIdx < logical[L][1]) rendered[L]++;
+        Rect Visible()
+        {
+            Rect v = new Rect(0, 0, Screen.width, Screen.height);
+            foreach (RectMask2D m in scores.GetComponentsInParent<RectMask2D>())
+            {
+                Rect r = WorldRect(m.rectTransform);
+                v = Rect.MinMaxRect(Mathf.Max(v.xMin, r.xMin), Mathf.Max(v.yMin, r.yMin), Mathf.Min(v.xMax, r.xMax), Mathf.Min(v.yMax, r.yMax));
+            }
+            foreach (Mask m in scores.GetComponentsInParent<Mask>())
+            {
+                Rect r = WorldRect(m.rectTransform);
+                v = Rect.MinMaxRect(Mathf.Max(v.xMin, r.xMin), Mathf.Max(v.yMin, r.yMin), Mathf.Min(v.xMax, r.xMax), Mathf.Min(v.yMax, r.yMax));
+            }
+            return v;
+        }
+        int positions = 1;
+        float step = 1f;
+        if (scroll != null)
+        {
+            float range = scroll.content.rect.height - scroll.viewport.rect.height;
+            if (range > 1f) { step = Mathf.Min(1f, 0.6f * scroll.viewport.rect.height / range); positions = Mathf.CeilToInt(1f / step) + 1; }
+        }
+        int shots = 0;
+        for (int p = 0; p < positions; p++)
+        {
+            if (scroll != null) scroll.verticalNormalizedPosition = Mathf.Max(0f, 1f - p * step);
+            Canvas.ForceUpdateCanvases();
+            Rect vis = Visible();
+            bool any = false;
+            var seenHere = new List<int>();
+            for (int L = 0; L < n; L++)
+            {
+                bool all = rendered[L] > 0;
+                for (int k = 0; k < glines.Count; k++)
+                {
+                    if (glines[k].startCharIdx < logical[L][0] || glines[k].startCharIdx >= logical[L][1]) continue;
+                    float top = scores.rectTransform.TransformPoint(0, glines[k].topY / ppu, 0).y;
+                    float bot = scores.rectTransform.TransformPoint(0, (glines[k].topY - glines[k].height) / ppu, 0).y;
+                    if (bot < vis.yMin - 1 || top > vis.yMax + 1) all = false;
+                    if (top > vis.yMin && bot < vis.yMax) any = true;
+                }
+                if (all) { seenHere.Add(L); if (seenAt[L] < 0) seenAt[L] = p; }
+            }
+            Log(tag + " " + part + " scores position " + p + "/" + (positions - 1) + " (normalized " + (scroll != null ? scroll.verticalNormalizedPosition.ToString("0.000") : "n/a") + ", visible y " + vis.yMin.ToString("0") + ".." + vis.yMax.ToString("0") + "): fully visible lines [" + string.Join(",", seenHere) + "]");
+            if (any && part == "home") { yield return Frames(2); yield return Shot(ShotName(tag) + "-" + part + "-scores-" + (++shots)); }
+        }
+        for (int L = 0; L < n; L++)
+            Log(tag + " " + part + " score line " + L + " (" + rendered[L] + " rendered) first fully visible at position " + seenAt[L] + ": '" + Short(text.Substring(logical[L][0], logical[L][1] - logical[L][0]).Trim()) + "'");
+        var missed = Enumerable.Range(0, n).Where(L => seenAt[L] < 0).ToList();
+        Check(n - 1 == 10, tag + " " + part + ": score block has a heading and " + (n - 1) + " fixture lines (" + glines.Count + " rendered lines)");
+        Check(missed.Count == 0, tag + " " + part + ": every score line (heading and " + (n - 1) + " fixtures) is fully inside the visible area at one of " + positions + " overlapping scroll positions" + (missed.Count > 0 ? "; never fully visible: " + string.Join(",", missed) : ""));
+        if (scroll != null) scroll.verticalNormalizedPosition = 1f;
+        yield return Frames(2);
     }
 
     static string Short(string s) { s = s.Replace("\n", "\\n"); return s.Length > 70 ? s.Substring(0, 70) + "…" : s; }

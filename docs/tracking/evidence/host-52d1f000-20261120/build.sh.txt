@@ -3,7 +3,7 @@
 set -u
 V=$1; EC=$2; TS=$3
 WT=/c/Users/<user>/Desktop/Soccer-Manager-Pro/.claude/worktrees/career-host
-S=/c/Users/<user>/AppData/Local/Temp/claude/fdfd192d12cd41e8/d936ab1e-e6b5-43a0-8ebc-48cbc7029d2a/scratchpad/career
+S=/c/Users/<user>/AppData/Local/Temp/claude/fdfd192d12cd41e8/d936ab1e-e6b5-43a0-8ebc-48cbc7029d2a/scratchpad/career2
 cd $WT
 sed -i "s/^  _enableCareer: [01]\r\?$/  _enableCareer: $EC/; s/^  _textScale: [0-9.]*\r\?$/  _textScale: $TS/" Assets/Scenes/Scene.unity
 grep -n "_enableCareer\|_textScale" Assets/Scenes/Scene.unity

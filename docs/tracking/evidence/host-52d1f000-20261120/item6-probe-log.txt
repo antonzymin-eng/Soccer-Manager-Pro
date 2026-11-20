@@ -1,433 +1,439 @@
-03:24:02.407 f=0 boot mode=item6 screen=1920x1080 display=1920 x 1080 @ 59.9992132798364Hz
-03:24:03.034 f=11 click 'New career'
-03:24:03.089 f=20 PASS New career opens the setup page
-03:24:03.092 f=20 PASS Start is disabled before a club is chosen (20 clubs)
-03:24:03.093 f=20 click 'Select Ashford Town'
-03:24:03.110 f=25 click 'Start career'
-03:24:03.355 f=84 PASS Start reaches Career Home: Ashford Town | Season 1, day 0 | Position 1 | Rounds 0/38
+05:46:44.657 f=0 boot mode=item6 screen=1920x1080 display=1920 x 1080 @ 59.9992132798364Hz
+05:46:45.344 f=11 saves at start: 0 file(s)
+05:46:45.371 f=11 click 'New career'
+05:46:45.459 f=20 PASS New career opens the setup page
+05:46:45.462 f=20 PASS Start is disabled before a club is chosen (20 clubs)
+05:46:45.464 f=20 click 'Select Ashford Town'
+05:46:45.488 f=25 click 'Start career'
+05:46:45.901 f=99 PASS Start reaches Career Home: Ashford Town | Season 1, day 0 | Position 1 | Rounds 0/38
  / Last action: Career started
  / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Juniper Park FC (home), day 7, in 7 days.
-03:24:03.362 f=84 PASS creation autosave written: autosave{save=d035f728459363a1 slot=a1aa0c732af7863e}
-03:24:03.364 f=84 click 'Save to manual slot 1'
-03:24:03.436 f=89 PASS manual slot 1 saved: manual-1{save=d035f728459363a1 slot=595eb6624772a514}
-03:24:03.438 f=89 click 'Advance one day'
-03:24:03.499 f=94 click 'Advance one day'
-03:24:03.549 f=99 click 'Advance one day'
-03:24:03.602 f=104 click 'Advance one day'
-03:24:03.656 f=109 click 'Advance one day'
-03:24:03.711 f=114 click 'Advance one day'
-03:24:03.766 f=119 click 'Advance one day'
-03:24:03.829 f=124 PASS reached a matchday: Ashford Town | Season 1, day 7 | Position 1 | Rounds 0/38
+ / Next: Ironbridge United (away), day 7, in 7 days.
+05:46:45.910 f=99 PASS creation autosave written: autosave{save=5cf6d4d76a0c166b slot=37a364df07657c8b}
+05:46:45.911 f=99 click 'Save to manual slot 1'
+05:46:46.004 f=104 PASS manual slot 1 saved: manual-1{save=5cf6d4d76a0c166b slot=d585ddc797485826}
+05:46:46.006 f=104 click 'Advance one day'
+05:46:46.074 f=109 click 'Advance one day'
+05:46:46.142 f=114 click 'Advance one day'
+05:46:46.206 f=119 click 'Advance one day'
+05:46:46.286 f=124 click 'Advance one day'
+05:46:46.374 f=129 click 'Advance one day'
+05:46:46.463 f=134 click 'Advance one day'
+05:46:46.549 f=139 PASS reached a matchday: Ashford Town | Season 1, day 7 | Position 1 | Rounds 0/38
+ / Last action: Day advanced
+ / Injured players: 0. Board target: position 10 or better. Objective on track.
+ / Next: Ironbridge United (away), day 7, in 0 days.
+05:46:46.553 f=139 click 'Resolve matchday (on Career Home)'
+05:46:46.608 f=141 PASS round 1: busy notice while the round runs
+05:49:34.710 f=53306 round 1: round took 168.1 s; scores visible 1 frame(s) after idle
+05:49:34.712 f=53306 PASS round 1: rounds played 0 -> 1
+05:49:34.714 f=53306 PASS round 1: latest round has 10 results for 20 clubs
+05:49:34.719 f=53306 PASS round 1: score block shows every fixture of round 1 under 'Round 1 results'
+05:49:34.719 f=53306 round 1 SCORES: Round 1 results
+ | Granton Wanderers 1 - 2 Halloway City
+ | Langmere Athletic 1 - 2 Juniper Park FC
+ | Marlow Heath 0 - 1 Quarrywood Town
+ | Ironbridge United 0 - 8 Ashford Town (you)
+ | Oakenfield FC 2 - 0 Dunhaven United
+ | Fernbrook FC 0 - 1 Carrowmore City
+ | Belmont Rovers 1 - 0 Thorncliff United
+ | Northgate United 2 - 1 Redmarsh Rovers
+ | Stanbury Athletic 2 - 2 Eastvale Athletic
+ | Pendleton City 1 - 0 Kesgrave Rovers
+05:49:34.723 f=53306 round 1 TABLE:
+    1 | Ashford Town (you) | 1 | 1 | 0 | 0 | 8 | 0 | 8 | 3
+    2 | Oakenfield FC | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 3
+    3 | Halloway City | 1 | 1 | 0 | 0 | 2 | 1 | 1 | 3
+    4 | Juniper Park FC | 1 | 1 | 0 | 0 | 2 | 1 | 1 | 3
+    5 | Northgate United | 1 | 1 | 0 | 0 | 2 | 1 | 1 | 3
+    6 | Belmont Rovers | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
+    7 | Carrowmore City | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
+    8 | Pendleton City | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
+    9 | Quarrywood Town | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
+    10 | Eastvale Athletic | 1 | 0 | 1 | 0 | 2 | 2 | 0 | 1
+    11 | Stanbury Athletic | 1 | 0 | 1 | 0 | 2 | 2 | 0 | 1
+    12 | Granton Wanderers | 1 | 0 | 0 | 1 | 1 | 2 | -1 | 0
+    13 | Langmere Athletic | 1 | 0 | 0 | 1 | 1 | 2 | -1 | 0
+    14 | Redmarsh Rovers | 1 | 0 | 0 | 1 | 1 | 2 | -1 | 0
+    15 | Fernbrook FC | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
+    16 | Kesgrave Rovers | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
+    17 | Marlow Heath | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
+    18 | Thorncliff United | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
+    19 | Dunhaven United | 1 | 0 | 0 | 1 | 0 | 2 | -2 | 0
+    20 | Ironbridge United | 1 | 0 | 0 | 1 | 0 | 8 | -8 | 0
+05:49:34.724 f=53306 PASS round 1: every displayed cell matches the table model (20 rows)
+05:49:34.725 f=53306 PASS round 1: P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
+05:49:34.725 f=53306 PASS round 1: rows are in tie-break order
+05:49:34.727 f=53306 PASS round 1: a negative goal difference is displayed with its sign
+05:49:34.727 f=53306 PASS round 1: table equals the totals of every round's displayed scores
+05:49:34.772 f=53306 shot 01-item6-round1.bmp 1920x1080
+05:49:34.777 f=53306 click 'Advance one day'
+05:49:34.825 f=53311 click 'Advance one day'
+05:49:34.891 f=53316 click 'Advance one day'
+05:49:34.953 f=53321 click 'Advance one day'
+05:49:35.013 f=53326 click 'Advance one day'
+05:49:35.074 f=53331 click 'Advance one day'
+05:49:35.135 f=53336 click 'Advance one day'
+05:49:35.198 f=53341 PASS reached a matchday: Ashford Town | Season 1, day 14 | Position 1 | Rounds 1/38
  / Last action: Day advanced
  / Injured players: 1. Board target: position 10 or better. Objective on track.
- / Next: Juniper Park FC (home), day 7, in 0 days.
-03:24:03.833 f=124 click 'Resolve matchday (on Career Home)'
-03:24:03.871 f=126 PASS round 1: busy notice while the round runs
-03:27:28.202 f=72726 round 1: round took 204.4 s; scores visible 1 frame(s) after idle
-03:27:28.205 f=72726 PASS round 1: rounds played 0 -> 1
-03:27:28.207 f=72726 PASS round 1: latest round has 10 results for 20 clubs
-03:27:28.213 f=72726 PASS round 1: score block shows every fixture of round 1 under 'Round 1 results'
-03:27:28.213 f=72726 round 1 SCORES: Round 1 results
- | Carrowmore City 2 - 2 Northgate United
- | Eastvale Athletic 0 - 3 Ironbridge United
- | Stanbury Athletic 3 - 0 Oakenfield FC
- | Halloway City 3 - 1 Pendleton City
- | Kesgrave Rovers 2 - 0 Granton Wanderers
- | Belmont Rovers 0 - 1 Langmere Athletic
- | Redmarsh Rovers 7 - 0 Dunhaven United
- | Marlow Heath 0 - 1 Quarrywood Town
- | Ashford Town (you) 9 - 9 Juniper Park FC
- | Thorncliff United 2 - 0 Fernbrook FC
-03:27:28.218 f=72726 round 1 TABLE:
-    1 | Redmarsh Rovers | 1 | 1 | 0 | 0 | 7 | 0 | 7 | 3
-    2 | Ironbridge United | 1 | 1 | 0 | 0 | 3 | 0 | 3 | 3
-    3 | Stanbury Athletic | 1 | 1 | 0 | 0 | 3 | 0 | 3 | 3
-    4 | Halloway City | 1 | 1 | 0 | 0 | 3 | 1 | 2 | 3
-    5 | Kesgrave Rovers | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 3
-    6 | Thorncliff United | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 3
-    7 | Langmere Athletic | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
-    8 | Quarrywood Town | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3
-    9 | Ashford Town (you) | 1 | 0 | 1 | 0 | 9 | 9 | 0 | 1
-    10 | Juniper Park FC | 1 | 0 | 1 | 0 | 9 | 9 | 0 | 1
-    11 | Carrowmore City | 1 | 0 | 1 | 0 | 2 | 2 | 0 | 1
-    12 | Northgate United | 1 | 0 | 1 | 0 | 2 | 2 | 0 | 1
-    13 | Belmont Rovers | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
-    14 | Marlow Heath | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0
-    15 | Pendleton City | 1 | 0 | 0 | 1 | 1 | 3 | -2 | 0
-    16 | Fernbrook FC | 1 | 0 | 0 | 1 | 0 | 2 | -2 | 0
-    17 | Granton Wanderers | 1 | 0 | 0 | 1 | 0 | 2 | -2 | 0
-    18 | Eastvale Athletic | 1 | 0 | 0 | 1 | 0 | 3 | -3 | 0
-    19 | Oakenfield FC | 1 | 0 | 0 | 1 | 0 | 3 | -3 | 0
-    20 | Dunhaven United | 1 | 0 | 0 | 1 | 0 | 7 | -7 | 0
-03:27:28.219 f=72726 PASS round 1: every displayed cell matches the table model (20 rows)
-03:27:28.219 f=72726 PASS round 1: P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
-03:27:28.220 f=72726 PASS round 1: rows are in tie-break order
-03:27:28.220 f=72726 PASS round 1: a negative goal difference is displayed with its sign
-03:27:28.222 f=72726 PASS round 1: table equals the totals of every round's displayed scores
-03:27:28.276 f=72726 shot 01-item6-round1.bmp 1920x1080
-03:27:28.282 f=72726 click 'Advance one day'
-03:27:28.337 f=72731 click 'Advance one day'
-03:27:28.412 f=72736 click 'Advance one day'
-03:27:28.482 f=72741 click 'Advance one day'
-03:27:28.551 f=72746 click 'Advance one day'
-03:27:28.617 f=72751 click 'Advance one day'
-03:27:28.687 f=72756 click 'Advance one day'
-03:27:28.757 f=72761 PASS reached a matchday: Ashford Town | Season 1, day 14 | Position 9 | Rounds 1/38
+ / Next: Langmere Athletic (home), day 14, in 0 days.
+05:49:35.200 f=53341 autosave.tdsave held with FileShare.None
+05:49:35.202 f=53341 click 'Resolve matchday (on Career Home)'
+05:49:35.246 f=53343 PASS round 2 (autosave blocked): busy notice while the round runs
+05:52:36.752 f=111388 round 2 (autosave blocked): round took 181.5 s; scores visible 1 frame(s) after idle
+05:52:36.756 f=111388 PASS round 2 (autosave blocked): rounds played 1 -> 2
+05:52:36.756 f=111388 PASS round 2 (autosave blocked): latest round has 10 results for 20 clubs
+05:52:36.757 f=111388 PASS round 2 (autosave blocked): score block shows every fixture of round 2 under 'Round 2 results'
+05:52:36.758 f=111388 round 2 (autosave blocked) SCORES: Round 2 results
+ | Juniper Park FC 3 - 1 Granton Wanderers
+ | Quarrywood Town 1 - 2 Halloway City
+ | Ashford Town (you) 0 - 4 Langmere Athletic
+ | Dunhaven United 2 - 0 Marlow Heath
+ | Carrowmore City 3 - 0 Ironbridge United
+ | Thorncliff United 2 - 0 Oakenfield FC
+ | Redmarsh Rovers 1 - 2 Fernbrook FC
+ | Eastvale Athletic 0 - 4 Belmont Rovers
+ | Kesgrave Rovers 3 - 0 Northgate United
+ | Pendleton City 2 - 3 Stanbury Athletic
+05:52:36.758 f=111388 round 2 (autosave blocked) TABLE:
+    1 | Belmont Rovers | 2 | 2 | 0 | 0 | 5 | 0 | 5 | 6
+    2 | Carrowmore City | 2 | 2 | 0 | 0 | 4 | 0 | 4 | 6
+    3 | Juniper Park FC | 2 | 2 | 0 | 0 | 5 | 2 | 3 | 6
+    4 | Halloway City | 2 | 2 | 0 | 0 | 4 | 2 | 2 | 6
+    5 | Stanbury Athletic | 2 | 1 | 1 | 0 | 5 | 4 | 1 | 4
+    6 | Ashford Town (you) | 2 | 1 | 0 | 1 | 8 | 4 | 4 | 3
+    7 | Langmere Athletic | 2 | 1 | 0 | 1 | 5 | 2 | 3 | 3
+    8 | Kesgrave Rovers | 2 | 1 | 0 | 1 | 3 | 1 | 2 | 3
+    9 | Thorncliff United | 2 | 1 | 0 | 1 | 2 | 1 | 1 | 3
+    10 | Pendleton City | 2 | 1 | 0 | 1 | 3 | 3 | 0 | 3
+    11 | Dunhaven United | 2 | 1 | 0 | 1 | 2 | 2 | 0 | 3
+    12 | Fernbrook FC | 2 | 1 | 0 | 1 | 2 | 2 | 0 | 3
+    13 | Oakenfield FC | 2 | 1 | 0 | 1 | 2 | 2 | 0 | 3
+    14 | Quarrywood Town | 2 | 1 | 0 | 1 | 2 | 2 | 0 | 3
+    15 | Northgate United | 2 | 1 | 0 | 1 | 2 | 4 | -2 | 3
+    16 | Eastvale Athletic | 2 | 0 | 1 | 1 | 2 | 6 | -4 | 1
+    17 | Redmarsh Rovers | 2 | 0 | 0 | 2 | 2 | 4 | -2 | 0
+    18 | Granton Wanderers | 2 | 0 | 0 | 2 | 2 | 5 | -3 | 0
+    19 | Marlow Heath | 2 | 0 | 0 | 2 | 0 | 3 | -3 | 0
+    20 | Ironbridge United | 2 | 0 | 0 | 2 | 0 | 11 | -11 | 0
+05:52:36.759 f=111388 PASS round 2 (autosave blocked): every displayed cell matches the table model (20 rows)
+05:52:36.759 f=111388 PASS round 2 (autosave blocked): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
+05:52:36.761 f=111388 PASS round 2 (autosave blocked): rows are in tie-break order
+05:52:36.761 f=111388 PASS round 2 (autosave blocked): a negative goal difference is displayed with its sign
+05:52:36.761 f=111388 PASS round 2 (autosave blocked): table equals the totals of every round's displayed scores
+05:52:36.762 f=111388 autosave lock released
+05:52:36.764 f=111388 PASS autosave failure is shown on Career Home: 'Autosave failed: The process cannot access the file because it is being used by another process.'
+05:52:36.768 f=111388 PASS the view model carries the autosave error
+05:52:36.776 f=111388 PASS the autosave pair still holds round 1 after the failed write: autosave{save=da8d8e607d9057b0 slot=ea27f0003a0fb147}
+05:52:36.788 f=111388 PASS no temporary or backup files left: autosave.slot,autosave.tdsave,manual-1.slot,manual-1.tdsave
+05:52:36.834 f=111388 shot 02-item6-autosave-failed.bmp 1920x1080
+05:52:36.838 f=111388 click 'Save to manual slot 1'
+05:52:36.878 f=111393 PASS a failed manual save shows its own error: 'The process cannot access the file because it is being used by another process.'
+05:52:36.909 f=111393 shot 03-item6-manual-save-failed.bmp 1920x1080
+05:52:36.913 f=111393 PASS manual slot 1 unchanged after the failed save
+05:52:36.914 f=111393 click 'Save to manual slot 1'
+05:52:36.965 f=111399 PASS retrying the manual save writes slot 1: manual-1{save=63e2a0c6e6612bb7 slot=d7cba10768c6e086}
+05:52:36.966 f=111399 PASS the manual-save error clears after the retry; the still-pending autosave failure is shown again (notice now 'Autosave failed: The process cannot access the file because it is being used by another process.')
+05:52:36.969 f=111399 manual-1 sidecar after retry: format=2 sequence=4 seasonSaveFormat=8 worldSeed=12320643717415727782 managedClubId=0 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=6 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=63e2a0c6e6612bb711d3baccee6afaa52e79701c5c037797a3bb257fa6cd5c8b managedClubName=Ashford Town 
+05:52:36.971 f=111399 click 'Advance one day'
+05:52:37.011 f=111404 click 'Advance one day'
+05:52:37.055 f=111409 click 'Advance one day'
+05:52:37.098 f=111414 click 'Advance one day'
+05:52:37.138 f=111419 click 'Advance one day'
+05:52:37.178 f=111424 click 'Advance one day'
+05:52:37.217 f=111429 click 'Advance one day'
+05:52:37.262 f=111434 PASS reached a matchday: Ashford Town | Season 1, day 21 | Position 6 | Rounds 2/38
  / Last action: Day advanced
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Thorncliff United (away), day 14, in 0 days.
-03:27:28.760 f=72761 autosave.tdsave held with FileShare.None
-03:27:28.762 f=72761 click 'Resolve matchday (on Career Home)'
-03:27:28.803 f=72763 PASS round 2 (autosave blocked): busy notice while the round runs
-03:31:04.164 f=150035 round 2 (autosave blocked): round took 215.4 s; scores visible 1 frame(s) after idle
-03:31:04.168 f=150035 PASS round 2 (autosave blocked): rounds played 1 -> 2
-03:31:04.169 f=150035 PASS round 2 (autosave blocked): latest round has 10 results for 20 clubs
-03:31:04.170 f=150035 PASS round 2 (autosave blocked): score block shows every fixture of round 2 under 'Round 2 results'
-03:31:04.171 f=150035 round 2 (autosave blocked) SCORES: Round 2 results
- | Ironbridge United 0 - 2 Carrowmore City
- | Oakenfield FC 2 - 1 Northgate United
- | Pendleton City 0 - 5 Eastvale Athletic
- | Granton Wanderers 6 - 0 Stanbury Athletic
- | Langmere Athletic 3 - 1 Halloway City
- | Dunhaven United 1 - 2 Kesgrave Rovers
- | Quarrywood Town 9 - 0 Belmont Rovers
- | Juniper Park FC 0 - 0 Redmarsh Rovers
- | Fernbrook FC 0 - 0 Marlow Heath
- | Thorncliff United 4 - 9 Ashford Town (you)
-03:31:04.172 f=150035 round 2 (autosave blocked) TABLE:
-    1 | Quarrywood Town | 2 | 2 | 0 | 0 | 10 | 0 | 10 | 6
-    2 | Kesgrave Rovers | 2 | 2 | 0 | 0 | 4 | 1 | 3 | 6
-    3 | Langmere Athletic | 2 | 2 | 0 | 0 | 4 | 1 | 3 | 6
-    4 | Redmarsh Rovers | 2 | 1 | 1 | 0 | 7 | 0 | 7 | 4
-    5 | Ashford Town (you) | 2 | 1 | 1 | 0 | 18 | 13 | 5 | 4
-    6 | Carrowmore City | 2 | 1 | 1 | 0 | 4 | 2 | 2 | 4
-    7 | Granton Wanderers | 2 | 1 | 0 | 1 | 6 | 2 | 4 | 3
-    8 | Eastvale Athletic | 2 | 1 | 0 | 1 | 5 | 3 | 2 | 3
-    9 | Ironbridge United | 2 | 1 | 0 | 1 | 3 | 2 | 1 | 3
-    10 | Halloway City | 2 | 1 | 0 | 1 | 4 | 4 | 0 | 3
-    11 | Oakenfield FC | 2 | 1 | 0 | 1 | 2 | 4 | -2 | 3
-    12 | Thorncliff United | 2 | 1 | 0 | 1 | 6 | 9 | -3 | 3
-    13 | Stanbury Athletic | 2 | 1 | 0 | 1 | 3 | 6 | -3 | 3
-    14 | Juniper Park FC | 2 | 0 | 2 | 0 | 9 | 9 | 0 | 2
-    15 | Northgate United | 2 | 0 | 1 | 1 | 3 | 4 | -1 | 1
-    16 | Marlow Heath | 2 | 0 | 1 | 1 | 0 | 1 | -1 | 1
-    17 | Fernbrook FC | 2 | 0 | 1 | 1 | 0 | 2 | -2 | 1
-    18 | Pendleton City | 2 | 0 | 0 | 2 | 1 | 8 | -7 | 0
-    19 | Dunhaven United | 2 | 0 | 0 | 2 | 1 | 9 | -8 | 0
-    20 | Belmont Rovers | 2 | 0 | 0 | 2 | 0 | 10 | -10 | 0
-03:31:04.174 f=150035 PASS round 2 (autosave blocked): every displayed cell matches the table model (20 rows)
-03:31:04.174 f=150035 PASS round 2 (autosave blocked): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
-03:31:04.174 f=150035 PASS round 2 (autosave blocked): rows are in tie-break order
-03:31:04.175 f=150035 PASS round 2 (autosave blocked): a negative goal difference is displayed with its sign
-03:31:04.176 f=150035 PASS round 2 (autosave blocked): table equals the totals of every round's displayed scores
-03:31:04.177 f=150035 autosave lock released
-03:31:04.179 f=150035 PASS autosave failure is shown on Career Home: 'Autosave failed: The process cannot access the file because it is being used by another process.'
-03:31:04.180 f=150035 PASS the view model carries the autosave error
-03:31:04.192 f=150035 PASS the autosave pair still holds round 1 after the failed write: autosave{save=3f1bc22b46b87d16 slot=3aca10d373b8297f}
-03:31:04.216 f=150035 PASS no temporary or backup files left: autosave.slot,autosave.tdsave,manual-1.slot,manual-1.tdsave
-03:31:04.270 f=150035 shot 02-item6-autosave-failed.bmp 1920x1080
-03:31:04.277 f=150035 click 'Save to manual slot 1'
-03:31:04.323 f=150040 PASS a failed manual save shows its own error: 'The process cannot access the file because it is being used by another process.'
-03:31:04.361 f=150040 shot 03-item6-manual-save-failed.bmp 1920x1080
-03:31:04.366 f=150040 PASS manual slot 1 unchanged after the failed save
-03:31:04.367 f=150040 click 'Save to manual slot 1'
-03:31:04.430 f=150046 PASS retrying the manual save writes slot 1: manual-1{save=4cbae697debaaeac slot=cf0b04cf7fc1eeae}
-03:31:04.432 f=150046 PASS the manual-save error clears after the retry; the still-pending autosave failure is shown again (notice now 'Autosave failed: The process cannot access the file because it is being used by another process.')
-03:31:04.435 f=150046 manual-1 sidecar after retry: format=2 sequence=4 seasonSaveFormat=8 worldSeed=522278309591718413 managedClubId=0 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=5 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=4cbae697debaaeac858db6c82efce8622846a54937382cd44f7ec2a1b0967b95 managedClubName=Ashford Town 
-03:31:04.437 f=150046 click 'Advance one day'
-03:31:04.477 f=150051 click 'Advance one day'
-03:31:04.517 f=150056 click 'Advance one day'
-03:31:04.560 f=150061 click 'Advance one day'
-03:31:04.605 f=150066 click 'Advance one day'
-03:31:04.649 f=150071 click 'Advance one day'
-03:31:04.692 f=150076 click 'Advance one day'
-03:31:04.745 f=150081 PASS reached a matchday: Ashford Town | Season 1, day 21 | Position 5 | Rounds 2/38
- / Last action: Day advanced
- / Injured players: 3. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 0 days.
-03:31:04.747 f=150081 click 'Resolve matchday (on Career Home)'
-03:31:04.778 f=150083 PASS round 3 (autosave released): busy notice while the round runs
-03:34:43.227 f=227757 round 3 (autosave released): round took 218.5 s; scores visible 1 frame(s) after idle
-03:34:43.230 f=227757 PASS round 3 (autosave released): rounds played 2 -> 3
-03:34:43.232 f=227757 PASS round 3 (autosave released): latest round has 10 results for 20 clubs
-03:34:43.233 f=227757 PASS round 3 (autosave released): score block shows every fixture of round 3 under 'Round 3 results'
-03:34:43.234 f=227757 round 3 (autosave released) SCORES: Round 3 results
- | Carrowmore City 1 - 0 Oakenfield FC
- | Ironbridge United 4 - 0 Pendleton City
- | Northgate United 1 - 1 Granton Wanderers
- | Eastvale Athletic 2 - 0 Langmere Athletic
- | Stanbury Athletic 3 - 2 Dunhaven United
- | Halloway City 2 - 1 Quarrywood Town
- | Kesgrave Rovers 3 - 1 Juniper Park FC
- | Belmont Rovers 0 - 0 Fernbrook FC
- | Redmarsh Rovers 1 - 0 Thorncliff United
- | Marlow Heath 1 - 3 Ashford Town (you)
-03:34:43.236 f=227757 round 3 (autosave released) TABLE:
-    1 | Kesgrave Rovers | 3 | 3 | 0 | 0 | 7 | 2 | 5 | 9
-    2 | Redmarsh Rovers | 3 | 2 | 1 | 0 | 8 | 0 | 8 | 7
-    3 | Ashford Town (you) | 3 | 2 | 1 | 0 | 21 | 14 | 7 | 7
-    4 | Carrowmore City | 3 | 2 | 1 | 0 | 5 | 2 | 3 | 7
-    5 | Quarrywood Town | 3 | 2 | 0 | 1 | 11 | 2 | 9 | 6
-    6 | Ironbridge United | 3 | 2 | 0 | 1 | 7 | 2 | 5 | 6
-    7 | Eastvale Athletic | 3 | 2 | 0 | 1 | 7 | 3 | 4 | 6
-    8 | Halloway City | 3 | 2 | 0 | 1 | 6 | 5 | 1 | 6
-    9 | Langmere Athletic | 3 | 2 | 0 | 1 | 4 | 3 | 1 | 6
-    10 | Stanbury Athletic | 3 | 2 | 0 | 1 | 6 | 8 | -2 | 6
-    11 | Granton Wanderers | 3 | 1 | 1 | 1 | 7 | 3 | 4 | 4
-    12 | Oakenfield FC | 3 | 1 | 0 | 2 | 2 | 5 | -3 | 3
-    13 | Thorncliff United | 3 | 1 | 0 | 2 | 6 | 10 | -4 | 3
-    14 | Northgate United | 3 | 0 | 2 | 1 | 4 | 5 | -1 | 2
-    15 | Juniper Park FC | 3 | 0 | 2 | 1 | 10 | 12 | -2 | 2
-    16 | Fernbrook FC | 3 | 0 | 2 | 1 | 0 | 2 | -2 | 2
-    17 | Marlow Heath | 3 | 0 | 1 | 2 | 1 | 4 | -3 | 1
-    18 | Belmont Rovers | 3 | 0 | 1 | 2 | 0 | 10 | -10 | 1
-    19 | Dunhaven United | 3 | 0 | 0 | 3 | 3 | 12 | -9 | 0
-    20 | Pendleton City | 3 | 0 | 0 | 3 | 1 | 12 | -11 | 0
-03:34:43.237 f=227757 PASS round 3 (autosave released): every displayed cell matches the table model (20 rows)
-03:34:43.238 f=227757 PASS round 3 (autosave released): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
-03:34:43.239 f=227757 PASS round 3 (autosave released): rows are in tie-break order
-03:34:43.239 f=227757 PASS round 3 (autosave released): a negative goal difference is displayed with its sign
-03:34:43.240 f=227757 PASS round 3 (autosave released): table equals the totals of every round's displayed scores
-03:34:43.244 f=227757 PASS the next round's autosave succeeds and clears the failure (notice '')
-03:34:43.259 f=227757 PASS autosave rewritten after recovery: autosave{save=e0af2b0992dd2683 slot=65298b13aee1caba}
-03:34:43.262 f=227757 autosave sidecar after recovery: format=2 sequence=5 seasonSaveFormat=8 worldSeed=522278309591718413 managedClubId=0 seasonNumber=0 worldDay=21 roundsPlayed=3 roundCount=38 leaguePosition=3 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=e0af2b0992dd26834be22e7c296aa5ce031ef1d4ddbce386124504280d7c4c6a managedClubName=Ashford Town 
-03:34:43.335 f=227757 shot 04-item6-recovered.bmp 1920x1080
-03:34:43.341 f=227757 click 'Return to Main Menu (without saving)'
-03:34:43.368 f=227762 PASS quit returns to Main Menu
-03:34:43.370 f=227762 click 'Continue career'
-03:34:43.513 f=227786 PASS Continue restores the standings exactly (20 rows): Ashford Town | Season 1, day 21 | Position 3 | Rounds 3/38
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 0 days.
+05:52:37.263 f=111434 click 'Resolve matchday (on Career Home)'
+05:52:37.292 f=111436 PASS round 3 (autosave released): busy notice while the round runs
+05:55:42.341 f=170459 round 3 (autosave released): round took 185.1 s; scores visible 1 frame(s) after idle
+05:55:42.343 f=170459 PASS round 3 (autosave released): rounds played 2 -> 3
+05:55:42.343 f=170459 PASS round 3 (autosave released): latest round has 10 results for 20 clubs
+05:55:42.344 f=170459 PASS round 3 (autosave released): score block shows every fixture of round 3 under 'Round 3 results'
+05:55:42.345 f=170459 round 3 (autosave released) SCORES: Round 3 results
+ | Granton Wanderers 1 - 0 Quarrywood Town
+ | Juniper Park FC 4 - 8 Ashford Town (you)
+ | Halloway City 0 - 1 Dunhaven United
+ | Langmere Athletic 0 - 2 Carrowmore City
+ | Marlow Heath 0 - 4 Thorncliff United
+ | Ironbridge United 2 - 1 Redmarsh Rovers
+ | Oakenfield FC 1 - 3 Eastvale Athletic
+ | Fernbrook FC 1 - 2 Kesgrave Rovers
+ | Belmont Rovers 4 - 1 Pendleton City
+ | Northgate United 2 - 0 Stanbury Athletic
+05:55:42.347 f=170459 round 3 (autosave released) TABLE:
+    1 | Belmont Rovers | 3 | 3 | 0 | 0 | 9 | 1 | 8 | 9
+    2 | Carrowmore City | 3 | 3 | 0 | 0 | 6 | 0 | 6 | 9
+    3 | Ashford Town (you) | 3 | 2 | 0 | 1 | 16 | 8 | 8 | 6
+    4 | Thorncliff United | 3 | 2 | 0 | 1 | 6 | 1 | 5 | 6
+    5 | Kesgrave Rovers | 3 | 2 | 0 | 1 | 5 | 2 | 3 | 6
+    6 | Halloway City | 3 | 2 | 0 | 1 | 4 | 3 | 1 | 6
+    7 | Dunhaven United | 3 | 2 | 0 | 1 | 3 | 2 | 1 | 6
+    8 | Northgate United | 3 | 2 | 0 | 1 | 4 | 4 | 0 | 6
+    9 | Juniper Park FC | 3 | 2 | 0 | 1 | 9 | 10 | -1 | 6
+    10 | Stanbury Athletic | 3 | 1 | 1 | 1 | 5 | 6 | -1 | 4
+    11 | Eastvale Athletic | 3 | 1 | 1 | 1 | 5 | 7 | -2 | 4
+    12 | Langmere Athletic | 3 | 1 | 0 | 2 | 5 | 4 | 1 | 3
+    13 | Fernbrook FC | 3 | 1 | 0 | 2 | 3 | 4 | -1 | 3
+    14 | Quarrywood Town | 3 | 1 | 0 | 2 | 2 | 3 | -1 | 3
+    15 | Granton Wanderers | 3 | 1 | 0 | 2 | 3 | 5 | -2 | 3
+    16 | Oakenfield FC | 3 | 1 | 0 | 2 | 3 | 5 | -2 | 3
+    17 | Pendleton City | 3 | 1 | 0 | 2 | 4 | 7 | -3 | 3
+    18 | Ironbridge United | 3 | 1 | 0 | 2 | 2 | 12 | -10 | 3
+    19 | Redmarsh Rovers | 3 | 0 | 0 | 3 | 3 | 6 | -3 | 0
+    20 | Marlow Heath | 3 | 0 | 0 | 3 | 0 | 7 | -7 | 0
+05:55:42.348 f=170459 PASS round 3 (autosave released): every displayed cell matches the table model (20 rows)
+05:55:42.349 f=170459 PASS round 3 (autosave released): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
+05:55:42.349 f=170459 PASS round 3 (autosave released): rows are in tie-break order
+05:55:42.350 f=170459 PASS round 3 (autosave released): a negative goal difference is displayed with its sign
+05:55:42.350 f=170459 PASS round 3 (autosave released): table equals the totals of every round's displayed scores
+05:55:42.353 f=170459 PASS the next round's autosave succeeds and clears the failure (notice '')
+05:55:42.360 f=170459 PASS autosave rewritten after recovery: autosave{save=4cf33c5b92580a5a slot=d6c66eb8fd8ae759}
+05:55:42.361 f=170459 autosave sidecar after recovery: format=2 sequence=5 seasonSaveFormat=8 worldSeed=12320643717415727782 managedClubId=0 seasonNumber=0 worldDay=21 roundsPlayed=3 roundCount=38 leaguePosition=3 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=4cf33c5b92580a5aedf3c64a7032ea0f799e73665fbba9d7fd384e45e53f791c managedClubName=Ashford Town 
+05:55:42.404 f=170459 shot 04-item6-recovered.bmp 1920x1080
+05:55:42.408 f=170459 click 'Return to Main Menu (without saving)'
+05:55:42.429 f=170464 PASS quit returns to Main Menu
+05:55:42.431 f=170464 click 'Continue career'
+05:55:42.546 f=170486 PASS Continue restores the standings exactly (20 rows): Ashford Town | Season 1, day 21 | Position 3 | Rounds 3/38
  / Last action: Career resumed
  / Injured players: 3. Board target: position 10 or better. Objective on track.
- / Next: Belmont Rovers (home), day 28, in 7 days.
-03:34:43.514 f=227786 score block after Continue: active=False text=''
-03:34:43.558 f=227786 shot 05-item6-continued.bmp 1920x1080
-03:34:43.560 f=227786 click 'Advance one day'
-03:34:43.625 f=227791 click 'Advance one day'
-03:34:43.711 f=227796 click 'Advance one day'
-03:34:43.782 f=227801 click 'Advance one day'
-03:34:43.848 f=227806 click 'Advance one day'
-03:34:43.920 f=227811 click 'Advance one day'
-03:34:43.996 f=227816 click 'Advance one day'
-03:34:44.065 f=227821 PASS reached a matchday: Ashford Town | Season 1, day 28 | Position 3 | Rounds 3/38
+ / Next: Granton Wanderers (home), day 28, in 7 days.
+05:55:42.547 f=170486 score block after Continue: active=False text=''
+05:55:42.588 f=170486 shot 05-item6-continued.bmp 1920x1080
+05:55:42.589 f=170486 click 'Advance one day'
+05:55:42.642 f=170491 click 'Advance one day'
+05:55:42.708 f=170496 click 'Advance one day'
+05:55:42.772 f=170501 click 'Advance one day'
+05:55:42.843 f=170506 click 'Advance one day'
+05:55:42.912 f=170511 click 'Advance one day'
+05:55:42.974 f=170516 click 'Advance one day'
+05:55:43.041 f=170521 PASS reached a matchday: Ashford Town | Season 1, day 28 | Position 3 | Rounds 3/38
  / Last action: Day advanced
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Belmont Rovers (home), day 28, in 0 days.
-03:34:44.065 f=227821 click 'Resolve matchday (on Career Home)'
-03:34:44.109 f=227823 PASS round 4 (after Continue): busy notice while the round runs
-03:38:19.843 f=304775 round 4 (after Continue): round took 215.8 s; scores visible 1 frame(s) after idle
-03:38:19.846 f=304775 PASS round 4 (after Continue): rounds played 3 -> 4
-03:38:19.847 f=304775 PASS round 4 (after Continue): latest round has 10 results for 20 clubs
-03:38:19.848 f=304775 PASS round 4 (after Continue): score block shows every fixture of round 4 under 'Round 4 results'
-03:38:19.848 f=304775 round 4 (after Continue) SCORES: Round 4 results
- | Pendleton City 0 - 4 Carrowmore City
- | Granton Wanderers 2 - 0 Oakenfield FC
- | Langmere Athletic 0 - 1 Ironbridge United
- | Dunhaven United 1 - 1 Northgate United
- | Quarrywood Town 3 - 0 Eastvale Athletic
- | Juniper Park FC 2 - 0 Stanbury Athletic
- | Fernbrook FC 2 - 1 Halloway City
- | Thorncliff United 0 - 4 Kesgrave Rovers
- | Ashford Town (you) 22 - 0 Belmont Rovers
- | Marlow Heath 1 - 3 Redmarsh Rovers
-03:38:19.850 f=304775 round 4 (after Continue) TABLE:
-    1 | Kesgrave Rovers | 4 | 4 | 0 | 0 | 11 | 2 | 9 | 12
-    2 | Ashford Town (you) | 4 | 3 | 1 | 0 | 43 | 14 | 29 | 10
-    3 | Redmarsh Rovers | 4 | 3 | 1 | 0 | 11 | 1 | 10 | 10
-    4 | Carrowmore City | 4 | 3 | 1 | 0 | 9 | 2 | 7 | 10
-    5 | Quarrywood Town | 4 | 3 | 0 | 1 | 14 | 2 | 12 | 9
-    6 | Ironbridge United | 4 | 3 | 0 | 1 | 8 | 2 | 6 | 9
-    7 | Granton Wanderers | 4 | 2 | 1 | 1 | 9 | 3 | 6 | 7
-    8 | Eastvale Athletic | 4 | 2 | 0 | 2 | 7 | 6 | 1 | 6
-    9 | Halloway City | 4 | 2 | 0 | 2 | 7 | 7 | 0 | 6
-    10 | Langmere Athletic | 4 | 2 | 0 | 2 | 4 | 4 | 0 | 6
-    11 | Stanbury Athletic | 4 | 2 | 0 | 2 | 6 | 10 | -4 | 6
-    12 | Juniper Park FC | 4 | 1 | 2 | 1 | 12 | 12 | 0 | 5
-    13 | Fernbrook FC | 4 | 1 | 2 | 1 | 2 | 3 | -1 | 5
-    14 | Northgate United | 4 | 0 | 3 | 1 | 5 | 6 | -1 | 3
-    15 | Oakenfield FC | 4 | 1 | 0 | 3 | 2 | 7 | -5 | 3
-    16 | Thorncliff United | 4 | 1 | 0 | 3 | 6 | 14 | -8 | 3
-    17 | Marlow Heath | 4 | 0 | 1 | 3 | 2 | 7 | -5 | 1
-    18 | Dunhaven United | 4 | 0 | 1 | 3 | 4 | 13 | -9 | 1
-    19 | Belmont Rovers | 4 | 0 | 1 | 3 | 0 | 32 | -32 | 1
-    20 | Pendleton City | 4 | 0 | 0 | 4 | 1 | 16 | -15 | 0
-03:38:19.851 f=304775 PASS round 4 (after Continue): every displayed cell matches the table model (20 rows)
-03:38:19.852 f=304775 PASS round 4 (after Continue): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
-03:38:19.853 f=304775 PASS round 4 (after Continue): rows are in tie-break order
-03:38:19.853 f=304775 PASS round 4 (after Continue): a negative goal difference is displayed with its sign
-03:38:19.854 f=304775 PASS round 4 (after Continue): table equals the totals of every round's displayed scores
-03:38:19.907 f=304775 shot 06-item6-round4.bmp 1920x1080
-03:38:19.908 f=304775 click 'Return to Main Menu (without saving)'
-03:38:19.928 f=304780 PASS cycle 1: quit to Main Menu
-03:38:19.931 f=304780 click 'New career'
-03:38:19.954 f=304785 PASS New career opens the setup page
-03:38:19.957 f=304785 PASS Start is disabled before a club is chosen (20 clubs)
-03:38:19.958 f=304785 click 'Select Dunhaven United'
-03:38:19.972 f=304790 click 'Start career'
-03:38:20.069 f=304803 PASS Start reaches Career Home: Dunhaven United | Season 1, day 0 | Position 4 | Rounds 0/38
+ / Injured players: 2. Board target: position 10 or better. Objective on track.
+ / Next: Granton Wanderers (home), day 28, in 0 days.
+05:55:43.043 f=170521 click 'Resolve matchday (on Career Home)'
+05:55:43.084 f=170523 PASS round 4 (after Continue): busy notice while the round runs
+05:58:49.979 f=230125 round 4 (after Continue): round took 186.9 s; scores visible 1 frame(s) after idle
+05:58:49.981 f=230125 PASS round 4 (after Continue): rounds played 3 -> 4
+05:58:49.982 f=230125 PASS round 4 (after Continue): latest round has 10 results for 20 clubs
+05:58:49.983 f=230125 PASS round 4 (after Continue): score block shows every fixture of round 4 under 'Round 4 results'
+05:58:49.984 f=230125 round 4 (after Continue) SCORES: Round 4 results
+ | Ashford Town (you) 14 - 8 Granton Wanderers
+ | Dunhaven United 2 - 0 Quarrywood Town
+ | Carrowmore City 1 - 2 Juniper Park FC
+ | Thorncliff United 3 - 0 Halloway City
+ | Redmarsh Rovers 1 - 2 Langmere Athletic
+ | Eastvale Athletic 1 - 0 Marlow Heath
+ | Kesgrave Rovers 1 - 1 Ironbridge United
+ | Pendleton City 2 - 0 Oakenfield FC
+ | Stanbury Athletic 2 - 3 Fernbrook FC
+ | Northgate United 3 - 0 Belmont Rovers
+05:58:49.986 f=230125 round 4 (after Continue) TABLE:
+    1 | Ashford Town (you) | 4 | 3 | 0 | 1 | 30 | 16 | 14 | 9
+    2 | Thorncliff United | 4 | 3 | 0 | 1 | 9 | 1 | 8 | 9
+    3 | Belmont Rovers | 4 | 3 | 0 | 1 | 9 | 4 | 5 | 9
+    4 | Carrowmore City | 4 | 3 | 0 | 1 | 7 | 2 | 5 | 9
+    5 | Northgate United | 4 | 3 | 0 | 1 | 7 | 4 | 3 | 9
+    6 | Dunhaven United | 4 | 3 | 0 | 1 | 5 | 2 | 3 | 9
+    7 | Juniper Park FC | 4 | 3 | 0 | 1 | 11 | 11 | 0 | 9
+    8 | Kesgrave Rovers | 4 | 2 | 1 | 1 | 6 | 3 | 3 | 7
+    9 | Eastvale Athletic | 4 | 2 | 1 | 1 | 6 | 7 | -1 | 7
+    10 | Langmere Athletic | 4 | 2 | 0 | 2 | 7 | 5 | 2 | 6
+    11 | Fernbrook FC | 4 | 2 | 0 | 2 | 6 | 6 | 0 | 6
+    12 | Pendleton City | 4 | 2 | 0 | 2 | 6 | 7 | -1 | 6
+    13 | Halloway City | 4 | 2 | 0 | 2 | 4 | 6 | -2 | 6
+    14 | Stanbury Athletic | 4 | 1 | 1 | 2 | 7 | 9 | -2 | 4
+    15 | Ironbridge United | 4 | 1 | 1 | 2 | 3 | 13 | -10 | 4
+    16 | Quarrywood Town | 4 | 1 | 0 | 3 | 2 | 5 | -3 | 3
+    17 | Oakenfield FC | 4 | 1 | 0 | 3 | 3 | 7 | -4 | 3
+    18 | Granton Wanderers | 4 | 1 | 0 | 3 | 11 | 19 | -8 | 3
+    19 | Redmarsh Rovers | 4 | 0 | 0 | 4 | 4 | 8 | -4 | 0
+    20 | Marlow Heath | 4 | 0 | 0 | 4 | 0 | 8 | -8 | 0
+05:58:49.987 f=230125 PASS round 4 (after Continue): every displayed cell matches the table model (20 rows)
+05:58:49.987 f=230125 PASS round 4 (after Continue): P = W + D + L, GD = GF - GA, Pts = 3W + D on every row
+05:58:49.988 f=230125 PASS round 4 (after Continue): rows are in tie-break order
+05:58:49.988 f=230125 PASS round 4 (after Continue): a negative goal difference is displayed with its sign
+05:58:49.989 f=230125 PASS round 4 (after Continue): table equals the totals of every round's displayed scores
+05:58:50.033 f=230125 shot 06-item6-round4.bmp 1920x1080
+05:58:50.035 f=230125 click 'Return to Main Menu (without saving)'
+05:58:50.056 f=230130 PASS cycle 1: quit to Main Menu
+05:58:50.060 f=230130 click 'New career'
+05:58:50.083 f=230135 PASS New career opens the setup page
+05:58:50.085 f=230135 PASS Start is disabled before a club is chosen (20 clubs)
+05:58:50.085 f=230135 click 'Select Dunhaven United'
+05:58:50.102 f=230140 click 'Start career'
+05:58:50.186 f=230152 PASS Start reaches Career Home: Dunhaven United | Season 1, day 0 | Position 4 | Rounds 0/38
  / Last action: Career started
  / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Halloway City (home), day 7, in 7 days.
-03:38:20.074 f=304803 PASS cycle 1: new career autosave names Dunhaven United
-03:38:20.076 f=304803 click 'Return to Main Menu (without saving)'
-03:38:20.093 f=304808 click 'Load career'
-03:38:20.120 f=304813 PASS cycle 1: Load career opens the picker
-03:38:20.129 f=304813 DUMP cycle 1: picker screen=LoadCareer selected=Load career
+ / Next: Thorncliff United (home), day 7, in 7 days.
+05:58:50.189 f=230152 PASS cycle 1: new career autosave names Dunhaven United
+05:58:50.190 f=230152 click 'Return to Main Menu (without saving)'
+05:58:50.208 f=230157 click 'Load career'
+05:58:50.232 f=230162 PASS cycle 1: Load career opens the picker
+05:58:50.239 f=230162 DUMP cycle 1: picker screen=LoadCareer selected=Load career
     BTN[on] Autosave: Ready | Dunhaven United | Season 1, day 0, round 0/38, position 4
-    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5
+    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6
     BTN[off] Manual slot 2: Empty
     BTN[off] Manual slot 3: Empty
     BTN[on] Back
-03:38:20.130 f=304813 click 'Autosave: Ready | Dunhaven United | Season 1, day 0, round 0/38, position 4'
-03:38:20.186 f=304822 PASS cycle 1: loading the autosave resumes Dunhaven United
-03:38:20.187 f=304822 click 'Return to Main Menu (without saving)'
-03:38:20.207 f=304827 click 'Load career'
-03:38:20.227 f=304832 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5'
-03:38:20.280 f=304842 PASS cycle 1: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 5 | Rounds 2/38
+05:58:50.240 f=230162 click 'Autosave: Ready | Dunhaven United | Season 1, day 0, round 0/38, position 4'
+05:58:50.287 f=230170 PASS cycle 1: loading the autosave resumes Dunhaven United
+05:58:50.288 f=230170 click 'Return to Main Menu (without saving)'
+05:58:50.305 f=230175 click 'Load career'
+05:58:50.325 f=230180 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6'
+05:58:50.376 f=230188 PASS cycle 1: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 6 | Rounds 2/38
  / Last action: Career resumed
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 7 days.
-03:38:20.281 f=304842 click 'Return to Main Menu (without saving)'
-03:38:20.299 f=304847 click 'Continue career'
-03:38:20.356 f=304859 PASS cycle 1: Continue resumes the newest save (Dunhaven United)
-03:38:20.358 f=304859 PASS cycle 1: no error notice
-03:38:20.360 f=304859 click 'Return to Main Menu (without saving)'
-03:38:20.380 f=304864 PASS cycle 2: quit to Main Menu
-03:38:20.383 f=304864 click 'New career'
-03:38:20.412 f=304869 PASS New career opens the setup page
-03:38:20.414 f=304869 PASS Start is disabled before a club is chosen (20 clubs)
-03:38:20.415 f=304869 click 'Select Granton Wanderers'
-03:38:20.430 f=304874 click 'Start career'
-03:38:20.509 f=304887 PASS Start reaches Career Home: Granton Wanderers | Season 1, day 0 | Position 7 | Rounds 0/38
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 7 days.
+05:58:50.379 f=230188 click 'Return to Main Menu (without saving)'
+05:58:50.399 f=230193 click 'Continue career'
+05:58:50.452 f=230203 PASS cycle 1: Continue resumes the newest save (Dunhaven United)
+05:58:50.455 f=230203 PASS cycle 1: no error notice
+05:58:50.456 f=230203 click 'Return to Main Menu (without saving)'
+05:58:50.477 f=230208 PASS cycle 2: quit to Main Menu
+05:58:50.481 f=230208 click 'New career'
+05:58:50.502 f=230213 PASS New career opens the setup page
+05:58:50.506 f=230213 PASS Start is disabled before a club is chosen (20 clubs)
+05:58:50.506 f=230213 click 'Select Granton Wanderers'
+05:58:50.521 f=230218 click 'Start career'
+05:58:50.591 f=230229 PASS Start reaches Career Home: Granton Wanderers | Season 1, day 0 | Position 7 | Rounds 0/38
  / Last action: Career started
  / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Eastvale Athletic (home), day 7, in 7 days.
-03:38:20.511 f=304887 PASS cycle 2: new career autosave names Granton Wanderers
-03:38:20.513 f=304887 click 'Return to Main Menu (without saving)'
-03:38:20.529 f=304892 click 'Load career'
-03:38:20.550 f=304897 PASS cycle 2: Load career opens the picker
-03:38:20.553 f=304897 DUMP cycle 2: picker screen=LoadCareer selected=Load career
-    BTN[on] Autosave: Ready | Granton Wanderers | Season 1, day 0, round 0/38, position 7
-    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5
-    BTN[off] Manual slot 2: Empty
-    BTN[off] Manual slot 3: Empty
-    BTN[on] Back
-03:38:20.555 f=304897 click 'Autosave: Ready | Granton Wanderers | Season 1, day 0, round 0/38, position 7'
-03:38:20.610 f=304907 PASS cycle 2: loading the autosave resumes Granton Wanderers
-03:38:20.611 f=304907 click 'Return to Main Menu (without saving)'
-03:38:20.629 f=304912 click 'Load career'
-03:38:20.649 f=304917 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5'
-03:38:20.709 f=304927 PASS cycle 2: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 5 | Rounds 2/38
- / Last action: Career resumed
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 7 days.
-03:38:20.711 f=304927 click 'Return to Main Menu (without saving)'
-03:38:20.728 f=304932 click 'Continue career'
-03:38:20.787 f=304943 PASS cycle 2: Continue resumes the newest save (Granton Wanderers)
-03:38:20.791 f=304943 PASS cycle 2: no error notice
-03:38:20.792 f=304943 click 'Return to Main Menu (without saving)'
-03:38:20.811 f=304948 PASS cycle 3: quit to Main Menu
-03:38:20.814 f=304948 click 'New career'
-03:38:20.838 f=304953 PASS New career opens the setup page
-03:38:20.841 f=304953 PASS Start is disabled before a club is chosen (20 clubs)
-03:38:20.842 f=304953 click 'Select Juniper Park FC'
-03:38:20.858 f=304958 click 'Start career'
-03:38:20.952 f=304974 PASS Start reaches Career Home: Juniper Park FC | Season 1, day 0 | Position 10 | Rounds 0/38
- / Last action: Career started
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Carrowmore City (away), day 7, in 7 days.
-03:38:20.956 f=304974 PASS cycle 3: new career autosave names Juniper Park FC
-03:38:20.957 f=304974 click 'Return to Main Menu (without saving)'
-03:38:20.978 f=304979 click 'Load career'
-03:38:21.000 f=304984 PASS cycle 3: Load career opens the picker
-03:38:21.002 f=304984 DUMP cycle 3: picker screen=LoadCareer selected=Load career
-    BTN[on] Autosave: Ready | Juniper Park FC | Season 1, day 0, round 0/38, position 10
-    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5
-    BTN[off] Manual slot 2: Empty
-    BTN[off] Manual slot 3: Empty
-    BTN[on] Back
-03:38:21.003 f=304984 click 'Autosave: Ready | Juniper Park FC | Season 1, day 0, round 0/38, position 10'
-03:38:21.062 f=304994 PASS cycle 3: loading the autosave resumes Juniper Park FC
-03:38:21.064 f=304994 click 'Return to Main Menu (without saving)'
-03:38:21.083 f=304999 click 'Load career'
-03:38:21.100 f=305004 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5'
-03:38:21.157 f=305013 PASS cycle 3: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 5 | Rounds 2/38
- / Last action: Career resumed
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 7 days.
-03:38:21.158 f=305013 click 'Return to Main Menu (without saving)'
-03:38:21.177 f=305018 click 'Continue career'
-03:38:21.237 f=305030 PASS cycle 3: Continue resumes the newest save (Juniper Park FC)
-03:38:21.239 f=305030 PASS cycle 3: no error notice
-03:38:21.240 f=305030 click 'Return to Main Menu (without saving)'
-03:38:21.261 f=305035 PASS cycle 4: quit to Main Menu
-03:38:21.264 f=305035 click 'New career'
-03:38:21.287 f=305040 PASS New career opens the setup page
-03:38:21.291 f=305040 PASS Start is disabled before a club is chosen (20 clubs)
-03:38:21.291 f=305040 click 'Select Marlow Heath'
-03:38:21.305 f=305045 click 'Start career'
-03:38:21.384 f=305058 PASS Start reaches Career Home: Marlow Heath | Season 1, day 0 | Position 13 | Rounds 0/38
- / Last action: Career started
- / Injured players: 0. Board target: position 10 or better. Objective off track.
  / Next: Northgate United (away), day 7, in 7 days.
-03:38:21.386 f=305058 PASS cycle 4: new career autosave names Marlow Heath
-03:38:21.387 f=305058 click 'Return to Main Menu (without saving)'
-03:38:21.404 f=305063 click 'Load career'
-03:38:21.428 f=305068 PASS cycle 4: Load career opens the picker
-03:38:21.429 f=305068 DUMP cycle 4: picker screen=LoadCareer selected=Load career
-    BTN[on] Autosave: Ready | Marlow Heath | Season 1, day 0, round 0/38, position 13
-    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5
+05:58:50.594 f=230229 PASS cycle 2: new career autosave names Granton Wanderers
+05:58:50.595 f=230229 click 'Return to Main Menu (without saving)'
+05:58:50.614 f=230234 click 'Load career'
+05:58:50.635 f=230239 PASS cycle 2: Load career opens the picker
+05:58:50.637 f=230239 DUMP cycle 2: picker screen=LoadCareer selected=Load career
+    BTN[on] Autosave: Ready | Granton Wanderers | Season 1, day 0, round 0/38, position 7
+    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6
     BTN[off] Manual slot 2: Empty
     BTN[off] Manual slot 3: Empty
     BTN[on] Back
-03:38:21.430 f=305068 click 'Autosave: Ready | Marlow Heath | Season 1, day 0, round 0/38, position 13'
-03:38:21.483 f=305077 PASS cycle 4: loading the autosave resumes Marlow Heath
-03:38:21.484 f=305077 click 'Return to Main Menu (without saving)'
-03:38:21.502 f=305082 click 'Load career'
-03:38:21.520 f=305087 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5'
-03:38:21.574 f=305097 PASS cycle 4: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 5 | Rounds 2/38
+05:58:50.638 f=230239 click 'Autosave: Ready | Granton Wanderers | Season 1, day 0, round 0/38, position 7'
+05:58:50.682 f=230246 PASS cycle 2: loading the autosave resumes Granton Wanderers
+05:58:50.685 f=230246 click 'Return to Main Menu (without saving)'
+05:58:50.701 f=230251 click 'Load career'
+05:58:50.721 f=230256 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6'
+05:58:50.770 f=230265 PASS cycle 2: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 6 | Rounds 2/38
  / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 7 days.
+05:58:50.771 f=230265 click 'Return to Main Menu (without saving)'
+05:58:50.788 f=230270 click 'Continue career'
+05:58:50.842 f=230281 PASS cycle 2: Continue resumes the newest save (Granton Wanderers)
+05:58:50.846 f=230281 PASS cycle 2: no error notice
+05:58:50.847 f=230281 click 'Return to Main Menu (without saving)'
+05:58:50.868 f=230286 PASS cycle 3: quit to Main Menu
+05:58:50.870 f=230286 click 'New career'
+05:58:50.899 f=230291 PASS New career opens the setup page
+05:58:50.901 f=230291 PASS Start is disabled before a club is chosen (20 clubs)
+05:58:50.902 f=230291 click 'Select Juniper Park FC'
+05:58:50.922 f=230296 click 'Start career'
+05:58:51.004 f=230308 PASS Start reaches Career Home: Juniper Park FC | Season 1, day 0 | Position 10 | Rounds 0/38
+ / Last action: Career started
  / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 7 days.
-03:38:21.575 f=305097 click 'Return to Main Menu (without saving)'
-03:38:21.594 f=305102 click 'Continue career'
-03:38:21.646 f=305111 PASS cycle 4: Continue resumes the newest save (Marlow Heath)
-03:38:21.648 f=305111 PASS cycle 4: no error notice
-03:38:21.649 f=305111 click 'Return to Main Menu (without saving)'
-03:38:21.670 f=305116 PASS cycle 5: quit to Main Menu
-03:38:21.675 f=305116 click 'New career'
-03:38:21.697 f=305121 PASS New career opens the setup page
-03:38:21.700 f=305121 PASS Start is disabled before a club is chosen (20 clubs)
-03:38:21.700 f=305121 click 'Select Pendleton City'
-03:38:21.716 f=305126 click 'Start career'
-03:38:21.809 f=305141 PASS Start reaches Career Home: Pendleton City | Season 1, day 0 | Position 16 | Rounds 0/38
+ / Next: Langmere Athletic (away), day 7, in 7 days.
+05:58:51.006 f=230308 PASS cycle 3: new career autosave names Juniper Park FC
+05:58:51.006 f=230308 click 'Return to Main Menu (without saving)'
+05:58:51.024 f=230313 click 'Load career'
+05:58:51.045 f=230318 PASS cycle 3: Load career opens the picker
+05:58:51.048 f=230318 DUMP cycle 3: picker screen=LoadCareer selected=Load career
+    BTN[on] Autosave: Ready | Juniper Park FC | Season 1, day 0, round 0/38, position 10
+    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6
+    BTN[off] Manual slot 2: Empty
+    BTN[off] Manual slot 3: Empty
+    BTN[on] Back
+05:58:51.048 f=230318 click 'Autosave: Ready | Juniper Park FC | Season 1, day 0, round 0/38, position 10'
+05:58:51.097 f=230326 PASS cycle 3: loading the autosave resumes Juniper Park FC
+05:58:51.098 f=230326 click 'Return to Main Menu (without saving)'
+05:58:51.117 f=230331 click 'Load career'
+05:58:51.137 f=230336 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6'
+05:58:51.186 f=230344 PASS cycle 3: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 6 | Rounds 2/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 7 days.
+05:58:51.188 f=230344 click 'Return to Main Menu (without saving)'
+05:58:51.205 f=230349 click 'Continue career'
+05:58:51.260 f=230358 PASS cycle 3: Continue resumes the newest save (Juniper Park FC)
+05:58:51.264 f=230358 PASS cycle 3: no error notice
+05:58:51.264 f=230358 click 'Return to Main Menu (without saving)'
+05:58:51.286 f=230363 PASS cycle 4: quit to Main Menu
+05:58:51.289 f=230363 click 'New career'
+05:58:51.315 f=230368 PASS New career opens the setup page
+05:58:51.317 f=230368 PASS Start is disabled before a club is chosen (20 clubs)
+05:58:51.319 f=230368 click 'Select Marlow Heath'
+05:58:51.336 f=230373 click 'Start career'
+05:58:51.409 f=230385 PASS Start reaches Career Home: Marlow Heath | Season 1, day 0 | Position 13 | Rounds 0/38
  / Last action: Career started
  / Injured players: 0. Board target: position 10 or better. Objective off track.
- / Next: Langmere Athletic (home), day 7, in 7 days.
-03:38:21.811 f=305141 PASS cycle 5: new career autosave names Pendleton City
-03:38:21.812 f=305141 click 'Return to Main Menu (without saving)'
-03:38:21.831 f=305146 click 'Load career'
-03:38:21.850 f=305151 PASS cycle 5: Load career opens the picker
-03:38:21.853 f=305151 DUMP cycle 5: picker screen=LoadCareer selected=Load career
-    BTN[on] Autosave: Ready | Pendleton City | Season 1, day 0, round 0/38, position 16
-    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5
+ / Next: Ashford Town (away), day 7, in 7 days.
+05:58:51.411 f=230385 PASS cycle 4: new career autosave names Marlow Heath
+05:58:51.413 f=230385 click 'Return to Main Menu (without saving)'
+05:58:51.431 f=230390 click 'Load career'
+05:58:51.453 f=230395 PASS cycle 4: Load career opens the picker
+05:58:51.454 f=230395 DUMP cycle 4: picker screen=LoadCareer selected=Load career
+    BTN[on] Autosave: Ready | Marlow Heath | Season 1, day 0, round 0/38, position 13
+    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6
     BTN[off] Manual slot 2: Empty
     BTN[off] Manual slot 3: Empty
     BTN[on] Back
-03:38:21.854 f=305151 click 'Autosave: Ready | Pendleton City | Season 1, day 0, round 0/38, position 16'
-03:38:21.911 f=305160 PASS cycle 5: loading the autosave resumes Pendleton City
-03:38:21.912 f=305160 click 'Return to Main Menu (without saving)'
-03:38:21.930 f=305165 click 'Load career'
-03:38:21.949 f=305170 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 5'
-03:38:22.005 f=305179 PASS cycle 5: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 5 | Rounds 2/38
+05:58:51.455 f=230395 click 'Autosave: Ready | Marlow Heath | Season 1, day 0, round 0/38, position 13'
+05:58:51.500 f=230402 PASS cycle 4: loading the autosave resumes Marlow Heath
+05:58:51.503 f=230402 click 'Return to Main Menu (without saving)'
+05:58:51.520 f=230407 click 'Load career'
+05:58:51.541 f=230412 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6'
+05:58:51.590 f=230420 PASS cycle 4: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 6 | Rounds 2/38
  / Last action: Career resumed
- / Injured players: 0. Board target: position 10 or better. Objective on track.
- / Next: Marlow Heath (away), day 21, in 7 days.
-03:38:22.007 f=305179 click 'Return to Main Menu (without saving)'
-03:38:22.027 f=305184 click 'Continue career'
-03:38:22.089 f=305193 PASS cycle 5: Continue resumes the newest save (Pendleton City)
-03:38:22.092 f=305193 PASS cycle 5: no error notice
-03:38:22.093 f=305193 click 'Return to Main Menu (without saving)'
-03:38:22.114 f=305198 PASS final quit to Main Menu
-03:38:22.116 f=305198 save directory: autosave.slot, autosave.tdsave, manual-1.slot, manual-1.tdsave
-03:38:22.117 f=305198 SUMMARY pass=108 fail=0 consoleErrors=0
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 7 days.
+05:58:51.591 f=230420 click 'Return to Main Menu (without saving)'
+05:58:51.608 f=230425 click 'Continue career'
+05:58:51.669 f=230436 PASS cycle 4: Continue resumes the newest save (Marlow Heath)
+05:58:51.670 f=230436 PASS cycle 4: no error notice
+05:58:51.671 f=230436 click 'Return to Main Menu (without saving)'
+05:58:51.690 f=230441 PASS cycle 5: quit to Main Menu
+05:58:51.694 f=230441 click 'New career'
+05:58:51.716 f=230446 PASS New career opens the setup page
+05:58:51.719 f=230446 PASS Start is disabled before a club is chosen (20 clubs)
+05:58:51.719 f=230446 click 'Select Pendleton City'
+05:58:51.735 f=230451 click 'Start career'
+05:58:51.816 f=230464 PASS Start reaches Career Home: Pendleton City | Season 1, day 0 | Position 16 | Rounds 0/38
+ / Last action: Career started
+ / Injured players: 0. Board target: position 10 or better. Objective off track.
+ / Next: Dunhaven United (away), day 7, in 7 days.
+05:58:51.817 f=230464 PASS cycle 5: new career autosave names Pendleton City
+05:58:51.819 f=230464 click 'Return to Main Menu (without saving)'
+05:58:51.836 f=230469 click 'Load career'
+05:58:51.857 f=230474 PASS cycle 5: Load career opens the picker
+05:58:51.861 f=230474 DUMP cycle 5: picker screen=LoadCareer selected=Load career
+    BTN[on] Autosave: Ready | Pendleton City | Season 1, day 0, round 0/38, position 16
+    BTN[on] Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6
+    BTN[off] Manual slot 2: Empty
+    BTN[off] Manual slot 3: Empty
+    BTN[on] Back
+05:58:51.862 f=230474 click 'Autosave: Ready | Pendleton City | Season 1, day 0, round 0/38, position 16'
+05:58:51.907 f=230482 PASS cycle 5: loading the autosave resumes Pendleton City
+05:58:51.909 f=230482 click 'Return to Main Menu (without saving)'
+05:58:51.927 f=230487 click 'Load career'
+05:58:51.948 f=230492 click 'Manual slot 1: Ready | Ashford Town | Season 1, day 14, round 2/38, position 6'
+05:58:51.998 f=230500 PASS cycle 5: manual slot 1 loads the round-2 save: Ashford Town | Season 1, day 14 | Position 6 | Rounds 2/38
+ / Last action: Career resumed
+ / Injured players: 1. Board target: position 10 or better. Objective on track.
+ / Next: Juniper Park FC (away), day 21, in 7 days.
+05:58:51.999 f=230500 click 'Return to Main Menu (without saving)'
+05:58:52.020 f=230505 click 'Continue career'
+05:58:52.085 f=230515 PASS cycle 5: Continue resumes the newest save (Pendleton City)
+05:58:52.087 f=230515 PASS cycle 5: no error notice
+05:58:52.087 f=230515 click 'Return to Main Menu (without saving)'
+05:58:52.106 f=230520 PASS final quit to Main Menu
+05:58:52.109 f=230520 save directory: autosave.slot, autosave.tdsave, manual-1.slot, manual-1.tdsave
+05:58:52.113 f=230520 saves at end: 4 file(s)
+05:58:52.115 f=230520   autosave.slot 402 B sha256/16=0f3cb3e81011b71a :: format=2 sequence=11 seasonSaveFormat=8 worldSeed=3677821223376789727 managedClubId=15 seasonNumber=0 worldDay=0 roundsPlayed=0 roundCount=38 leaguePosition=16 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=3bfe9f1c51c9bb895eaaf91436b19bf89a82c5ae0eb06c18e32035174be6c290 managedClubName=Pendleton City 
+05:58:52.119 f=230520   autosave.tdsave 116818 B sha256/16=3bfe9f1c51c9bb89
+05:58:52.120 f=230520   manual-1.slot 399 B sha256/16=d7cba10768c6e086 :: format=2 sequence=4 seasonSaveFormat=8 worldSeed=12320643717415727782 managedClubId=0 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=6 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=63e2a0c6e6612bb711d3baccee6afaa52e79701c5c037797a3bb257fa6cd5c8b managedClubName=Ashford Town 
+05:58:52.123 f=230520   manual-1.tdsave 116818 B sha256/16=63e2a0c6e6612bb7
+05:58:52.124 f=230520 SUMMARY pass=108 fail=0 consoleErrors=0

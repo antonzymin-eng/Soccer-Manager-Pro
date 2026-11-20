@@ -8,7 +8,8 @@ tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
 tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
 unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11; display 1920x1080 at 96 DPI
 worktree: fresh detached worktree, GIT_LFS_SKIP_SMUDGE=1 then git lfs pull for Assets/** and src/**; Assets/Scripts = junction to its own src
-compile: 2026-11-20T02:21:08Z - 2026-11-20T02:22:00Z, empty Library (see compile.txt for the AI Assistant package-cache copy)
+saves: the player's careers folder did not exist before the first run; runs.txt gives each run's starting saves
+compile: 2026-11-20T05:43:09Z - 2026-11-20T05:44:20Z, empty Library (see compile.txt for the AI Assistant package-cache copy)
 
 Untracked or modified in the worktree for the player builds only (never committed):
   ?? Assets/CareerProbe/CareerProbe.cs (+ .meta)   scratch driver, archived as career-probe-driver.cs.txt
@@ -17,6 +18,6 @@ Untracked or modified in the worktree for the player builds only (never committe
 porcelain under src and Packages after all runs: 0 lines
 
 Build variant A is byte-for-byte the tracked scene this change commits (_enableCareer: 1, _textScale: 1).
-build A: start 2026-11-20T03:08:49Z exit 0 end 2026-11-20T03:09:02Z
-build B: start 2026-11-20T03:08:27Z exit 0 end 2026-11-20T03:08:48Z
-build C: start 2026-11-20T02:37:08Z exit 0 end 2026-11-20T02:37:40Z
+build A: start 2026-11-20T05:44:54Z exit 0 end 2026-11-20T05:45:55Z
+build B: start 2026-11-20T05:45:55Z exit 0 end 2026-11-20T05:46:08Z
+build C: start 2026-11-20T05:46:09Z exit 0 end 2026-11-20T05:46:21Z

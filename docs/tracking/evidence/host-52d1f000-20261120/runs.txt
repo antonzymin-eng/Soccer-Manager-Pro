@@ -2,26 +2,36 @@ Created: 2026-11-20. Governing runs (UTC). Each player was launched as
   SystemXI.exe -screen-fullscreen 0 -screen-width 1920 -screen-height 1080 -logFile <log> -careerProbe <mode> -probeDir <dir> [-probeKeys 1 -probeKeySize <WxH>]
 Builds: A = _enableCareer 1, _textScale 1 (the tracked scene of this change); B = _enableCareer 1, _textScale 2; C = _enableCareer 0, _textScale 1 (main before this change).
 
-item6: build A; 2026-11-20T03:23:58Z -> exit 0 2026-11-20T03:38:24Z; SUMMARY pass=108 fail=0 consoleErrors=0; "Exception" in player log: 0
-layout-100: build A; 2026-11-20T03:38:39Z -> exit 0 2026-11-20T03:43:28Z; SUMMARY pass=233 fail=0 consoleErrors=0; "Exception" in player log: 0
-layout-200: build B; 2026-11-20T03:09:10Z -> exit 0 2026-11-20T03:13:50Z; SUMMARY pass=237 fail=0 consoleErrors=0; "Exception" in player log: 0
-pm1-career-on: build A; 2026-11-20T03:14:36Z -> exit 0 2026-11-20T03:23:44Z; SUMMARY pass=14 fail=0 consoleErrors=0; "Exception" in player log: 0
-pm1-career-off: build C; 2026-11-20T02:37:51Z -> exit 0 2026-11-20T02:47:03Z; SUMMARY pass=11 fail=0 consoleErrors=0; "Exception" in player log: 0
+item6: build A; 2026-11-20T05:46:35Z -> exit 0 2026-11-20T05:58:53Z; SUMMARY pass=108 fail=0 consoleErrors=0; "Exception" in player log: 0
+layout-100: build A; 2026-11-20T05:58:54Z -> exit 0 2026-11-20T06:03:45Z; SUMMARY pass=253 fail=0 consoleErrors=0; "Exception" in player log: 0
+layout-200: build B; 2026-11-20T06:03:46Z -> exit 0 2026-11-20T06:08:45Z; SUMMARY pass=254 fail=0 consoleErrors=0; "Exception" in player log: 0
+pm1-career-on: build A; 2026-11-20T06:08:46Z -> exit 0 2026-11-20T06:17:54Z; SUMMARY pass=14 fail=0 consoleErrors=0; "Exception" in player log: 0
+pm1-career-off: build C; 2026-11-20T06:17:54Z -> exit 0 2026-11-20T06:27:03Z; SUMMARY pass=11 fail=0 consoleErrors=0; "Exception" in player log: 0
 
-Superseded attempts (kept out of this folder; each was caused by the driver, not the game, and was rerun):
-- item6 attempt 1 (02:28-02:35): score-line comparison split on '\n' and missed the '\r\n' line endings, so the
-  score-block check failed on rounds 1 and 2; then the driver hashed manual-1.tdsave while its own FileShare.None
-  handle held it and aborted. Game behaviour up to that point matched the governing run.
-- item6 attempt 2 (02:36-02:55): 107 passed / 1 failed. The failed check rejected any notice containing "cannot
-  access", but after the manual-save retry the notice correctly falls back to the still-held autosave failure,
-  whose operating-system text is the same. Its build folder was also rebuilt mid-run. Superseded by the governing run.
-- layout-100 attempt 1 (02:56-02:59): long-name text injected into labels was not restored, so a later click by
-  label found nothing and the driver aborted; the menu pages were also visited after the round, and leaving
-  Career Home clears the score block (expected behaviour), so the long-name pass saw no scores.
-- layout-100 attempt 2 (03:00): stopped by hand; the 1920x1080 panel cannot open a 2560x1440 window, so the driver
-  was changed to emulate that size with the canvas scale factor.
-- layout-100 attempt 3 (03:03-03:07): 231 passed / 1 failed. The failed check compared the table with score totals
-  accumulated in this run only, but the continued career had a round from an earlier run. Its keyboard pass never
-  reached the first calendar week; the driver now pages to it. Superseded by the governing run.
-- pm1-career-off ran on build C made at 02:37 from an earlier driver revision. Every later driver change was in the
-  item 6, layout, resize and keyboard routines; the PM-1 routine and the helpers it calls are unchanged.
+Starting saves. The runs above ran one after another from build output to exit, in the order listed, and nothing else
+touched the player's careers folder. Each probe log lists every file in that folder (size, SHA-256 prefix and the
+.slot sidecar text) at the start and the end of the run. Each run's starting listing equals the previous run's final
+listing, byte for byte:
+- item6: the folder did not exist (0 files). Item 6 created every save it used.
+- layout-100: item 6's final state. The autosave is Pendleton City (club 15) at round 0, day 0, sequence 11, from the
+  last new/load/continue/quit cycle. Manual slot 1 is Ashford Town at round 2, sequence 4. Continue resumes Pendleton
+  City, and the run plays its round 1.
+- layout-200: layout-100's final state. Pendleton City at round 1 in the autosave (sequence 12) and manual slot 2
+  (sequence 13, the keyboard save). Manual slot 1 is unchanged. The run plays round 2.
+- pm1-career-on: layout-200's final state. Pendleton City at round 2 (autosave sequence 14, manual slot 2 sequence 15).
+- pm1-career-off: the same six files. Neither PM-1 run changed any save; each run's final listing equals its start.
+
+Superseded: the whole first round of these checks (evidence folder v1.0, PR #556 commit a0ab106c), at the same source
+and with the same builds:
+  item6 108/0 (03:23-03:38 UTC), layout-100 233/0 (03:38-03:43), layout-200 237/0 (03:09-03:13),
+  pm1-career-on 14/0 (03:14-03:23), pm1-career-off 11/0 (02:37-02:47).
+Review of PR #556 found two gaps, and both were real:
+- The score-block check passed when the block was taller than the viewport ("readable || tall") without showing that
+  every line came into view. The screenshot labelled "scores" was taken after the sweep ended. With long names it
+  showed only standings rows.
+- The README said items 7 and 8 continued the career item 6 left. The 200% layout and Career-on PM-1 runs finished
+  before the governing item 6 run began. They continued careers from superseded attempts, and the saves they started
+  from were not recorded.
+The driver now checks every score line against the visible area at overlapping scroll positions, with a screenshot
+at each position on Career Home. It also logs the saves folder at the start and end of each run. Everything was
+rerun once, in the order above, from an empty folder. The v1.0 logs and screenshots remain in git history at a0ab106c.
