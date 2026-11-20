@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="Spike.uss" />
+    <ui:VisualElement name="spike-rail" class="spike-rail">
+        <ui:ScrollView name="spike-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden">
+            <ui:VisualElement class="spike-content">
+                <ui:Label text="UI Toolkit feasibility" class="spike-heading" />
+                <ui:Label name="spike-status" class="spike-copy" />
+                <ui:Button name="cycle-scale" text="Cycle text scale" class="spike-control" />
+                <ui:Label name="long-copy" class="spike-copy spike-reading-stop" focusable="true" tabindex="0"
+                    text="Northbridge Athletic and International Railway Workers Football Club — Saturday 26 September, 15:00, at the Saint-Étienne Municipal Stadium. This longer fixture description checks whether every line remains readable with expanded text." />
+                <ui:Label name="font-sample" class="spike-copy" text="Font sample · Ålesund · Łódź · São Paulo · Žilina · 0123456789" />
+                <ui:Button name="submit-probe" text="Test keyboard activation" class="spike-control" />
+                <ui:Button name="return-focus" text="Return focus to UGUI" class="spike-control" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

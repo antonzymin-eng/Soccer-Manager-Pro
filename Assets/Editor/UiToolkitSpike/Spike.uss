@@ -1,0 +1,59 @@
+.spike-rail {
+    --spike-text: 16px;
+    --spike-heading: 23px;
+
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    right: 12px;
+    width: 32%;
+    min-width: 260px;
+    max-width: 440px;
+    background-color: #151e2b;
+    color: #f3f6ff;
+}
+
+.spike-rail.spike-large-text {
+    --spike-text: 32px;
+    --spike-heading: 46px;
+}
+
+.spike-rail > ScrollView {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.spike-content {
+    padding: 12px;
+}
+
+.spike-heading {
+    font-size: var(--spike-heading);
+    white-space: normal;
+    -unity-font-style: bold;
+}
+
+.spike-copy,
+.spike-control {
+    font-size: var(--spike-text);
+    white-space: normal;
+}
+
+.spike-copy {
+    margin-bottom: 10px;
+}
+
+.spike-control {
+    min-height: 36px;
+    margin: 0 0 10px 0;
+    padding: 6px 10px;
+    background-color: #263b58;
+    color: #f3f6ff;
+}
+
+.spike-control:focus,
+.spike-reading-stop:focus {
+    background-color: #f0c66e;
+    color: #152131;
+}
