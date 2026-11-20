@@ -831,7 +831,10 @@ ever fully on screen during a Tab cycle; at 100%, 1366×768, only 2 of 21 were. 
 answer. The table shows eight rows under a *Positions 9 to 16 of 20* heading, with *Higher positions*,
 *Your position* and *Lower positions* controls after the rows. *Your position* is the default page. Re-run,
 every page was fully readable by keyboard at 100% and 200% at 1366×768 and 1920×1080. With 62-character
-names and expanded copy at 1366×768 and 200%, two pages still miss their heading and two rows.
+names and expanded copy at 1366×768 and 200%, two pages missed their heading and two rows. Review fixes
+in the same PR made the page heading and rows one Tab stop. Focus shows its top even when the page is
+taller than the window, and Down/Up scroll it. A page change also keeps the focused control in view.
+Re-run, every page was readable at all three text settings and both sizes.
 
 ## 7.6 S1 usability tasks
 

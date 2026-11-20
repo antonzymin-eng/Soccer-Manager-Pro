@@ -1,6 +1,7 @@
 // File:     src/client-app/S0FocusNavigation.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08 (explicit Match View order)
+// Modified: 2026-11-20 (keyboard-scrollable content regions are Tab stops)
+// Modified (prior): 2026-10-08 (explicit Match View order)
 // Author:   —
 // Spec:     S0 journey §14.3, I-Q15, Code Standards #20
 // Purpose:  Host-free focus traversal, composite pitch entry and current feedback target decisions.
@@ -21,12 +22,14 @@ namespace TacticalDirector.ClientApp
             /// <summary>An action or disclosure in normal traversal.</summary>
             Action,
             /// <summary>One member of the pitch's single Tab-entry group.</summary>
-            PitchMarker
+            PitchMarker,
+            /// <summary>Read-only content in normal traversal that arrow keys scroll while it has focus.</summary>
+            Region
         }
 
-        /// <summary>Only actions and the current pitch entry participate in Tab traversal.</summary>
+        /// <summary>Only actions, content regions and the current pitch entry participate in Tab traversal.</summary>
         public static bool IsTabStop(Role role, int markerIndex, int pitchEntryIndex)
-            => role == Role.Action || (role == Role.PitchMarker && markerIndex >= 0 && markerIndex == pitchEntryIndex);
+            => role == Role.Action || role == Role.Region || (role == Role.PitchMarker && markerIndex >= 0 && markerIndex == pitchEntryIndex);
 
         /// <summary>First available selector, or -1 when no selector survives.</summary>
         public static int FirstAvailable<T>(IReadOnlyList<T> items, Predicate<T> isAvailable)
@@ -116,4 +119,5 @@ namespace TacticalDirector.ClientApp
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Consumed focus policy for action/anchor/pitch traversal, dialog selectors and retained feedback. |
 // | 1.1     | 2026-10-08 | —      | Explicit logical Tab order with anchor entry at the next listed hierarchy successor (journey §9.3). |
+// | 1.2     | 2026-11-20 | —      | Region role: a keyboard-scrollable read-only content block is a Tab stop (Career Home standings). |
 #endregion

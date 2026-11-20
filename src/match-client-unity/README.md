@@ -382,7 +382,9 @@ To validate in an isolated host checkout:
    career labels. At the smallest supported layout and 200% text scale, verify that all ten standings
    columns align with their headers, long club names wrap without clipping or overlap, the entire
    scores block is readable when scrolled, and every standings page (Higher / Your / Lower positions)
-   comes fully on screen by keyboard. All career pages use the existing wrapped/scrolled factory
+   comes fully on screen by keyboard: at Tab stops, or with the arrow keys while the standings page
+   (heading and rows, one Tab stop) has focus. After every page change the focused control stays
+   in view. All career pages use the existing wrapped/scrolled factory
    and shared focus rings.
 8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content
    identity and report return behavior are preserved. No Career Home → Match or Report → Career Home

@@ -27,9 +27,12 @@ Its only display is 1920×1080.\
 | `editmode-paged-results.xml.xz`, `editmode-paged-summary.txt` | The same suites with the standings paging change: 350 passed, 0 failed, 3 skipped. |
 | `keys-paged-100.log`, `keys-paged-200.log`, `keys-paged-200-long-expanded.log` | The keyboard runs repeated on the paged standings. |
 | `item7-paged-*.png` | Standings page 2 with focus on *Lower positions*, 1366×768. |
+| `editmode-review-results.xml.xz`, `editmode-review-summary.txt` | The suites again with the PR #557 review fixes: 351 passed, 0 failed, 3 skipped. |
+| `keys-review-100.log`, `keys-review-200.log`, `keys-review-200-long-expanded.log` | The keyboard runs with the review fixes, which also assert focus visibility after every Enter and drive the arrow keys. |
+| `item7-review-*.png` | Page 1 with focus on the standings page region, 1366×768, at 200% and 200% with long names. |
 | `player-log-summary.txt` | Exception counts in the player logs, and one engine diagnostic from the discarded first attempt. |
 | `item6-*.png`, `item7-*.png`, `item8-*.png` | Screenshots (1366×768 unless named 1920). |
-| `career-accept-probe.cs.txt`, `career-accept-probe-paged.cs.txt`, `build-probe-player.cs.txt`, `run-accept.ps1.txt`, `long-copy-patch.py.txt` | Scratch driver, build script, launcher and the long-name substitution. None were committed. |
+| `career-accept-probe.cs.txt`, `career-accept-probe-paged.cs.txt`, `career-accept-probe-review.cs.txt`, `build-probe-player.cs.txt`, `run-accept.ps1.txt`, `long-copy-patch.py.txt` | Scratch driver, build script, launcher and the long-name substitution. None were committed. |
 
 ## Compile and EditMode (#554)
 
@@ -130,10 +133,53 @@ Tab. The probe logged that as a failure to reach it, which is a probe expectatio
 Alignment, clipping and the score-block checks are unchanged from the first run. The player logs show
 0 exceptions.
 
-**Residual:** with the harness's 62-character club names and 40% expanded copy at 1366×768 and 200%,
+**Residual (closed by the review fixes below):** with the harness's 62-character club names and 40% expanded copy at 1366×768 and 200%,
 most rows wrap to two or three lines. An eight-row page plus its three controls is then taller than the
 window, so the heading and the top rows of a full page never fit beside a focused control. Shipped names
 pass. The #551 fixture list has the same page size and was never tested with long names.
+
+## Review fixes (PR #557), re-run
+
+The PR review raised two problems, both visible in the committed logs above:
+
+1. **Focus left the screen after a page change.** Moving from the four-row last page to an eight-row page
+   grew the table above the selected button. The button stayed selected, so nothing scrolled it back into
+   view: `OUTSIDE-VIEW` after *Higher positions* at 200% (`keys-paged-200.log`) and after *Your position*
+   at 100% (`keys-paged-100.log`). The binding refreshed paging focus before it replaced the rows.
+2. **The long-name pages were not readable by keyboard,** as recorded in the residual above.
+
+Fixes (candidate `src` tree `511aa40e`; captured 17:43–18:03 UTC on November 20):
+
+- After a page change, the focused paging control is revealed again once the new rows are laid out.
+- Focusing a paging control first shows the whole standings block (title, page heading, rows and
+  controls) when it fits the window.
+- The page heading and rows form one *Standings page* Tab stop, a new `Region` focus role. Focusing it
+  shows its top, even when it is taller than the window. While it has focus, Down and Up scroll it by
+  half a window, never past its edges. The page size stays at eight rows.
+
+EditMode: 351 passed, 0 failed, 3 skipped, including a new focus-role test. Players E, B and C were rebuilt
+from the candidate. The probe now checks that focus is in view after every Enter on a standings control,
+and it presses Down on the region until the region's bottom edge is on screen, then Up back to the top.
+One thing changed in the method after the first long-name run: arrow keys were first posted without
+their scan code and the extended-key bit, and the player ignored them. A real keyboard sends both, so the
+probe now does too. That run was discarded, and player C was rebuilt (product *System XI Probe C6*) and
+re-run.
+
+| Check | 100% | 200% | 200% long + expanded |
+| --- | --- | --- | --- |
+| Focus in view after every Enter on *Higher* / *Your* / *Lower positions* (both sizes) | PASS | PASS | PASS |
+| Pages fully readable by keyboard, 1366×768 | 3 of 3 | 3 of 3 | **3 of 3** (before: 1 of 3) |
+| Pages fully readable by keyboard, 1920×1080 | 3 of 3 | 3 of 3 | 3 of 3 |
+| Heading and every row at a Tab stop alone, without arrows | every page | every page | every page |
+| Arrow keys reach the bottom of a page taller than the window | — (fits) | — (fits) | 1 Down per full page, 1 Up back to the top |
+| Probe result | 72 pass, 0 fail | 78 pass, 0 fail | 71 pass, 1 fail |
+
+The one failure is the existing finding that the seven expanded short headers wrap to two lines at
+1366×768. The Career Home Tab cycle now has nine stops: the region between *Return to Main Menu* and the
+paging controls is the new one. Shift+Tab is still the exact reverse. The player logs show 0 exceptions.
+The *Standings page* focus ring surrounds the whole page (`item7-review-200long-1366-standings-region-page1.png`).
+When the page is taller than the window, the probe logs the region as `inView-tall-top`: its top edge is on
+screen and it fills the window.
 
 ## Item 8 — PM-1 journey with Career on and off
 
@@ -178,3 +224,4 @@ Scene settings, the probe and the build script are recorded in `source-identity.
 | 1.0 | 2026-11-20 | Created: #554 compile and EditMode; P7b checklist items 6, 7 and 8 on the pinned host. |
 | 1.1 | 2026-11-20 | Standings paging fix chosen by the owner: compile, EditMode and keyboard re-run at 100%, 200% and 200% long names. |
 | 1.2 | 2026-11-20 | Folder renamed from `host-52d1f000-20261120` (taken by PR #556's run, merged first); links point at the archived issue. |
+| 1.3 | 2026-11-20 | PR #557 review fixes: focus revealed after a page change; standings page region with arrow-key scrolling; EditMode and keyboard re-run; long-name residual closed. |

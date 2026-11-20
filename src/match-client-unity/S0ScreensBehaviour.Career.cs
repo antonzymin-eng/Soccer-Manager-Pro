@@ -1,6 +1,6 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-20
+// Modified: 2026-11-20 (standings region Tab stop; focus revealed after a page change)
 // Modified (prior): 2026-11-19
 // Modified (prior): 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
 // Author:   —
@@ -47,11 +47,13 @@ namespace TacticalDirector.MatchClientUnity
         private bool _isCareerScheduleOpen, _isCareerCalendarSelected;
         private int _careerScheduleSeason = -1;
         private RectTransform _careerStandingsRows;
+        private Selectable _careerStandingsRegion;
         private Text _careerStandingsHeading;
         private Button _careerHigherPage, _careerOwnPage, _careerLowerPage;
         private int? _careerStandingsFirst;
         private int _careerStandingsSeason = -1;
         private CareerStandingsPage _careerStandingsPage;
+        private int _careerStandingsShownFirst = -1, _careerStandingsShownCount = -1;
         private uint? _careerCalendarDay;
         private CareerCalendarWeek _careerWeek;
         private int? _careerFixtureFirst;
@@ -118,8 +120,16 @@ namespace TacticalDirector.MatchClientUnity
             CareerControl(h, C("quit"), career.QuitToMainMenu, _careerHomeScroll);
             _careerStandings = _ui.Column("League standings", h, 0);
             _ui.Label(_careerStandings, C("table"), S0UiFactory.TextStyle.Subheading);
-            _careerStandingsHeading = _ui.Label(_careerStandings, "");
-            _careerStandingsRows = _ui.Column("Standings rows", _careerStandings, 0);
+            // The page heading and rows form one Tab stop. Focus shows its top even when it is taller than the window,
+            // and arrow keys scroll it, so a page is readable whatever the row heights.
+            RectTransform region = _ui.Column("Standings page", _careerStandings, 0);
+            _careerStandingsRegion = region.gameObject.AddComponent<Selectable>();
+            _careerStandingsRegion.navigation = new Navigation { mode = Navigation.Mode.None };
+            _careerStandingsRegion.transition = Selectable.Transition.None;
+            Register(_careerStandingsRegion, _careerHomeScroll, S0FocusNavigation.Role.Region);
+            _revealGroups[_careerStandingsRegion] = _careerStandings;
+            _careerStandingsHeading = _ui.Label(region, "");
+            _careerStandingsRows = _ui.Column("Standings rows", region, 0);
             _careerTableCells = new string[_careerText.TableHeaders.Count];
             Text[] headers = CreateCareerTableRow(S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < headers.Length; i++)
@@ -133,6 +143,9 @@ namespace TacticalDirector.MatchClientUnity
                 () => _careerStandingsFirst = null, _careerHomeScroll);
             _careerLowerPage = CareerControl(paging, C("table.page.next"),
                 () => _careerStandingsFirst = _careerStandingsPage.NextFirst, _careerHomeScroll);
+            _revealGroups[_careerHigherPage] = _careerStandings;
+            _revealGroups[_careerOwnPage] = _careerStandings;
+            _revealGroups[_careerLowerPage] = _careerStandings;
         }
 
         private Text[] CreateCareerTableRow(S0UiFactory.TextStyle style)
@@ -174,6 +187,10 @@ namespace TacticalDirector.MatchClientUnity
             _careerStandingsPage = _careerStandingsFirst.HasValue
                 ? CareerStandingsPage.At(in home, _careerStandingsFirst.Value)
                 : CareerStandingsPage.Current(in home);
+            bool pageChanged = _careerStandingsPage.First != _careerStandingsShownFirst ||
+                               _careerStandingsPage.Count != _careerStandingsShownCount;
+            _careerStandingsShownFirst = _careerStandingsPage.First;
+            _careerStandingsShownCount = _careerStandingsPage.Count;
             S0UiFactory.Set(_careerStandingsHeading, _careerText.StandingsHeading(in home, in _careerStandingsPage));
             RefreshSchedulePaging(_career.IsInitialized && !_career.IsBusy, _careerStandingsPage.HasPrevious,
                 _careerStandingsPage.HasNext, _careerHigherPage, _careerOwnPage, _careerLowerPage);
@@ -194,6 +211,13 @@ namespace TacticalDirector.MatchClientUnity
                 for (int column = 0; column < cells.Length; column++)
                     S0UiFactory.Set(cells[column], _careerTableCells[column]);
             }
+
+            // A new page changes the height above the paging controls, so reveal the focused control again once
+            // the new rows are in place; a control that stays selected would otherwise be left off screen.
+            Selectable focused = EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
+            if (pageChanged && focused != null && _revealGroups.TryGetValue(focused, out RectTransform group) &&
+                group == _careerStandings)
+                Focus(focused);
         }
 
         private void BuildCareerSchedule(RectTransform home)
@@ -371,4 +395,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.8 | 2026-11-19 | — | Page the fixture list (Earlier / Upcoming / Later fixtures) so every row is reachable by keyboard at 200% text scale; share the boundary focus rule with week paging. |
 // | 1.9 | 2026-11-19 | — | Render round scores and aligned league standings from the cached snapshot. |
 // | 1.10 | 2026-11-20 | — | Page the standings (eight rows under a position heading) with Higher / Your / Lower position controls after the rows, sharing the fixture paging focus rule, so every row is reachable by keyboard at 200% text scale. |
+// | 1.11 | 2026-11-20 | — | PR #557 review: the page heading and rows are one Region Tab stop (top shown on focus, arrow keys scroll it), the paging controls reveal the whole standings block when it fits, and a page change reveals the focused control after the new rows are laid out. |
 #endregion

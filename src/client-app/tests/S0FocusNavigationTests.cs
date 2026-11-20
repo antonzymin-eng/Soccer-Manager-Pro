@@ -1,6 +1,7 @@
 // File:     src/client-app/tests/S0FocusNavigationTests.cs
 // Created:  2026-10-08
-// Modified: 2026-10-08 (explicit Match View order)
+// Modified: 2026-11-20 (content regions are Tab stops)
+// Modified (prior): 2026-10-08 (explicit Match View order)
 // Author:   —
 // Spec:     S0 journey §14.3, I-Q15, Code Standards #20
 // Purpose:  Permanent regressions for composite pitch traversal, modal/selector eligibility and retained feedback.
@@ -84,6 +85,25 @@ namespace TacticalDirector.ClientApp.Tests
             Predicate<Target> eligible = t => t.Available && S0FocusNavigation.IsTabStop(t.Role, t.Marker, 0);
             Assert.AreEqual(3, S0FocusNavigation.Move(order, 4, 1, eligible));
             Assert.AreEqual(4, S0FocusNavigation.Move(order, 3, -1, eligible));
+        }
+
+        [Test]
+        public void ContentRegionIsATabStopBetweenActionsButAnAnchorIsNot()
+        {
+            var order = new[]
+            {
+                new Target(S0FocusNavigation.Role.Action),
+                new Target(S0FocusNavigation.Role.Anchor),
+                new Target(S0FocusNavigation.Role.Region),
+                new Target(S0FocusNavigation.Role.Action),
+                new Target(S0FocusNavigation.Role.Region, available: false)
+            };
+            Predicate<Target> eligible = t => t.Available && S0FocusNavigation.IsTabStop(t.Role, t.Marker, 0);
+            Assert.AreEqual(2, S0FocusNavigation.Move(order, 0, 1, eligible));
+            Assert.AreEqual(3, S0FocusNavigation.Move(order, 2, 1, eligible));
+            Assert.AreEqual(0, S0FocusNavigation.Move(order, 3, 1, eligible));
+            Assert.AreEqual(2, S0FocusNavigation.Move(order, 3, -1, eligible));
+            Assert.IsFalse(S0FocusNavigation.IsTabStop(S0FocusNavigation.Role.Anchor, -1, 0));
         }
 
         [Test]
@@ -201,4 +221,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Composite Tab/arrow, visibility/modal, first-selector and repeated-history regressions for the shipping focus policy. |
 // | 1.1     | 2026-10-08 | —      | Journey §9.3 Match View order: statistics before earlier feedback, anchor entry and end wrap. |
+// | 1.2     | 2026-11-20 | —      | Region role: a content region is a Tab stop in hierarchy order; anchors stay outside traversal. |
 #endregion
