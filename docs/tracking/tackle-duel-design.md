@@ -1,7 +1,7 @@
 # Tackle duel — design note (scaling back #440, proposing a richer duel)
 
-> **Created:** November 16, 2026 · **Version:** 0.7 · **Status:** DRAFT — design supplement, not an
-> approved spec. Nothing here is implemented, measured or authorized. Every constant below is a
+> **Created:** November 16, 2026 · **Version:** 0.8 · **Status:** DRAFT — design supplement, not an
+> approved spec. A′ (§3–§4) is implemented and merged (PR #549, `ERR-014-011`, November 19, 2026 UTC); nothing else here is implemented, measured or authorized. Every constant below is a
 > proposal, and every decision in §7 is the owner's.
 > **Purpose:** The owner reviewed #440 Stage B and judged the tackle model a poor fit for real
 > carrier-versus-tackler outcomes. In real duels, sometimes the carrier lets the ball run too far and
@@ -10,7 +10,7 @@
 > down to its correctness fix, and lays out a staged duel that uses state the engine already tracks.
 > **Base facts:** main `d290d844` (#543 kickoff formation/Duty, #539 career, #547 W13.1 switched off).
 > Owning spec for tackle resolution: Defensive AI #14 §3.6.5 (`ERR-014-006`). #440 Stage A design:
-> `w-440-ball-loose-design.md` on `codex/440-ball-loose` (PR #544, unmerged).
+> `w-440-ball-loose-design.md` (PR #544, merged November 19, 2026 UTC).
 
 ## 1. What exists today
 
@@ -426,6 +426,7 @@ A′'s rule stands: the ball is released where it lies, with the §4 velocity. v
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 0.8 | November 19, 2026 | — | Status only: A′ merged (PR #549); PR #544 merged. D2 and D4–D6 remain open. No formula change. |
 | 0.7 | November 18, 2026 | — | §7: D1 approved by the owner and recorded in `w-440-ball-loose-design.md` v1.6 (PR #544). D2 and D4–D6 remain open. No formula change. |
 | 0.6 | November 18, 2026 | — | Codex review of v0.5 at `1079bf9c` (one P2). §4's 0.01 m facing fallback reversed `n` for a tackler directly in front, a probability cliff (P(Foul) 0.0387 → 0.1132) that contradicted §6's continuity. §5.2 adds a near-coincident fade: side of approach and closing speed blend to neutral below `APPROACH_BLEND_M` (new, 0.10 m `[GT]`), so B′ adds seven `[GT]` constants. §4 limits the fallback to the A′ knock direction; §5.4 and §6 use effective closing speed `c̃`. Worked examples unchanged. New near-coincident sweeps (7.7 million sign evaluations, 2.4 million continuity pairs, separations from 0) found no violation and no jump. §3 updated. |
 | 0.5 | November 16, 2026 | — | Owner review: B′ judged overbuilt. §5 is rewritten as a slim duel on today's §3.6.5 skeleton, with the same eligibility, one target and one draw. It adds side-of-approach exposure, heavy touch as exposure (new `TOUCH_EXPOSE_K` 0.10 s/m), closing-speed commitment and timing, and keeps the existing Aggression term as the man-first lean. Withdrawn: the virtual ball point, two-target geometry, reach taper and drawn intent: 12 constants withdrawn and one added (`TOUCH_EXPOSE_K`), so B′'s new `[GT]` constants fall from 17 to 6, plus one `[CROSS]`. Kept from the reviews: closing-speed commitment, the set-speed-conditional lunge sign and continuity. The from-behind sign now holds per attempt. §3 and §7 are updated, and D3 is withdrawn. Three new worked examples; sign sweeps run on the v0.5 formulas found no violation. |

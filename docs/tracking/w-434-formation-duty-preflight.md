@@ -1,8 +1,8 @@
 # #434 formation and Duty — approved implementation contract
 
-**Created:** November 9, 2026. **Updated:** November 10, 2026. **Version:** 1.6.
+**Created:** November 9, 2026. **Updated:** November 19, 2026. **Version:** 1.7.
 **Purpose:** Preserve the approved kickoff, tactic, save and comparison decisions.
-**Status:** Runtime unchanged; review follow-up adds per-team reporting and allocation coverage. Trace diagnosis HOLD for Opus; owner-run pinned Unity passed at `75d62186` (0 failed).
+**Status:** Runtime unchanged; review follow-up adds per-team reporting and allocation coverage. Trace diagnosis HOLD for Opus; owner-run pinned Unity passed at `75d62186` (0 failed). **Merged to main November 16, 2026** (PR #543, `75485fca`) with the trace diagnosis still on HOLD and no diagnosis result recorded.
 **Analyzed base:** `d4b026aa951432d342217314b8c4d49b53a19e7d`.
 **Implementation/evidence:** [retained package](evidence/formation-duty-20261109/README.md).
 
@@ -204,7 +204,7 @@ with active/pending rotations, non-Support replay, real selected IDs, invalid li
 mapping versus corrupt-save rejection and exact Support bits. Two restart fixture
 clock jumps now initialize kickoff normally; assertions remain unchanged.
 
-Both PRs remain draft and unmerged. #440 Stage A is an independent main-based
+Both PRs were draft and unmerged when this contract was written; PR #543 merged November 16, 2026 and PR #544 November 19, 2026 (UTC). #440 Stage A is an independent main-based
 observation investigation; no #440 gameplay fix is authorized by these decisions.
 
 ## Version history
@@ -215,4 +215,5 @@ observation investigation; no #440 gameplay fix is authorized by these decisions
 | 1.3 | November 9, 2026 | Records direct owner approval of P1–P4, fallback, no bands and slot limitation. |
 | 1.4 | November 10, 2026 | Closeout condenses superseded process history into the accepted contract and points to retained implementation evidence. |
 | 1.5 | November 10, 2026 | Owner-directed per-team reporting/control blocker, raw-request documentation and scoped allocation coverage; trace diagnosis held for Opus and host handoff assigned to owner. No gameplay changes. |
+| 1.7 | November 19, 2026 | Status sync: PR #543 merged November 16, 2026 (`75485fca`) with the trace diagnosis on HOLD and no result recorded; player-control blocker unchanged. No contract change. |
 | 1.6 | November 10, 2026 | Records the owner-run pinned Unity receipt at `75d62186`: clean full-import compile, four-assembly EditMode with 0 failures, formation fixture 42/42. Diagnosis hold and player-control blocker unchanged. |

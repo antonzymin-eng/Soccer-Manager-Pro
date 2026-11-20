@@ -1,6 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 19, 2026 — v1.5: C3 schedule compiled, played and keyboard-checked on the pinned host; the 200% reach gap is fixed by fixture-list paging. Squad screens and the startup scene's remaining UX checks stay open. C3 row updated.
+**Last Updated:** November 19, 2026 — v1.6: Status sync. #434 (PR #543) merged November 16 and #440 A′ (PRs #544, #549) merged November 19 (UTC); step 3 is complete. The step 4 quick-sim check now waits only on career-lane item 5 (#44 T3). Step 3 updated.
+
+**Last Updated (prior):** November 19, 2026 — v1.5: C3 schedule compiled, played and keyboard-checked on the pinned host; the 200% reach gap is fixed by fixture-list paging. Squad screens and the startup scene's remaining UX checks stay open. C3 row updated.
 
 **Last Updated (prior):** November 19, 2026 — v1.4: C4 career shutdown cancellation merged (PR #550) and accepted on the pinned host; its open issue is archived. Career startup stays opt-in pending the startup checks. C4 row updated.
 
@@ -554,7 +556,7 @@ decided.
    passed with 0 `error CS`; whole MatchEngine EditMode at `fdbbff5a` had 939 passed / 0 failed /
    16 skipped / 1 existing inconclusive ([receipt](evidence/host-w8c-fdbbff5a-20261106/README.md)).
 3. **#434 formation/Duty part and #440 (M/L).** Committed by D-05 after B→C; they do not wait for the
-   final D-08. Land with separate attribution. **#434: implemented/measured in draft PR #543; pinned Unity and owner football review pending.** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: Stage A measured in PR #544; owner decision D1 (November 18) cuts the fix to A′, a geometry-derived knock plus a one-frame carrier fence with correctness acceptance only ([design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026)). A′ is implemented with its #14 §3.6.5.8 amendment (`ERR-014-011`) on branch `claude/440-a-prime`; its six-seed characterization and pinned Unity run are done (PR #549); it lands after PR #544.**
+   final D-08. Land with separate attribution. **#434: merged November 16, 2026 (PR #543, `75485fca`); player-facing formation/Duty controls stay blocked ([open issue](open-issues.md#formation-duty-player-control-blocker)).** Kickoff-only scope, accepted roster-index limitation and the one-off P4 structural comparison are recorded in [the approved contract](w-434-formation-duty-preflight.md). **#440: Stage A measured in PR #544; owner decision D1 (November 18) cuts the fix to A′, a geometry-derived knock plus a one-frame carrier fence with correctness acceptance only ([design v1.6](w-440-ball-loose-design.md#owner-decision-d1--november-18-2026)). A′ and its #14 §3.6.5.8 amendment (`ERR-014-011`) merged November 19, 2026 (UTC) in PR #549 (`a78a9a7a`), after PR #544; its characterization and pinned Unity run are done. Step 3 is complete.**
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
@@ -964,6 +966,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.6 | November 19, 2026 | Status sync: #434 and #440 A′ merged; step 3 complete. |
 | v1.5 | November 19, 2026 | C3 schedule validated on the pinned host; fixture list paged for 200% keyboard reach. |
 | v1.4 | November 19, 2026 | C4 shutdown cancellation merged and accepted on the pinned host. |
 | v1.3 | November 19, 2026 | Integrate the schedule candidate with PR #550 and reconcile C3/C4 validation status. |
