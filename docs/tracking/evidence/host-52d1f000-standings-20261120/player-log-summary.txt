@@ -1,0 +1,17 @@
+# Player logs (Unity -logFile) of the final runs: "Exception" lines and match-engine error diagnostics.
+A rounds        0 exceptions
+A resume        0 exceptions
+A cycle1        0 exceptions
+A cycle2        0 exceptions
+E keys (100%)   0 exceptions
+B keys (200%)   0 exceptions
+C keys (200%, long names + expanded copy)  0 exceptions
+E pm1 Career on 0 exceptions
+D pm1 Career off 0 exceptions
+(E pm1 also ran once with an empty text dump; that run's log: 0 exceptions)
+
+# First attempt (discarded for probe defects; see README "Probe corrections"):
+B keys, round 1, development-build console error (not an exception; the match continued):
+  [PassExecutor] Execute() called while executor is unavailable (state=Idle, goalkeeperFeedbackPending=True). Agent=0. Frame=27000
+  Source: src/pass-mechanics/PassExecutor.cs (DEVELOPMENT_BUILD-only LogError on a rejected Execute call).
+  It did not recur in any other round of this run (10 career rounds resolved in total across both attempts).

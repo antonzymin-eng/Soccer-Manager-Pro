@@ -1,0 +1,25 @@
+2026-11-20T15:18:02.5933607Z frame=30 boot mode=pm1 window=1050462 screen=1920x1080 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe E\careers
+2026-11-20T15:18:02.6589378Z frame=41 INFO career entries on the Main Menu: True
+2026-11-20T15:18:02.6635829Z frame=41 dumped texts '01-main-menu'
+2026-11-20T15:18:02.7388302Z frame=41 screenshot pm1-01-main-menu.bmp 1920x1080
+2026-11-20T15:18:02.7449449Z frame=42 click 'Play a demo match'
+2026-11-20T15:18:02.9967317Z frame=77 dumped texts '02-tactics-setup'
+2026-11-20T15:18:03.0620428Z frame=77 screenshot pm1-02-tactics-setup.bmp 1920x1080
+2026-11-20T15:18:03.0660750Z frame=78 click 'Start match'
+2026-11-20T15:18:04.5081408Z frame=144 dumped texts '03-match-view-start'
+2026-11-20T15:18:04.5836575Z frame=144 screenshot pm1-03-match-view.bmp 1920x1080
+2026-11-20T15:27:04.7733902Z frame=49861 INFO match played to full time in 540 s
+2026-11-20T15:27:05.2443487Z frame=49921 dumped texts '04-match-view-full-time'
+2026-11-20T15:27:05.3485452Z frame=49921 screenshot pm1-04-full-time.bmp 1920x1080
+2026-11-20T15:27:05.3574199Z frame=49922 click 'View match report'
+2026-11-20T15:27:05.6013042Z frame=49957 dumped texts '05-report'
+2026-11-20T15:27:05.7010560Z frame=49957 screenshot pm1-05-report.bmp 1920x1080
+2026-11-20T15:27:05.7125762Z frame=49958 click 'Return to main menu'
+2026-11-20T15:27:05.9639382Z frame=49993 PASS Report returns to the Main Menu with the demo available
+2026-11-20T15:27:05.9721194Z frame=49993 PASS career entries on the Main Menu after the report: True
+2026-11-20T15:27:05.9762299Z frame=49993 dumped texts '06-main-menu-after-report'
+2026-11-20T15:27:05.9883402Z frame=49994 click 'Play a demo match'
+2026-11-20T15:27:06.2339010Z frame=50029 PASS a second demo reaches Tactics Setup
+2026-11-20T15:27:06.2427615Z frame=50030 click 'Back'
+2026-11-20T15:27:06.3519934Z frame=50045 PASS Back from Tactics Setup returns to the Main Menu
+2026-11-20T15:27:06.3541509Z frame=50045 DONE mode=pm1 pass=4 fail=0 keys=0

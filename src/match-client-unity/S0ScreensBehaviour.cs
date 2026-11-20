@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.cs
 // Created:  2026-10-08
-// Modified: 2026-11-18
-// Modified (prior): 2026-10-28 (owner decisions: report partial-statistics disclosure title; pop-ups get Close and close on an outside click)
+// Modified: 2026-11-20 (focus reveals tall regions from the top; arrow keys scroll a focused region)
+// Modified (prior): 2026-11-18
 // Author:   —
 // Spec:     P5b / S0 journey §14, binding contracts §§3–4, Code Standards #20
 // Purpose:  Thin persistent UGUI binding for four localized screens, dialogs and accepted pitch labels.
@@ -36,6 +36,8 @@ namespace TacticalDirector.MatchClientUnity
         private readonly List<GameObject> _owned = new List<GameObject>();
         private readonly Dictionary<Selectable, GameObject> _focusRings = new Dictionary<Selectable, GameObject>();
         private readonly Dictionary<Selectable, ScrollRect> _scrolls = new Dictionary<Selectable, ScrollRect>();
+        // Content a control belongs to: focusing the control shows the whole group first when it fits the viewport.
+        private readonly Dictionary<Selectable, RectTransform> _revealGroups = new Dictionary<Selectable, RectTransform>();
         private readonly Dictionary<Selectable, S0FocusNavigation.Role> _focusRoles = new Dictionary<Selectable, S0FocusNavigation.Role>();
         private readonly Selectable[] _pitchControls = new Selectable[MatchEngineConstants.SQUAD_SIZE];
         private Predicate<Selectable> _isAllowed, _isTabStop;
@@ -1160,7 +1162,32 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             EventSystem.current.SetSelectedGameObject(item.gameObject);
             if (_scrolls.TryGetValue(item, out ScrollRect scroll))
-                Reveal(scroll, item.transform as RectTransform);
+            {
+                if (_revealGroups.TryGetValue(item, out RectTransform group))
+                    Reveal(scroll, group);
+                Reveal(scroll, item.transform as RectTransform, true);
+            }
+        }
+
+        // A focused content region taller than its viewport scrolls by arrow key, never past its own edges.
+        private bool ScrollRegion(GameObject selected, int step)
+        {
+            Selectable region = selected.GetComponent<Selectable>();
+            if (region == null || !_focusRoles.TryGetValue(region, out S0FocusNavigation.Role role) ||
+                role != S0FocusNavigation.Role.Region || !_scrolls.TryGetValue(region, out ScrollRect scroll) || scroll == null)
+                return false;
+            _keyboardFocus = true;
+            Canvas.ForceUpdateCanvases();
+            Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, (RectTransform)region.transform);
+            Rect visible = scroll.viewport.rect;
+            float distance = visible.height * S0UiConstants.REGION_SCROLL_SHARE;
+            Vector2 offset = scroll.content.anchoredPosition;
+            if (step > 0)
+                offset.y += Mathf.Min(distance, Mathf.Max(0f, visible.yMin - bounds.min.y));
+            else
+                offset.y -= Mathf.Min(distance, Mathf.Max(0f, bounds.max.y - visible.yMax));
+            scroll.content.anchoredPosition = offset;
+            return true;
         }
 
         private void RecoverFocus()
@@ -1240,7 +1267,7 @@ namespace TacticalDirector.MatchClientUnity
         private void ChoiceArrow(int step)
         {
             GameObject selected = EventSystem.current?.currentSelectedGameObject;
-            if (selected == null)
+            if (selected == null || ScrollRegion(selected, step))
                 return;
             int marker = Array.IndexOf(_pitchControls, selected.GetComponent<Selectable>());
             if (marker >= 0)
@@ -1281,7 +1308,9 @@ namespace TacticalDirector.MatchClientUnity
             }
         }
 
-        private static void Reveal(ScrollRect scroll, RectTransform item)
+        // Scrolls only as far as needed. With alignTopWhenTall, an item taller than the viewport shows its top, so
+        // a focused region is read from its start whichever direction focus arrived from.
+        private static void Reveal(ScrollRect scroll, RectTransform item, bool alignTopWhenTall = false)
         {
             if (scroll == null || item == null)
                 return;
@@ -1289,7 +1318,7 @@ namespace TacticalDirector.MatchClientUnity
             Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, item);
             Rect visible = scroll.viewport.rect;
             Vector2 offset = scroll.content.anchoredPosition;
-            if (bounds.max.y > visible.yMax)
+            if (bounds.max.y > visible.yMax || (alignTopWhenTall && bounds.size.y > visible.height))
                 offset.y -= bounds.max.y - visible.yMax;
             else if (bounds.min.y < visible.yMin)
                 offset.y += visible.yMin - bounds.min.y;
@@ -1340,4 +1369,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.12    | 2026-10-29 | —      | PR #518 owner report: the pitch changed size on the first and last Faster, because the "Already at real time" and "Already at the fastest speed" boxes appeared and disappeared above a pitch sized from the remaining page height. The waiting, ended, slowest and fastest reasons, which never apply together, now share one `S0ReservedReason` box that keeps the tallest one's height and blanks while empty. Copy unchanged. |
 // | 1.13 | 2026-11-03 | — | Optional career pages and shared keyboard/focus refresh. |
 // | 1.14 | 2026-11-18 | — | Put career actions first in the startup menu when the career shell is enabled. |
+// | 1.15 | 2026-11-20 | — | Focus shows a control's reveal group first when it fits; a focused item taller than the viewport shows its top; arrow keys scroll a focused Region by half a viewport within its bounds. |
 #endregion

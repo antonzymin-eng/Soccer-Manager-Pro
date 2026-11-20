@@ -1,7 +1,7 @@
 // File:     src/client-app/CareerScreenText.cs
 // Created:  2026-11-03
-// Modified: 2026-11-19
-// Modified (prior): 2026-11-05 (AR-2: T6: clamp displayed headroom and format full uint window close day.)
+// Modified: 2026-11-20
+// Modified (prior): 2026-11-19 (Localize completed-round scores and format standings columns.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7, UX detailed plan §7.5, Localization #49 KD-5
 // Purpose:  Separate career copy and host-free presentation formatting over the shared typed formatter.
@@ -60,6 +60,9 @@ namespace TacticalDirector.ClientApp
             R("schedule.page", "Fixtures {0} to {1} of {2}", "III"),
             R("schedule.page.previous", "Earlier fixtures"), R("schedule.page.current", "Upcoming fixtures"),
             R("schedule.page.next", "Later fixtures"),
+            R("table.page", "Positions {0} to {1} of {2}", "III"),
+            R("table.page.previous", "Higher positions"), R("table.page.current", "Your position"),
+            R("table.page.next", "Lower positions"),
             R("schedule.day", "Day {0}", "L"), R("schedule.today", "Day {0} (today)", "L"),
             R("schedule.fixture", "{0} | {1} ({2}) | {3}", "SSSS"),
             R("schedule.free", "{0} | No club fixture", "S"),
@@ -391,6 +394,18 @@ namespace TacticalDirector.ClientApp
             throw new ArgumentException("Club " + clubId + " is not in the market's club rows.", nameof(clubId));
         }
 
+        /// <summary>The standings page heading, for example "Positions 9 to 16 of 20"; empty without a career
+        /// or with an empty table.</summary>
+        public string StandingsHeading(in CareerHomeViewModel home, in CareerStandingsPage page)
+        {
+            if (!home.HasCareer || page.Count == 0)
+            {
+                return "";
+            }
+
+            return Text.Format("table.page", "table.page", page.First + 1, page.First + page.Count, page.Total);
+        }
+
         /// <summary>Writes one standings row to a buffer sized for <see cref="TableHeaders"/>.</summary>
         public void WriteTableRow(in CareerHomeViewModel home, int index, string[] cells)
         {
@@ -425,4 +440,5 @@ namespace TacticalDirector.ClientApp
 // | 1.7 | 2026-11-19 | — | Localize schedule rows, fixture status and calendar week navigation. |
 // | 1.8 | 2026-11-19 | — | Page the fixture list with a position heading (keyboard reach at 200% text scale). |
 // | 1.9 | 2026-11-19 | — | Localize completed-round scores and format standings columns. |
+// | 1.10 | 2026-11-20 | — | Page the standings: position heading and Higher / Your / Lower position labels (keyboard reach at 200% text scale). |
 #endregion

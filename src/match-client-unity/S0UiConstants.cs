@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0UiConstants.cs
 // Created:  2026-10-08
-// Modified: 2026-10-21 (Gate J J-04: H v0.2 touchline / retro-blue skin)
-// Modified (prior): 2026-10-08
+// Modified: 2026-11-20 (region arrow-key scroll share)
+// Modified (prior): 2026-10-21 (Gate J J-04: H v0.2 touchline / retro-blue skin)
 // Author:   —
 // Spec:     S0 binding contracts §3, H v0.2 reference (docs/design/s0-high-fidelity/prototype.css),
 //           art direction v1, Code Standards #20
@@ -35,6 +35,9 @@ namespace TacticalDirector.MatchClientUnity
         /// <summary>[DERIVED] White substitute annulus radius between the marker and possession annulus, metres.</summary>
         internal static float SubstituteOutlineRadiusM => (MatchClientConstants.AgentMarkerRadiusM + MatchClientConstants.PossessionRingRadiusM) * 0.5f;
 
+        /// <summary>[FIXED] Share of the viewport height one arrow key scrolls a focused content region; half keeps
+        /// context from the previous view on screen.</summary>
+        internal const float REGION_SCROLL_SHARE = 0.5f;
         /// <summary>[FIXED] Focus outline thickness in client pixels.</summary>
         internal const int FOCUS_WIDTH = 3;
         /// <summary>[FIXED] Most recent three feedback rows remain expanded.</summary>
@@ -102,4 +105,5 @@ namespace TacticalDirector.MatchClientUnity
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-10-08 | —      | Tagged visual-only skin catalogue. |
 // | 1.1     | 2026-10-21 | —      | Gate J J-04: H v0.2 touchline / retro-blue palette, panel/rail/dialog widths and text sizes replace the neutral white skin. |
+// | 1.2     | 2026-11-20 | —      | REGION_SCROLL_SHARE for arrow-key scrolling of a focused content region. |
 #endregion
