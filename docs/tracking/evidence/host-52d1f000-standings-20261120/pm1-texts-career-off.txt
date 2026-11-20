@@ -1,0 +1,161 @@
+TEXTS 01-main-menu:
+  From the touchline
+  Manage the home side in one demo match. The opponent is AI-managed.
+  [button] Play a demo match
+TEXTS 02-tactics-setup:
+  Tactics Setup
+  You manage Home. Away is AI-managed.
+  Home Mentality — choose one
+  [button] Very Defensive — Least risk in on-ball choices; deepest defensive line.
+  [button] Defensive — Less risk in on-ball choices; deeper defensive line.
+  [button] Cautious — Slightly less risk in on-ball choices; slightly deeper defensive line.
+  [button] Balanced — Standard risk in on-ball choices and standard defensive line.
+  [button] Current
+  [button] Positive — Slightly more risk in on-ball choices; slightly higher defensive line.
+  [button] Attacking — More risk in on-ball choices; higher defensive line.
+  [button] Very Attacking — Most risk in on-ball choices; highest defensive line.
+  Ready to start with Balanced.
+  [button] Start match
+  [button] Back
+TEXTS 03-match-view-start:
+  Match View
+  Home
+  0 – 0
+  First half
+  Minute 0
+  Selected speed 1×
+  Current Mentality: Balanced
+  Away
+  [button] Slower
+  [button] Pause
+  [button] Faster
+  Already at real time — slower is unavailable.
+  Speed steps: 1×, 3×, 5×, 10×.
+  Home attacks right → • Away attacks left ←
+  H1
+  H2
+  H3
+  H4
+  H5
+  H6
+  H7
+  H8
+  H9
+  H10
+  H11
+  A1
+  A2
+  A3
+  A4
+  A5
+  A6
+  A7
+  A8
+  A9
+  A10
+  A11
+  H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution.
+  Match pitch. Home H attacks right; Away A attacks left. Goals, penalty areas and ball shown.
+  Home team changes
+  Current Mentality: Balanced
+  [button] Change Mentality
+  [button] Make substitution
+  Substitutions used: 0 / 5
+  Change request feedback
+  [button] ▸ Match statistics
+TEXTS 04-match-view-full-time:
+  Match View
+  Home
+  17 – 8
+  Full time
+  Minute 90
+  Selected speed 10× • Paused
+  Current Mentality: Balanced
+  Away
+  [button] Slower
+  [button] Resume
+  [button] Faster
+  Match ended — playback and team changes are unavailable.
+  Speed steps: 1×, 3×, 5×, 10×.
+  Home attacks right → • Away attacks left ←
+  H1
+  H2
+  H3
+  H4
+  H5
+  H6
+  H7
+  H8
+  H9
+  H10
+  H11
+  A1
+  A2
+  A3
+  A4
+  A5
+  A6
+  A7
+  A8
+  A9
+  A10
+  A11
+  H/A identify Home/Away player shirts. A white-outlined substitute marker identifies an applied substitution.
+  Match pitch. Home H attacks right; Away A attacks left. Goals, penalty areas and ball shown.
+  Home team changes
+  Current Mentality: Balanced
+  [button] Change Mentality
+  [button] Make substitution
+  Substitutions used: 0 / 5
+  Change request feedback
+  Statistics panel closed at full time.
+  Match statistics
+  [button] View match report
+TEXTS 05-report:
+  Post-Match Report
+  Full time — Home result: Win
+  17 – 8
+  Match statistics
+  Statistic
+  Home
+  Away
+  Goals recorded
+  17
+  8
+  Possession %
+  5.7%
+  5.6%
+  Territorial %
+  48.8%
+  51.2%
+  Fouls
+  4
+  6
+  Yellow cards
+  0
+  0
+  Red cards
+  0
+  0
+  Offsides
+  54
+  21
+  Corners
+  0
+  0
+  Throw-ins
+  11
+  11
+  Goal kicks
+  15
+  3
+  Substitutions
+  0
+  0
+  Possession shares include loose-ball time; the two teams need not total 100%.
+  Change request feedback
+  [button] Return to main menu
+TEXTS 06-main-menu-after-report:
+  From the touchline
+  Manage the home side in one demo match. The opponent is AI-managed.
+  [button] Play a demo match

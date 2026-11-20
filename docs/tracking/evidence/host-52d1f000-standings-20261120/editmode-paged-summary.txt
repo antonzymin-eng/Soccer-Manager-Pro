@@ -1,0 +1,13 @@
+# Paged-standings candidate: compile and EditMode in a fresh sparse worktree of the PR branch plus the paging change.
+compile: Unity.exe -batchmode -nographics -quit -projectPath <scratch>/standings-paging  -> exit=0, 0 error CS
+EditMode: -runTests -testPlatform EditMode -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.UiFramework.Tests"
+start: 2026-11-20T16:11:51Z   end/exit: exit=0 2026-11-20T16:19:03Z
+
+assembly                                 total  passed  failed  skipped
+TacticalDirector.ClientApp.Tests.dll       301     298       0        3
+TacticalDirector.UiFramework.Tests.dll      52      52       0        0
+all                                        353     350       0        3
+
+New and passing: CareerStandingsPages_CoverTheTableInOrderAndStopAtBothEnds, CareerStandingsPage_CurrentHoldsTheManagedClub,
+CareerStandingsPage_RequiresAnActiveCareer (CareerScreensTests 21/21), StandingsHeadingNamesThePositionsOnThePage
+(CareerScreenTextTests 14/14). ClientCareerCoordinatorTests 47/47. Skips: the same three opt-in diagnostics.

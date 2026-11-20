@@ -380,8 +380,11 @@ To validate in an isolated host checkout:
 7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, focus return after a successful save, visible feedback on failure, the smallest
    desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
    career labels. At the smallest supported layout and 200% text scale, verify that all ten standings
-   columns align with their headers, long club names wrap without clipping or overlap, and the entire
-   scores block is readable when scrolled. All career pages use the existing wrapped/scrolled factory
+   columns align with their headers, long club names wrap without clipping or overlap, the entire
+   scores block is readable when scrolled, and every standings page (Higher / Your / Lower positions)
+   comes fully on screen by keyboard: at Tab stops, or with the arrow keys while the standings page
+   (heading and rows, one Tab stop) has focus. After every page change the focused control stays
+   in view. All career pages use the existing wrapped/scrolled factory
    and shared focus rings.
 8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content
    identity and report return behavior are preserved. No Career Home → Match or Report → Career Home

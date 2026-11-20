@@ -1,0 +1,1189 @@
+// Scratch host-validation driver. Never committed. Active only with -careerAccept <mode> -probeDir <dir>.
+// Modes: rounds | resume | cycle | keys | pm1. Mouse-equivalent steps invoke the real UGUI buttons
+// (Button.onClick); keyboard steps post real key messages to the player's own window, which the screens read
+// through the legacy Input Manager. Every check is written to accept-probe.log as PASS/FAIL/INFO lines.
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+public sealed class CareerAcceptProbe : MonoBehaviour
+{
+    private const uint WM_KEYDOWN = 0x0100, WM_KEYUP = 0x0101;
+    private const int VK_TAB = 0x09, VK_RETURN = 0x0D, VK_SHIFT = 0x10, VK_LSHIFT = 0xA0, VK_UP = 0x26, VK_DOWN = 0x28;
+    [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr l);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern bool GetKeyboardState(byte[] state);
+    [DllImport("user32.dll")] private static extern bool SetKeyboardState(byte[] state);
+    [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint a, uint b, bool attach);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    private delegate bool EnumProc(IntPtr hWnd, IntPtr l);
+
+    private const string MATCHDAY = "Resolve matchday (on Career Home)";
+    private const string DAY = "Advance one day";
+    private const string QUIT = "Return to Main Menu (without saving)";
+    private static readonly Regex ScoreLine = new Regex(@"^\[?(.+) (\d+) - (\d+) (.+?)(?: ~+\])?$");
+
+    private string _mode, _dir, _careers;
+    private IntPtr _window;
+    private int _keys, _fails, _passes;
+    private int _shiftVariant = -1;
+    private readonly Dictionary<string, int[]> _expected = new Dictionary<string, int[]>(); // P W D L GF GA
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Boot()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        string mode = null, dir = null;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "-careerAccept") mode = args[i + 1];
+            if (args[i] == "-probeDir") dir = args[i + 1];
+        }
+        if (mode == null || dir == null) return;
+        Application.runInBackground = true;
+        var go = new GameObject("CareerAcceptProbe");
+        DontDestroyOnLoad(go);
+        var probe = go.AddComponent<CareerAcceptProbe>();
+        probe._mode = mode;
+        probe._dir = dir;
+        probe._careers = Path.Combine(Application.persistentDataPath, "careers");
+        probe.StartCoroutine(probe.Main());
+    }
+
+    // ---------- logging ----------
+    private void Mark(string s) => File.AppendAllText(Path.Combine(_dir, "accept-probe.log"),
+        DateTime.UtcNow.ToString("o") + " frame=" + Time.frameCount + " " + s + "\n");
+    private void Check(bool ok, string what) { if (ok) _passes++; else _fails++; Mark((ok ? "PASS " : "FAIL ") + what); }
+    private void Info(string s) => Mark("INFO " + s);
+
+    // ---------- UI lookup (labels may be pseudo-expanded "[label ~~~]" in the expanded-copy build) ----------
+    private static bool Is(string text, string label) => text == label || text.StartsWith("[" + label + " ~", StringComparison.Ordinal);
+    private static bool Starts(string text, string prefix) => text.StartsWith(prefix, StringComparison.Ordinal) || text.StartsWith("[" + prefix, StringComparison.Ordinal);
+    private static string Unwrap(string text)
+    {
+        if (!text.StartsWith("[", StringComparison.Ordinal)) return text;
+        int tilde = text.LastIndexOf(" ~", StringComparison.Ordinal);
+        return tilde > 0 ? text.Substring(1, tilde - 1) : text;
+    }
+
+    private static string LabelOf(GameObject go)
+    {
+        if (go == null) return "(none)";
+        var t = go.GetComponentInChildren<Text>();
+        return t == null ? "<" + go.name + ">" : t.text.Replace("\n", " / ");
+    }
+
+    private static Button Find(string label)
+    {
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && Is(t.text, label)) return b;
+        }
+        return null;
+    }
+
+    private static Button FindPrefix(string prefix, int skip = 0)
+    {
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && Starts(t.text, prefix) && skip-- == 0) return b;
+        }
+        return null;
+    }
+
+    private static Text TextPrefix(string prefix)
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && Starts(t.text, prefix) && t.GetComponentInParent<Button>() == null) return t;
+        return null;
+    }
+
+    private static bool Busy() => TextPrefix("Working...") != null;
+    private static string Summary() { var t = TextContains("| Season "); return t == null ? "(no summary)" : t.text.Replace("\n", " / "); }
+    private static Text TextContains(string part)
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && t.text.Contains(part) && t.GetComponentInParent<Button>() == null) return t;
+        return null;
+    }
+    private static Text Results()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && Regex.IsMatch(t.text, @"^\[?Round \d+ results")) return t;
+        return null;
+    }
+    private static GameObject Focused() => EventSystem.current == null ? null : EventSystem.current.currentSelectedGameObject;
+
+    private static List<Text[]> Standings()
+    {
+        var rows = new List<Text[]>();
+        var column = GameObject.Find("League standings");
+        if (column == null) return rows;
+        foreach (Transform child in column.GetComponentsInChildren<Transform>(false))
+            if (child.name == "Standings row")
+                rows.Add(child.GetComponentsInChildren<Text>(false));
+        return rows;
+    }
+
+    private static string RowText(Text[] cells)
+    {
+        var s = new StringBuilder();
+        foreach (Text c in cells) s.Append(c.text).Append(" | ");
+        return s.ToString();
+    }
+
+    // ---------- waiting / input ----------
+    private IEnumerator Frames(int n) { for (int i = 0; i < n; i++) yield return null; }
+    private bool _timedOut;
+    private IEnumerator Until(Func<bool> condition, string what, float seconds = 30f)
+    {
+        _timedOut = false;
+        float end = Time.realtimeSinceStartup + seconds;
+        while (Time.realtimeSinceStartup < end)
+        {
+            if (condition()) yield break;
+            yield return null;
+        }
+        _timedOut = true;
+        Check(false, "timed out waiting for " + what + " after " + seconds + " s");
+    }
+
+    private IEnumerator Click(string label)
+    {
+        yield return Until(() => { var b = Find(label); return b != null && b.interactable && !Busy(); }, "'" + label + "'");
+        Button button = Find(label);
+        Mark("click '" + label + "'");
+        if (button != null) button.onClick.Invoke();
+        yield return Frames(5);
+    }
+
+    private IEnumerator Idle(float seconds = 60f)
+    {
+        yield return Frames(3);
+        yield return Until(() => !Busy(), "idle", seconds);
+        yield return Frames(3);
+    }
+
+    private void FindWindow()
+    {
+        uint pid = (uint)Process.GetCurrentProcess().Id;
+        EnumWindows((h, l) => { GetWindowThreadProcessId(h, out uint owner); if (owner == pid && IsWindowVisible(h)) { _window = h; return false; } return true; }, IntPtr.Zero);
+    }
+
+    private void ShiftDown(int variant)
+    {
+        var state = new byte[256];
+        if (variant >= 2)
+        {
+            GetKeyboardState(state);
+            state[VK_SHIFT] = 0x80; state[VK_LSHIFT] = 0x80;
+            if (variant == 3)
+            {
+                uint windowThread = GetWindowThreadProcessId(_window, out _);
+                AttachThreadInput(GetCurrentThreadId(), windowThread, true);
+            }
+            SetKeyboardState(state);
+        }
+        if (variant == 0) PostMessage(_window, WM_KEYDOWN, (IntPtr)VK_LSHIFT, (IntPtr)0x002A0001);
+        else PostMessage(_window, WM_KEYDOWN, (IntPtr)VK_SHIFT, (IntPtr)0x002A0001);
+    }
+
+    private void ShiftUp(int variant)
+    {
+        if (variant == 0) PostMessage(_window, WM_KEYUP, (IntPtr)VK_LSHIFT, (IntPtr)unchecked((int)0xC02A0001));
+        else PostMessage(_window, WM_KEYUP, (IntPtr)VK_SHIFT, (IntPtr)unchecked((int)0xC02A0001));
+        if (variant >= 2)
+        {
+            var state = new byte[256];
+            GetKeyboardState(state);
+            state[VK_SHIFT] = 0; state[VK_LSHIFT] = 0;
+            SetKeyboardState(state);
+            if (variant == 3)
+            {
+                uint windowThread = GetWindowThreadProcessId(_window, out _);
+                AttachThreadInput(GetCurrentThreadId(), windowThread, false);
+            }
+        }
+    }
+
+    // Finds a way to hold Shift that Input.GetKey(KeyCode.LeftShift) (what the screens read) actually sees.
+    private IEnumerator CalibrateShift()
+    {
+        for (int v = 0; v < 4; v++)
+        {
+            ShiftDown(v);
+            bool seen = false;
+            for (int i = 0; i < 6 && !seen; i++) { yield return null; seen = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift); }
+            ShiftUp(v);
+            yield return Frames(4);
+            bool released = !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift);
+            Info("shift variant " + v + " seen=" + seen + " released=" + released);
+            if (seen && released) { _shiftVariant = v; break; }
+        }
+        Info("shift variant chosen=" + _shiftVariant + " (window thread " + GetWindowThreadProcessId(_window, out _) + ", probe thread " + GetCurrentThreadId() + ")");
+    }
+
+    private IEnumerator Key(int vk, bool shift = false, bool log = true)
+    {
+        if (shift)
+        {
+            if (_shiftVariant < 0) { Check(false, "Shift+Tab requested but no shift variant works"); yield break; }
+            ShiftDown(_shiftVariant);
+            yield return Frames(2);
+        }
+        // Arrow keys are extended keys: a real keyboard sends their scan code with the extended bit (24).
+        int arrow = vk == VK_DOWN ? 0x01500000 : vk == VK_UP ? 0x01480000 : 0;
+        PostMessage(_window, WM_KEYDOWN, (IntPtr)vk, (IntPtr)(arrow | 1));
+        yield return Frames(2);
+        PostMessage(_window, WM_KEYUP, (IntPtr)vk, (IntPtr)unchecked((int)0xC0000001 | arrow));
+        if (shift) { yield return Frames(1); ShiftUp(_shiftVariant); }
+        yield return Frames(4);
+        _keys++;
+        if (log)
+            Mark("key#" + _keys + " " + (vk == VK_TAB ? (shift ? "Shift+Tab" : "Tab") : vk == VK_DOWN ? "Down" : vk == VK_UP ? "Up" : "Enter") + " -> '" + LabelOf(Focused()) + "' " + Visibility(Focused()));
+    }
+
+    private IEnumerator TabTo(string label, int max = 60)
+    {
+        for (int i = 0; i < max; i++)
+        {
+            if (Is(LabelOf(Focused()), label)) yield break;
+            yield return Key(VK_TAB);
+        }
+        Check(false, "reach '" + label + "' by Tab within " + max + " presses");
+    }
+
+    private IEnumerator TabToPrefix(string prefix, int max = 60)
+    {
+        for (int i = 0; i < max; i++)
+        {
+            if (Starts(LabelOf(Focused()), prefix)) yield break;
+            yield return Key(VK_TAB);
+        }
+        Check(false, "reach '" + prefix + "...' by Tab within " + max + " presses");
+    }
+
+    // ---------- geometry ----------
+    private static bool InView(RectTransform rect, out string detail)
+    {
+        detail = "n/a";
+        var scroll = rect.GetComponentInParent<ScrollRect>();
+        if (scroll == null || scroll.viewport == null) return true;
+        var c = new Vector3[4]; rect.GetWorldCorners(c);
+        var v = new Vector3[4]; scroll.viewport.GetWorldCorners(v);
+        bool inside = c[0].y >= v[0].y - 0.5f && c[1].y <= v[1].y + 0.5f && c[0].x >= v[0].x - 0.5f && c[2].x <= v[2].x + 0.5f;
+        bool tall = c[1].y - c[0].y > v[1].y - v[0].y + 0.5f;
+        bool tallTop = tall && c[1].y <= v[1].y + 0.5f && c[1].y >= v[0].y && c[0].y <= v[0].y + 0.5f && c[0].x >= v[0].x - 0.5f && c[2].x <= v[2].x + 0.5f;
+        detail = inside ? "inView" : tallTop ? "inView-tall-top" : "OUTSIDE-VIEW";
+        inside = inside || tallTop;
+        return inside;
+    }
+
+    // A row is fully visible only when every cell is: a wrapped club name can extend below the number cells.
+    private static bool RowInView(Text[] row)
+    {
+        foreach (Text cell in row)
+            if (!InView(cell.rectTransform, out _)) return false;
+        return true;
+    }
+
+    private static string Visibility(GameObject focused)
+    {
+        if (focused == null) return "";
+        InView(focused.GetComponent<RectTransform>(), out string detail);
+        bool ring = false;
+        foreach (Transform child in focused.GetComponentsInChildren<Transform>(false))
+            if (child != focused.transform && child.name.IndexOf("focus", StringComparison.OrdinalIgnoreCase) >= 0) ring = true;
+        return "[" + detail + (ring ? ", ring" : ", NO-RING") + "]";
+    }
+
+    // Lines of t that are fully inside its scroll viewport now (rendered-line bounds from the Text generator).
+    private static HashSet<int> FullyVisibleLines(Text t, out int logical)
+    {
+        var seen = new HashSet<int>();
+        logical = 0;
+        if (t == null) return seen;
+        var scroll = t.GetComponentInParent<ScrollRect>();
+        Canvas.ForceUpdateCanvases();
+        string text = t.text;
+        var starts = new List<int> { 0 };
+        for (int i = 0; i < text.Length; i++) if (text[i] == '\n') starts.Add(i + 1);
+        logical = starts.Count;
+        var lines = Generate(t).lines;
+        if (lines == null || lines.Count == 0) return seen;
+        var v = new Vector3[4];
+        if (scroll != null && scroll.viewport != null) scroll.viewport.GetWorldCorners(v);
+        else { v[0] = new Vector3(0, 0, 0); v[1] = new Vector3(0, Screen.height, 0); }
+        float unitsPerPixel = 1f / t.pixelsPerUnit;
+        var allInside = new bool[logical];
+        var any = new bool[logical];
+        for (int i = 0; i < logical; i++) allInside[i] = true;
+        for (int k = 0; k < lines.Count; k++)
+        {
+            int row = 0;
+            while (row + 1 < logical && starts[row + 1] <= lines[k].startCharIdx) row++;
+            float top = t.rectTransform.TransformPoint(new Vector3(0, lines[k].topY * unitsPerPixel, 0)).y;
+            float bottom = t.rectTransform.TransformPoint(new Vector3(0, (lines[k].topY - lines[k].height) * unitsPerPixel, 0)).y;
+            any[row] = true;
+            if (!(bottom >= v[0].y - 0.5f && top <= v[1].y + 0.5f)) allInside[row] = false;
+        }
+        for (int i = 0; i < logical; i++) if (any[i] && allInside[i]) seen.Add(i);
+        return seen;
+    }
+
+    // Does the rendered text stay inside its own rect (no horizontal or vertical overflow, nothing dropped)?
+    // A fresh generator for the Text's current rect: cachedTextGenerator is stale for graphics culled by the
+    // scroll mask (their geometry is not rebuilt while outside the viewport).
+    private static TextGenerator Generate(Text t)
+    {
+        var gen = new TextGenerator();
+        gen.Populate(t.text, t.GetGenerationSettings(t.rectTransform.rect.size));
+        return gen;
+    }
+
+    private const float GLYPH_SLACK = 3f; // side bearings / descenders a few px past the rect are not clipping
+
+    private static string Fit(Text t)
+    {
+        Canvas.ForceUpdateCanvases();
+        var gen = Generate(t);
+        Rect r = t.rectTransform.rect;
+        float unitsPerPixel = 1f / t.pixelsPerUnit;
+        float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+        var verts = gen.verts;
+        for (int i = 0; i < verts.Count; i++)
+        {
+            Vector3 p = verts[i].position * unitsPerPixel;
+            if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+        }
+        int visibleChars = 0;
+        foreach (char ch in t.text) if (!char.IsWhiteSpace(ch)) visibleChars++;
+        int drawn = verts.Count / 4;
+        var problems = new StringBuilder();
+        if (verts.Count > 0)
+        {
+            if (maxX > r.xMax + GLYPH_SLACK || minX < r.xMin - GLYPH_SLACK) problems.Append("overflowX(" + minX.ToString("F0") + ".." + maxX.ToString("F0") + " in " + r.xMin.ToString("F0") + ".." + r.xMax.ToString("F0") + ") ");
+            if (minY < r.yMin - GLYPH_SLACK || maxY > r.yMax + GLYPH_SLACK) problems.Append("overflowY(" + minY.ToString("F0") + ".." + maxY.ToString("F0") + " in " + r.yMin.ToString("F0") + ".." + r.yMax.ToString("F0") + ") ");
+        }
+        if (drawn < visibleChars) problems.Append("dropped(" + drawn + "/" + visibleChars + ") ");
+        float preferred = LayoutUtility.GetPreferredHeight(t.rectTransform);
+        if (preferred > r.height + GLYPH_SLACK) problems.Append("short(pref " + preferred.ToString("F0") + " > " + r.height.ToString("F0") + ") ");
+        return problems.ToString();
+    }
+
+    private IEnumerator Shot(string name)
+    {
+        yield return new WaitForEndOfFrame();
+        var tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+        tex.Apply();
+        int w = Screen.width, h = Screen.height;
+        Color32[] px = tex.GetPixels32();
+        Destroy(tex);
+        int stride = (w * 3 + 3) & ~3;
+        var bmp = new byte[54 + stride * h];
+        void Put(int at, int v) { bmp[at] = (byte)v; bmp[at + 1] = (byte)(v >> 8); bmp[at + 2] = (byte)(v >> 16); bmp[at + 3] = (byte)(v >> 24); }
+        bmp[0] = (byte)'B'; bmp[1] = (byte)'M'; Put(2, bmp.Length); Put(10, 54); Put(14, 40); Put(18, w); Put(22, h);
+        bmp[26] = 1; bmp[28] = 24; Put(34, stride * h);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                Color32 c = px[y * w + x];
+                int o = 54 + y * stride + x * 3;
+                bmp[o] = c.b; bmp[o + 1] = c.g; bmp[o + 2] = c.r;
+            }
+        File.WriteAllBytes(Path.Combine(_dir, name + ".bmp"), bmp);
+        Mark("screenshot " + name + ".bmp " + w + "x" + h);
+    }
+
+    private void DumpTexts(string what)
+    {
+        var canvas = FindFirstObjectByType<Canvas>();
+        var s = new StringBuilder("TEXTS " + what + ":\n");
+        foreach (Canvas c in FindObjectsByType<Canvas>(FindObjectsSortMode.InstanceID))
+        {
+            if (!c.isActiveAndEnabled || !c.isRootCanvas) continue;
+            foreach (Text t in c.GetComponentsInChildren<Text>(false))
+                if (t.text.Length > 0) s.Append("  ").Append(t.GetComponentInParent<Button>() != null ? "[button] " : "").Append(t.text.Replace("\n", " / ")).Append('\n');
+        }
+        File.AppendAllText(Path.Combine(_dir, "texts-" + what + ".txt"), s.ToString());
+        Mark("dumped texts '" + what + "'");
+    }
+
+    // ---------- table checks ----------
+    private void SeedExpected()
+    {
+        _expected.Clear();
+        List<Text[]> rows = Standings();
+        for (int i = 1; i < rows.Count; i++) _expected[rows[i][1].text] = new int[6];
+    }
+
+    private int ApplyResults(int round)
+    {
+        Text results = Results();
+        if (results == null) { Check(false, "round " + round + ": score block present"); return 0; }
+        // CareerScreenText joins lines with AppendLine (Environment.NewLine = CRLF on Windows).
+        string[] lines = results.text.Replace("\r", "").Split('\n');
+        if (results.text.Contains("\r")) Info("score block uses CRLF line breaks");
+        Check(Regex.IsMatch(lines[0], @"^\[?Round " + round + " results"), "round " + round + ": score block heading is '" + lines[0] + "'");
+        var seen = new HashSet<string>();
+        int fixtures = 0;
+        for (int i = 1; i < lines.Length; i++)
+        {
+            Match m = ScoreLine.Match(lines[i]);
+            if (!m.Success) { Check(false, "parse score line '" + lines[i] + "'"); continue; }
+            string home = m.Groups[1].Value, away = m.Groups[4].Value;
+            int hg = int.Parse(m.Groups[2].Value), ag = int.Parse(m.Groups[3].Value);
+            fixtures++;
+            if (!seen.Add(home) || !seen.Add(away)) Check(false, "round " + round + ": a club appears twice (" + lines[i] + ")");
+            if (!_expected.ContainsKey(home) || !_expected.ContainsKey(away)) { Check(false, "round " + round + ": unknown club in '" + lines[i] + "'"); continue; }
+            Add(home, hg, ag); Add(away, ag, hg);
+        }
+        Check(fixtures == _expected.Count / 2 && seen.Count == _expected.Count,
+            "round " + round + ": score block lists " + fixtures + " fixtures covering " + seen.Count + " of " + _expected.Count + " clubs");
+        Mark("SCORES round " + round + ":\n" + results.text + "\n--- end");
+        return fixtures;
+    }
+
+    private void Add(string club, int scored, int conceded)
+    {
+        int[] e = _expected[club];
+        e[0]++; e[4] += scored; e[5] += conceded;
+        if (scored > conceded) e[1]++; else if (scored == conceded) e[2]++; else e[3]++;
+    }
+
+    private void CheckTable(string what)
+    {
+        List<Text[]> rows = Standings();
+        var dump = new StringBuilder("TABLE " + what + ":\n");
+        foreach (Text[] row in rows) dump.Append(RowText(row)).Append('\n');
+        Mark(dump.ToString() + "--- end");
+        Check(rows.Count == _expected.Count + 1, what + ": " + (rows.Count - 1) + " standings rows for " + _expected.Count + " clubs");
+        string[] headers = { "Pos", "Club", "P", "W", "D", "L", "GF", "GA", "GD", "Pts" };
+        bool headerOk = rows.Count > 0 && rows[0].Length == 10;
+        for (int c = 0; headerOk && c < 10; c++) headerOk = Is(rows[0][c].text, headers[c]);
+        Check(headerOk, what + ": ten headers in order " + string.Join(" ", headers));
+        int mismatches = 0, orderBreaks = 0, negative = 0;
+        int lastPts = int.MaxValue, lastGd = int.MaxValue, lastGf = int.MaxValue;
+        for (int i = 1; i < rows.Count; i++)
+        {
+            Text[] cells = rows[i];
+            string club = cells[1].text;
+            if (!_expected.TryGetValue(club, out int[] e)) { mismatches++; Mark("  unknown club row '" + club + "'"); continue; }
+            int gd = e[4] - e[5], pts = 3 * e[1] + e[2];
+            int[] want = { i, e[0], e[1], e[2], e[3], e[4], e[5], gd, pts };
+            int[] col = { 0, 2, 3, 4, 5, 6, 7, 8, 9 };
+            for (int k = 0; k < col.Length; k++)
+                if (cells[col[k]].text != want[k].ToString(System.Globalization.CultureInfo.InvariantCulture))
+                { mismatches++; Mark("  mismatch " + club + " column " + col[k] + ": shown '" + cells[col[k]].text + "' expected " + want[k]); }
+            if (gd < 0) negative++;
+            bool ordered = pts < lastPts || (pts == lastPts && (gd < lastGd || (gd == lastGd && e[4] <= lastGf)));
+            if (!ordered) { orderBreaks++; Mark("  order break at row " + i + " " + club); }
+            lastPts = pts; lastGd = gd; lastGf = e[4];
+        }
+        Check(mismatches == 0, what + ": every row's P W D L GF GA GD Pts and position match the scores (" + mismatches + " mismatches)");
+        Check(orderBreaks == 0, what + ": order follows Pts, then GD, then GF (" + orderBreaks + " breaks; full ties fall back to club id, which is not shown)");
+        Info(what + ": " + negative + " clubs with negative goal difference");
+    }
+
+    private List<string> TableSnapshot()
+    {
+        var list = new List<string>();
+        foreach (Text[] row in Standings()) list.Add(RowText(row));
+        return list;
+    }
+
+    private IEnumerator ResolveRound(int round, bool keyboard)
+    {
+        int days = 0;
+        while (Find(MATCHDAY) == null && days < 60)
+        {
+            if (keyboard)
+            {
+                yield return TabTo(DAY);
+                GameObject before = Focused();
+                yield return Key(VK_RETURN);
+                yield return Idle();
+                if (days == 0) Check(Focused() == before || Is(LabelOf(Focused()), MATCHDAY), "focus returns to the progress control after Advance one day (now '" + LabelOf(Focused()) + "')");
+            }
+            else { yield return Click(DAY); yield return Idle(); }
+            days++;
+        }
+        Info("round " + round + ": advanced " + days + " days; " + Summary());
+        GameObject progress = Find(MATCHDAY)?.gameObject;
+        if (keyboard) { yield return TabTo(MATCHDAY); yield return Key(VK_RETURN); }
+        else { Mark("click '" + MATCHDAY + "'"); Find(MATCHDAY).onClick.Invoke(); }
+        yield return Until(Busy, "busy", 10f);
+        float start = Time.realtimeSinceStartup;
+        yield return Frames(3);
+        int enabled = 0;
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.None)) if (b.isActiveAndEnabled && b.interactable) enabled++;
+        Check(enabled == 0, "round " + round + ": every control disabled while busy (" + enabled + " interactable)");
+        Info("round " + round + ": focus while busy '" + LabelOf(Focused()) + "'");
+        while (Busy() && Time.realtimeSinceStartup - start < 600f) yield return null;
+        // First frame after progress finishes: the score block must already be there.
+        bool scoresNow = Results() != null && Regex.IsMatch(Results().text, @"^\[?Round " + round + " results");
+        Check(scoresNow, "round " + round + ": score block shown in the first frame after progress finished (" + (Time.realtimeSinceStartup - start).ToString("F1") + " s round)");
+        yield return Frames(3);
+        Info("round " + round + ": focus after completion '" + LabelOf(Focused()) + "' (progress control was '" + LabelOf(progress) + "')");
+        Info("round " + round + ": " + Summary());
+    }
+
+    private string Notice()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && t.text.Length > 0 && t.GetComponentInParent<Button>() == null &&
+                (Starts(t.text, "Autosave failed") || t.text.Contains("denied") || t.text.Contains("being used") || t.text.Contains("Sharing violation") || t.text.Contains("could not") || t.text.Contains("Could not")))
+                return t.text.Replace("\n", " / ");
+        return null;
+    }
+
+    private Text NoticeText()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && t.text.Length > 0 && t.GetComponentInParent<Button>() == null && Notice() != null && t.text.Replace("\n", " / ") == Notice())
+                return t;
+        return null;
+    }
+
+    private string SaveFile(string stem)
+    {
+        foreach (string f in Directory.GetFiles(_careers, stem + ".*"))
+        {
+            string name = Path.GetFileName(f);
+            if (!name.EndsWith(".slot") && !name.EndsWith(".tmp") && !name.EndsWith(".bak") && !name.EndsWith(".damaged")) return f;
+        }
+        return null;
+    }
+
+    private string Listing()
+    {
+        var s = new StringBuilder();
+        foreach (string f in Directory.GetFiles(_careers)) s.Append(Path.GetFileName(f)).Append(':').Append(new FileInfo(f).Length).Append(' ');
+        return s.ToString();
+    }
+
+    private string PickerStates()
+    {
+        var slots = new StringBuilder();
+        foreach (var b in FindObjectsByType<Button>(FindObjectsSortMode.InstanceID))
+        {
+            var t = b.GetComponentInChildren<Text>();
+            if (b.isActiveAndEnabled && t != null && (Starts(t.text, "Autosave") || Starts(t.text, "Manual slot")))
+                slots.Append('[').Append(t.text.Replace("\n", " ")).Append(b.interactable ? "" : " (disabled)").Append("] ");
+        }
+        return slots.ToString();
+    }
+
+    private void SaveState(string file, List<string> table)
+    {
+        var s = new StringBuilder();
+        foreach (var kv in _expected) s.Append("E\t").Append(kv.Key).Append('\t').Append(string.Join(",", kv.Value)).Append('\n');
+        foreach (string row in table) s.Append("T\t").Append(row).Append('\n');
+        File.WriteAllText(Path.Combine(_dir, file), s.ToString());
+    }
+
+    private List<string> LoadState(string file)
+    {
+        _expected.Clear();
+        var table = new List<string>();
+        foreach (string line in File.ReadAllLines(Path.Combine(_dir, file)))
+        {
+            string[] p = line.Split('\t');
+            if (p[0] == "E") _expected[p[1]] = Array.ConvertAll(p[2].Split(','), int.Parse);
+            else if (p[0] == "T") table.Add(p[1]);
+        }
+        return table;
+    }
+
+    private IEnumerator NewCareer(int clubIndex)
+    {
+        yield return Click("New career");
+        yield return Until(() => FindPrefix("Select ") != null, "club list");
+        Button club = FindPrefix("Select ", clubIndex);
+        string name = club == null ? "?" : Unwrap(club.GetComponentInChildren<Text>().text).Substring(7);
+        Mark("click 'Select " + name + "'");
+        club?.onClick.Invoke();
+        yield return Frames(5);
+        yield return Click("Start career");
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home", 60f);
+        Check(Summary().StartsWith(name + " |", StringComparison.Ordinal), "new career for '" + name + "' shows its Career Home (" + Summary() + ")");
+    }
+
+    // ---------- modes ----------
+    private IEnumerator Main()
+    {
+        yield return Frames(30);
+        FindWindow();
+        Mark("boot mode=" + _mode + " window=" + _window + " screen=" + Screen.width + "x" + Screen.height + " careers=" + _careers);
+        IEnumerator run = _mode == "rounds" ? Rounds() : _mode == "resume" ? Resume() : _mode == "cycle" ? Cycle()
+            : _mode == "keys" ? Keys() : _mode == "pm1" ? Pm1() : null;
+        if (run != null) yield return run;
+        Mark("DONE mode=" + _mode + " pass=" + _passes + " fail=" + _fails + " keys=" + _keys);
+        File.WriteAllText(Path.Combine(_dir, "done-" + _mode + ".flag"), "pass=" + _passes + " fail=" + _fails);
+        yield return Frames(30);
+        Application.Quit();
+    }
+
+    private IEnumerator Rounds()
+    {
+        yield return Until(() => Find("New career") != null && Find("New career").interactable, "main menu");
+        yield return NewCareer(0);
+        SeedExpected();
+        Check(_expected.Count >= 2, "standings list " + _expected.Count + " clubs at career start");
+        Check(Results() == null, "no score block before any round");
+        CheckTable("start");
+        yield return Shot("rounds-00-start");
+
+        yield return ResolveRound(1, false);
+        ApplyResults(1);
+        CheckTable("after round 1");
+        yield return Shot("rounds-01-after-round1");
+
+        // Round 2 with the autosave file held open exclusively: the round must still complete and the
+        // failure must be reported.
+        string autosave = SaveFile("autosave");
+        byte[] autosaveBefore = File.ReadAllBytes(autosave);
+        Info("locking " + Path.GetFileName(autosave) + " for round 2; files " + Listing());
+        var hold = new FileStream(autosave, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        yield return ResolveRound(2, false);
+        string notice = Notice();
+        Check(notice != null && Starts(notice, "Autosave failed"), "autosave failure reported on Career Home: '" + notice + "'");
+        Text noticeText = NoticeText();
+        if (noticeText != null) Info("autosave notice on screen: " + InView(noticeText.rectTransform, out string d) + " (" + d + ")");
+        yield return Shot("rounds-02-autosave-failed");
+        hold.Dispose();
+        Check(Convert.ToBase64String(File.ReadAllBytes(autosave)) == Convert.ToBase64String(autosaveBefore), "autosave file unchanged by the failed write");
+        Info("files after failed autosave: " + Listing());
+        ApplyResults(2);
+        CheckTable("after round 2");
+        yield return Shot("rounds-03-after-round2");
+
+        // Manual saves, including a failed save and its retry on slot 2.
+        yield return Click("Save to manual slot 3"); yield return Idle();
+        Check(Notice() == null || Starts(Notice(), "Autosave failed"), "slot 3 save: no failure notice (" + Notice() + ")");
+        yield return Click("Save to manual slot 2"); yield return Idle();
+        string manual2 = SaveFile("manual-2");
+        var hold2 = new FileStream(manual2, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        yield return Click("Save to manual slot 2"); yield return Idle();
+        string failed = Notice();
+        Check(failed != null && !Starts(failed, "Autosave failed"), "manual save to a locked slot 2 reports a failure: '" + failed + "'");
+        yield return Shot("rounds-04-manual-save-failed");
+        hold2.Dispose();
+        yield return Click("Save to manual slot 2"); yield return Idle();
+        // The round-2 autosave failure stays reported until an autosave succeeds; the manual-save error must clear.
+        Check(Notice() == null || Starts(Notice(), "Autosave failed"), "retrying slot 2 after the lock is released clears the manual-save failure (notice now '" + Notice() + "')");
+        yield return Click("Save to manual slot 1"); yield return Idle();
+        Check(Notice() == null || Starts(Notice(), "Autosave failed"), "slot 1 save succeeds (notice '" + Notice() + "')");
+        Info("files after manual saves: " + Listing());
+        List<string> saved = TableSnapshot();
+        SaveState("state-after-round2.txt", saved);
+
+        // In-process Continue.
+        yield return Click(QUIT);
+        yield return Until(() => Find("Continue career") != null, "main menu");
+        yield return Click("Continue career");
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home after Continue", 60f);
+        Check(string.Join("\n", TableSnapshot()) == string.Join("\n", saved), "in-process Continue restores the standings exactly");
+        Info("after in-process Continue: score block " + (Results() == null ? "hidden" : "shown: " + Results().text.Split('\n')[0]) + "; " + Summary());
+        yield return Shot("rounds-05-continued");
+        yield return Click(QUIT);
+        yield return Until(() => Find("Continue career") != null, "main menu");
+    }
+
+    private IEnumerator Resume()
+    {
+        List<string> saved = LoadState("state-after-round2.txt");
+        yield return Until(() => Find("Load career") != null && Find("Load career").interactable && !Busy(), "main menu", 60f);
+        yield return Click("Load career");
+        yield return Frames(10);
+        string picker = PickerStates();
+        Info("PICKER " + picker);
+        Check(picker.Contains("Autosave: Ready") && picker.Contains("Manual slot 1: Ready"), "picker: autosave and slot 1 Ready");
+        Check(picker.Contains("Manual slot 2: Damaged") && picker.Contains("Manual slot 3: Incompatible"), "picker: slot 2 Damaged and slot 3 Incompatible, both disabled");
+        yield return Shot("resume-01-picker");
+        yield return Click("Back");
+        yield return Click("Continue career");
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home after Continue", 60f);
+        Check(string.Join("\n", TableSnapshot()) == string.Join("\n", saved), "Continue in a new process restores the standings exactly");
+        Check(Results() == null, "no score block right after Continue (scores return with the next completed round)");
+        Info("after Continue: " + Summary());
+        yield return Shot("resume-02-continued");
+        yield return ResolveRound(3, false);
+        ApplyResults(3);
+        CheckTable("after round 3 (resumed)");
+        yield return Shot("resume-03-after-round3");
+        yield return Click("Save to manual slot 1"); yield return Idle();
+        SaveState("state-after-round3.txt", TableSnapshot());
+
+        // Repeated new / load / quit cycles in one process.
+        for (int k = 1; k <= 3; k++)
+        {
+            yield return Click(QUIT);
+            yield return Until(() => Find("New career") != null, "main menu");
+            yield return NewCareer(k * 3);
+            string summary = Summary();
+            string club = summary.Substring(0, summary.IndexOf(" |", StringComparison.Ordinal));
+            yield return Click(QUIT);
+            yield return Until(() => Find("Load career") != null && Find("Load career").interactable, "main menu");
+            yield return Click("Load career");
+            yield return Frames(10);
+            Info("cycle " + k + " PICKER " + PickerStates());
+            yield return Click("Back");
+            yield return Click("Continue career");
+            yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home after Continue", 60f);
+            Check(Summary().StartsWith(club + " |", StringComparison.Ordinal), "cycle " + k + ": Continue opens the newest career (" + club + ")");
+            Check(Notice() == null, "cycle " + k + ": no error notice");
+        }
+        File.WriteAllText(Path.Combine(_dir, "last-career.txt"), Summary());
+        yield return Click(QUIT);
+        yield return Until(() => Find("Continue career") != null, "main menu");
+    }
+
+    private IEnumerator Cycle()
+    {
+        string expected = File.ReadAllText(Path.Combine(_dir, "last-career.txt"));
+        yield return Until(() => Find("Continue career") != null && Find("Continue career").interactable && !Busy(), "main menu", 60f);
+        yield return Click("Continue career");
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home after Continue", 60f);
+        string club = expected.Substring(0, expected.IndexOf(" |", StringComparison.Ordinal));
+        Check(Summary().StartsWith(club + " |", StringComparison.Ordinal), "relaunch: Continue opens " + club + " (" + Summary() + ")");
+        Check(Notice() == null, "relaunch: no error notice");
+        yield return Click(QUIT);
+        yield return Until(() => Find("Continue career") != null, "main menu");
+    }
+
+    private IEnumerator TabCycle(string what, bool reverse)
+    {
+        var stops = new List<string>();
+        GameObject first = Focused();
+        int noRing = 0, outside = 0;
+        for (int i = 0; i < 80; i++)
+        {
+            yield return Key(VK_TAB, reverse);
+            GameObject f = Focused();
+            string v = Visibility(f);
+            if (v.Contains("NO-RING")) noRing++;
+            if (v.Contains("OUTSIDE")) outside++;
+            Selectable s = f == null ? null : f.GetComponent<Selectable>();
+            if (s != null && !s.interactable) Check(false, what + ": Tab stopped on disabled '" + LabelOf(f) + "'");
+            stops.Add(LabelOf(f));
+            if (f == first) break;
+        }
+        Mark("CYCLE " + what + (reverse ? " (Shift+Tab)" : " (Tab)") + " " + stops.Count + " stops: " + string.Join(" -> ", stops));
+        Check(Focused() == first, what + (reverse ? " Shift+Tab" : " Tab") + " cycle wraps to its start in " + stops.Count + " stops");
+        Check(noRing == 0 && outside == 0, what + (reverse ? " Shift+Tab" : " Tab") + ": focus ring drawn and in view at every stop (" + noRing + " without ring, " + outside + " outside view)");
+        _lastCycle = stops;
+    }
+    private List<string> _lastCycle = new List<string>();
+
+    private IEnumerator BothCycles(string what)
+    {
+        // Start from a real Tab stop (a page opens with focus on its heading, which is not one).
+        Info(what + ": focus before the cycles '" + LabelOf(Focused()) + "'");
+        yield return Key(VK_TAB);
+        yield return TabCycle(what, false);
+        var forward = new List<string>(_lastCycle);
+        yield return TabCycle(what, true);
+        var backward = new List<string>(_lastCycle);
+        // Reversed cycle from the same start visits the same stops in the opposite order.
+        var expected = new List<string>();
+        for (int i = forward.Count - 2; i >= 0; i--) expected.Add(forward[i]);
+        expected.Add(forward[forward.Count - 1]);
+        Check(string.Join("|", expected) == string.Join("|", backward), what + ": Shift+Tab visits the Tab stops in reverse order");
+    }
+
+    private IEnumerator Keys()
+    {
+        yield return Until(() => Find("New career") != null && Find("New career").interactable && !Busy(), "main menu", 60f);
+        yield return Frames(10);
+        yield return CalibrateShift();
+        Info("Main Menu initial focus '" + LabelOf(Focused()) + "'");
+        yield return Shot("keys-01-main-menu");
+        yield return BothCycles("Main Menu");
+
+        // Back path: New Career -> Back.
+        yield return TabTo("New career");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Info("New Career focus after entry '" + LabelOf(Focused()) + "'");
+        yield return BothCycles("New Career (no club selected)");
+        Check(Find("Start career") != null && !Find("Start career").interactable, "Start career disabled until a club is chosen");
+        yield return TabTo("Back");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Check(Find("New career") != null, "Back from New Career returns to the Main Menu (focus '" + LabelOf(Focused()) + "')");
+
+        // New career by keyboard.
+        yield return TabTo("New career");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        yield return TabToPrefix("Select ");
+        string club = Unwrap(LabelOf(Focused())).Substring(7);
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Info("after selecting '" + club + "' focus '" + LabelOf(Focused()) + "'");
+        yield return Shot("keys-02-new-career-selected");
+        yield return TabTo("Start career");
+        yield return Key(VK_RETURN);
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home", 60f);
+        yield return Frames(5);
+        Info("Career Home focus after start '" + LabelOf(Focused()) + "'");
+        yield return Shot("keys-03-career-home");
+        yield return BothCycles("Career Home");
+
+        // Back paths: Career Home -> Main Menu -> Load Career -> Back -> Continue.
+        yield return TabTo(QUIT);
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Check(Find("Continue career") != null, "Return to Main Menu by keyboard (focus '" + LabelOf(Focused()) + "')");
+        yield return TabTo("Load career");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Info("Load Career focus after entry '" + LabelOf(Focused()) + "'; " + PickerStates());
+        yield return Shot("keys-04-load-career");
+        yield return BothCycles("Load Career");
+        yield return TabTo("Back");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Check(Find("Continue career") != null, "Back from Load Career returns to the Main Menu (focus '" + LabelOf(Focused()) + "')");
+        yield return TabTo("Continue career");
+        yield return Key(VK_RETURN);
+        yield return Until(() => Find("Save to manual slot 1") != null && !Busy(), "Career Home after Continue", 60f);
+        yield return Frames(5);
+        Info("Career Home focus after Continue '" + LabelOf(Focused()) + "'");
+
+        // One matchday entirely by keyboard.
+        yield return ResolveRound(1, true);
+        yield return Frames(10);
+
+        // Save by keyboard: success, failure, retry; focus after each.
+        yield return TabTo("Save to manual slot 1");
+        GameObject saveButton = Focused();
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Check(Focused() == saveButton, "focus returns to 'Save to manual slot 1' after a successful save (now '" + LabelOf(Focused()) + "')");
+        string manual1 = SaveFile("manual-1");
+        var hold = new FileStream(manual1, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        string failure = Notice();
+        Check(failure != null, "failed save shows a notice: '" + failure + "'");
+        Text noticeText = NoticeText();
+        if (noticeText != null)
+        {
+            bool inView = InView(noticeText.rectTransform, out string where);
+            Info("failure notice " + where + "; focus after failed save '" + LabelOf(Focused()) + "' " + Visibility(Focused()));
+            Check(inView || Visibility(Focused()).Contains("inView"), "failure feedback reachable: notice " + where);
+        }
+        yield return Shot("keys-05-save-failed");
+        hold.Dispose();
+        yield return TabTo("Save to manual slot 1");
+        yield return Key(VK_RETURN);
+        yield return Idle();
+        Check(Notice() == null && Focused() == saveButton, "retry after failure succeeds, clears the notice and keeps focus on the save control");
+        yield return BothCycles("Career Home after a round");
+
+        // Layout audits.
+        yield return Audit("1366x768");
+        yield return Resize(1920, 1080);
+        yield return Audit("1920x1080");
+        yield return Resize(2560, 1440);
+        if (Screen.width == 2560 && Screen.height == 1440) yield return Audit("2560x1440");
+        else Info("2560x1440 not available in a window on this display (got " + Screen.width + "x" + Screen.height + ")");
+        yield return Resize(1366, 768);
+    }
+
+    private Text StandingsHeadingText()
+    {
+        foreach (var t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+            if (t.isActiveAndEnabled && Starts(t.text, "Positions ")) return t;
+        return null;
+    }
+
+    private bool FocusInView() => Focused() != null && Visibility(Focused()).Contains("inView");
+
+    // Enter on a standings control; the focused control must be in view once the new page is laid out.
+    private IEnumerator Press(string tag, string what)
+    {
+        yield return Key(VK_RETURN);
+        yield return Frames(6);
+        Check(FocusInView(), tag + ": focus in view after Enter on " + what + " (now '" + LabelOf(Focused()) + "' " + Visibility(Focused()) + ")");
+    }
+
+    private static float v0Bottom(RectTransform region)
+    {
+        var v = new Vector3[4]; region.GetComponentInParent<ScrollRect>().viewport.GetWorldCorners(v);
+        return v[0].y;
+    }
+
+    private static RectTransform StandingsRegion()
+    {
+        var go = GameObject.Find("Standings page");
+        return go == null ? null : (RectTransform)go.transform;
+    }
+
+    // Every standings page: from the first page, a full Tab cycle plus the arrow keys on the standings region must
+    // bring the page heading, the column headers and every row fully on screen; then Lower positions moves on.
+    private IEnumerator StandingsPages(string tag)
+    {
+        yield return TabTo("Your position");
+        bool pressedHigher = false;
+        for (int i = 0; i < 5 && Find("Higher positions") != null && Find("Higher positions").interactable; i++)
+        {
+            yield return TabTo("Higher positions");
+            yield return Press(tag, "Higher positions");
+            pressedHigher = true;
+        }
+        if (pressedHigher)
+            Check(Is(LabelOf(Focused()), "Your position"), tag + ": at the first standings page focus moves from the disabled Higher positions to Your position (now '" + LabelOf(Focused()) + "')");
+        else
+            Info(tag + ": the managed club is on the first page, so Higher positions starts disabled and Tab skips it");
+        int pages = 0, incomplete = 0;
+        while (pages < 6)
+        {
+            pages++;
+            Text heading = StandingsHeadingText();
+            string title = heading == null ? "(no heading)" : heading.text;
+            List<Text[]> rows = Standings();
+            var seen = new HashSet<int>();
+            var seenTab = new HashSet<int>();
+            bool headingSeen = false, tabOnlyHeading = false;
+            System.Action<bool> observe = arrow =>
+            {
+                bool h = heading != null && FullyVisibleLines(heading, out int n).Count == n;
+                headingSeen |= h;
+                if (!arrow) tabOnlyHeading |= h;
+                for (int r = 0; r < rows.Count; r++)
+                    if (RowInView(rows[r]))
+                    {
+                        seen.Add(r);
+                        if (!arrow) seenTab.Add(r);
+                    }
+            };
+            GameObject start = Focused();
+            int regionStops = 0, arrowPresses = 0;
+            bool regionEndReached = true;
+            for (int i = 0; i < 80; i++)
+            {
+                observe(false);
+                yield return Key(VK_TAB, false, false);
+                if (Focused() != null && Focused().name == "Standings page")
+                {
+                    regionStops++;
+                    observe(false);
+                    if (pages == 1 && regionStops == 1) yield return Shot("keys-" + tag + "-standings-region-page1");
+                    // Arrow keys scroll the focused region; Down until its bottom edge shows, then back Up.
+                    var region = StandingsRegion();
+                    int downs = 0;
+                    for (; downs < 12; downs++)
+                    {
+                        var c = new Vector3[4]; region.GetWorldCorners(c);
+                        var v = new Vector3[4]; region.GetComponentInParent<ScrollRect>().viewport.GetWorldCorners(v);
+                        if (c[0].y >= v[0].y - 0.5f) break;
+                        yield return Key(VK_DOWN);
+                        arrowPresses++;
+                        observe(true);
+                    }
+                    var c2 = new Vector3[4]; region.GetWorldCorners(c2);
+                    Info(tag + ": standings region bottom edge after " + downs + " Down: " + c2[0].y.ToString("F0") + " (viewport bottom " + v0Bottom(region).ToString("F0") + ")");
+                    var v2 = new Vector3[4]; region.GetComponentInParent<ScrollRect>().viewport.GetWorldCorners(v2);
+                    if (c2[0].y < v2[0].y - 0.5f) regionEndReached = false;
+                    for (int u = 0; u < downs; u++) { yield return Key(VK_UP); arrowPresses++; observe(true); }
+                    Check(FocusInView(), tag + ": standings region top back in view after " + downs + " Down and " + downs + " Up (" + Visibility(Focused()) + ")");
+                }
+                if (Focused() == start) break;
+            }
+            observe(false);
+            bool complete = headingSeen && seen.Count == rows.Count && regionStops == 1 && regionEndReached;
+            if (!complete) incomplete++;
+            Check(complete, tag + ": standings page " + pages + " '" + title + "': heading " + (headingSeen ? "seen" : "NOT seen")
+                + ", rows (header + clubs) fully on screen by keyboard " + seen.Count + " of " + rows.Count
+                + " (Tab stops alone: heading " + (tabOnlyHeading ? "seen" : "not seen") + ", " + seenTab.Count + " rows; "
+                + arrowPresses + " arrow presses; region stops " + regionStops + ", region end reached " + regionEndReached + ")");
+            if (pages == 2) yield return Shot("keys-" + tag + "-standings-page2");
+            Button lower = Find("Lower positions");
+            if (lower == null || !lower.interactable) break;
+            yield return TabTo("Lower positions");
+            yield return Press(tag, "Lower positions");
+        }
+        Check(Is(LabelOf(Focused()), "Your position"), tag + ": at the last standings page focus moves from the disabled Lower positions to Your position (now '" + LabelOf(Focused()) + "')");
+        Check(incomplete == 0, tag + ": every standings page fully readable by keyboard (" + pages + " pages, " + incomplete + " incomplete)");
+        yield return Shot("keys-" + tag + "-standings-last-page");
+        // Back up one page by keyboard, then return to the managed club's page; focus must stay in view each time.
+        if (Find("Higher positions") != null && Find("Higher positions").interactable)
+        {
+            yield return TabTo("Higher positions");
+            yield return Press(tag, "Higher positions");
+        }
+        yield return TabTo("Your position");
+        yield return Press(tag, "Your position");
+        Text back = StandingsHeadingText();
+        Info(tag + ": Your position returns to '" + (back == null ? "(none)" : back.text) + "'");
+    }
+
+    private IEnumerator Resize(int w, int h)
+    {
+        Screen.SetResolution(w, h, FullScreenMode.Windowed);
+        for (int i = 0; i < 60 && (Screen.width != w || Screen.height != h); i++) yield return null;
+        yield return Frames(20);
+        Info("resized to " + Screen.width + "x" + Screen.height + " (asked " + w + "x" + h + ")");
+    }
+
+    private IEnumerator Audit(string tag)
+    {
+        Canvas.ForceUpdateCanvases();
+        yield return Frames(5);
+        List<Text[]> rows = Standings();
+        int misaligned = 0, overlaps = 0, numericWraps = 0, clubWraps = 0, unfit = 0, outsideX = 0;
+        var notes = new StringBuilder();
+        var vp = new Vector3[4];
+        ScrollRect scroll = rows.Count > 0 ? rows[0][0].GetComponentInParent<ScrollRect>() : null;
+        if (scroll != null) scroll.viewport.GetWorldCorners(vp);
+        for (int r = 0; r < rows.Count; r++)
+        {
+            Text[] cells = rows[r];
+            for (int c = 0; c < cells.Length; c++)
+            {
+                var wc = new Vector3[4]; cells[c].rectTransform.GetWorldCorners(wc);
+                var hc = new Vector3[4]; rows[0][c].rectTransform.GetWorldCorners(hc);
+                if (Mathf.Abs(wc[0].x - hc[0].x) > 0.5f || Mathf.Abs(wc[2].x - hc[2].x) > 0.5f) { misaligned++; notes.Append("misaligned r" + r + "c" + c + "; "); }
+                if (c + 1 < cells.Length)
+                {
+                    var nc = new Vector3[4]; cells[c + 1].rectTransform.GetWorldCorners(nc);
+                    if (wc[2].x > nc[0].x + 0.5f) { overlaps++; notes.Append("overlap r" + r + "c" + c + "; "); }
+                }
+                if (scroll != null && (wc[2].x > vp[2].x + 0.5f || wc[0].x < vp[0].x - 0.5f)) outsideX++;
+                int lines = Generate(cells[c]).lineCount;
+                if (lines > 1) { if (c == 1) clubWraps++; else { numericWraps++; notes.Append("wrap r" + r + "c" + c + " '" + cells[c].text + "'; "); } }
+                string fit = Fit(cells[c]);
+                if (fit.Length > 0) { unfit++; notes.Append("unfit r" + r + "c" + c + " '" + cells[c].text + "' " + fit + "; "); }
+            }
+        }
+        Check(rows.Count > 1 && misaligned == 0, tag + ": all ten standings columns align with their headers (" + misaligned + " misaligned cells, " + rows.Count + " rows)");
+        Check(overlaps == 0 && outsideX == 0, tag + ": no standings cell overlaps its neighbour or leaves the viewport (" + overlaps + " overlaps, " + outsideX + " outside)");
+        Check(numericWraps == 0, tag + ": header and number cells stay on one line (" + numericWraps + " wrapped)");
+        Check(unfit == 0, tag + ": every standings cell's text fits its cell (" + unfit + " clipped)");
+        Info(tag + ": " + clubWraps + " club-name cells wrap; " + notes);
+        if (rows.Count > 1) { var c0 = new Vector3[4]; rows[0][1].rectTransform.GetWorldCorners(c0); Info(tag + ": club column width " + (c0[2].x - c0[0].x).ToString("F0") + " px"); }
+
+        // Every visible text on Career Home fits its rect.
+        int bad = 0;
+        var badNotes = new StringBuilder();
+        foreach (Text t in FindObjectsByType<Text>(FindObjectsSortMode.InstanceID))
+        {
+            if (!t.isActiveAndEnabled || t.text.Length == 0 || t.GetComponentInParent<Canvas>() == null) continue;
+            string fit = Fit(t);
+            if (fit.Length > 0) { bad++; badNotes.Append("'" + (t.text.Length > 40 ? t.text.Substring(0, 40) : t.text).Replace("\n", " / ") + "' " + fit + "; "); }
+        }
+        Check(bad == 0, tag + ": no clipped or overflowing text anywhere on Career Home (" + bad + ")" + (bad > 0 ? " " + badNotes : ""));
+
+        // Keyboard scroll reach: across a full Tab cycle, is every score line and every standings row fully on screen at some stop?
+        Text results = Results();
+        var scoreSeen = new HashSet<int>();
+        var rowSeen = new HashSet<int>();
+        int scoreLines = 0;
+        GameObject start = Focused();
+        for (int i = 0; i < 80; i++)
+        {
+            foreach (int line in FullyVisibleLines(results, out scoreLines)) scoreSeen.Add(line);
+            for (int r = 0; r < rows.Count; r++)
+                if (RowInView(rows[r])) rowSeen.Add(r);
+            yield return Key(VK_TAB, false, false);
+            if (Focused() == start) break;
+        }
+        Check(results != null && scoreSeen.Count == scoreLines, tag + ": every score-block line fully on screen at some Tab stop (" + scoreSeen.Count + " of " + scoreLines + ")");
+        Info(tag + ": standings rows (current page) fully on screen at some Tab stop: " + rowSeen.Count + " of " + rows.Count);
+        yield return StandingsPages(tag);
+        // Mouse-wheel equivalent: scroll the page to the bottom and check the standings are all readable there.
+        if (scroll != null)
+        {
+            scroll.verticalNormalizedPosition = 0f;
+            Canvas.ForceUpdateCanvases();
+            yield return Frames(3);
+            int atBottom = 0;
+            for (int r = 0; r < rows.Count; r++) if (RowInView(rows[r])) atBottom++;
+            Info(tag + ": standings rows fully on screen when scrolled to the bottom: " + atBottom + " of " + rows.Count);
+            yield return Shot("keys-" + tag + "-scrolled-bottom");
+            if (results != null)
+            {
+                // Scroll so the score block's top is at the top of the viewport.
+                float best = 1f;
+                for (int step = 100; step >= 0; step--)
+                {
+                    scroll.verticalNormalizedPosition = step / 100f;
+                    Canvas.ForceUpdateCanvases();
+                    var rc = new Vector3[4]; results.rectTransform.GetWorldCorners(rc);
+                    if (rc[1].y <= vp[1].y) { best = step / 100f; break; }
+                }
+                scroll.verticalNormalizedPosition = best;
+                yield return Frames(3);
+                yield return Shot("keys-" + tag + "-scores");
+            }
+            scroll.verticalNormalizedPosition = 1f;
+            yield return Frames(3);
+        }
+        yield return Shot("keys-" + tag + "-top");
+    }
+
+    private IEnumerator Pm1()
+    {
+        yield return Until(() => Find("Play a demo match") != null && Find("Play a demo match").interactable && !Busy(), "main menu", 60f);
+        yield return Frames(10);
+        bool career = Find("New career") != null;
+        Info("career entries on the Main Menu: " + career);
+        DumpTexts("01-main-menu");
+        yield return Shot("pm1-01-main-menu");
+        yield return Click("Play a demo match");
+        yield return Frames(30);
+        DumpTexts("02-tactics-setup");
+        yield return Shot("pm1-02-tactics-setup");
+        yield return Click("Start match");
+        yield return Until(() => Find("Faster") != null, "Match View", 60f);
+        yield return Frames(60);
+        DumpTexts("03-match-view-start");
+        yield return Shot("pm1-03-match-view");
+        for (int i = 0; i < 10; i++)
+        {
+            Button faster = Find("Faster");
+            if (faster == null || !faster.interactable) break;
+            faster.onClick.Invoke();
+            yield return Frames(10);
+        }
+        float start = Time.realtimeSinceStartup;
+        yield return Until(() => Find("View match report") != null && Find("View match report").interactable, "full time", 3600f);
+        Info("match played to full time in " + (Time.realtimeSinceStartup - start).ToString("F0") + " s");
+        yield return Frames(60);
+        DumpTexts("04-match-view-full-time");
+        yield return Shot("pm1-04-full-time");
+        yield return Click("View match report");
+        yield return Frames(30);
+        DumpTexts("05-report");
+        yield return Shot("pm1-05-report");
+        yield return Click("Return to main menu");
+        yield return Frames(30);
+        Check(Find("Play a demo match") != null && Find("Play a demo match").interactable, "Report returns to the Main Menu with the demo available");
+        Check((Find("New career") != null) == career, "career entries on the Main Menu after the report: " + (Find("New career") != null));
+        DumpTexts("06-main-menu-after-report");
+        yield return Click("Play a demo match");
+        yield return Frames(30);
+        Check(Find("Start match") != null, "a second demo reaches Tactics Setup");
+        yield return Click("Back");
+        yield return Frames(10);
+        Check(Find("Play a demo match") != null, "Back from Tactics Setup returns to the Main Menu");
+    }
+}

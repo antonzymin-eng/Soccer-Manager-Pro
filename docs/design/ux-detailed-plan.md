@@ -1,7 +1,8 @@
 # System XI — Detailed UX Execution Plan
 
 **Created:** September 4, 2026  
-**Last Updated:** November 19, 2026 (v1.39 — Schedule keyboard acceptance run; fixture list paged.)
+**Last Updated:** November 20, 2026 (v1.40 — Career Home standings paged for keyboard reach.)
+**Last Updated (prior):** November 19, 2026 (v1.39 — Schedule keyboard acceptance run; fixture list paged.)
 **Last Updated (prior):** November 19, 2026 (v1.38 — Career Home schedule UX acceptance criteria.)
 **Last Updated (prior):** November 5, 2026 (v1.37 — T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged.)
 **Last Updated (prior):** November 4, 2026\
@@ -824,6 +825,17 @@ scales, every line of every page was fully on screen at some stop in a Tab cycle
 rendered line bounds. Rows stay read-only text. Shift+Tab, long
 club names and other window sizes were not verified in this run.
 
+**Standings (November 20, 2026, pinned host, [evidence](../tracking/evidence/host-52d1f000-standings-20261120/README.md)).** The league table was
+read-only text after the last Career Home control, so no key scrolled it into view. At 200%, no row was
+ever fully on screen during a Tab cycle; at 100%, 1366×768, only 2 of 21 were. The owner chose the #551
+answer. The table shows eight rows under a *Positions 9 to 16 of 20* heading, with *Higher positions*,
+*Your position* and *Lower positions* controls after the rows. *Your position* is the default page. Re-run,
+every page was fully readable by keyboard at 100% and 200% at 1366×768 and 1920×1080. With 62-character
+names and expanded copy at 1366×768 and 200%, two pages missed their heading and two rows. Review fixes
+in the same PR made the page heading and rows one Tab stop. Focus shows its top even when the page is
+taller than the window, and Down/Up scroll it. A page change also keeps the focused control in view.
+Re-run, every page was readable at all three text settings and both sizes.
+
 ## 7.6 S1 usability tasks
 
 **November 4 owner scope amendment (roadmap D-11):** interactive career matches and coach
@@ -1168,5 +1180,6 @@ Acceptance is a dated project-owner decision recorded here, in `docs/tracking/op
 | 1.35 | October 30, 2026 | S0 Gate J **ACCEPTED**: the B8/B10 re-capture and an uninterrupted I-Q15 pass on the H v0.2 skin (October 29), the owner's wording approval and J-04 visual acceptance (October 28) and J-05 (PR #520, merged `642294d1`; 10× at 601–602 ticks/s) completed §7 of [`p5b-real-client-acceptance.md`](../tracking/p5b-real-client-acceptance.md); the owner signed off on October 30 (record v0.15 §19). |
 | 1.36 | November 4, 2026 | Apply owner D-11 deferral of interactive career/delegation until staff; current S1 retains all eight tasks with readiness inspection, Home round/result feedback and between-round save/resume. Update current D-14 release-target pointer. No gate verdict or prior approval/evidence changed. |
 | 1.37 | 2026-11-05 | T5: refresh authoritative S2 transfer/finance status and link the supplement; host gates unchanged. |
+| 1.40 | November 20, 2026 | Record the standings keyboard-reach gap and the owner's paging fix. |
 | 1.39 | November 19, 2026 | Record the schedule keyboard run: 200% reach gap, owner's paging decision and the passing re-run. |
 | 1.38 | November 19, 2026 | Record the Career Home schedule candidate and its pinned-host keyboard and text-scale acceptance checks. |

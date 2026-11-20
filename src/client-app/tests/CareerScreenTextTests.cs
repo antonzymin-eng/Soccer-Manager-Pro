@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreenTextTests.cs
 // Created:  2026-11-03
-// Modified: 2026-11-19
+// Modified: 2026-11-20
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; Localization #49; Code Standards #20
 // Purpose:  Validate career display semantics and shared formatter isolation/admission.
@@ -176,6 +176,30 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual("Later fixtures", text.Label("schedule.page.next"));
         }
 
+        /// <summary>The standings heading names the table positions on the page; it is empty without a career.</summary>
+        [Test]
+        public void StandingsHeadingNamesThePositionsOnThePage()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            holder.Set(CareerTestSupport.StartQuick(temp.Slots));
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            var text = new CareerScreenText();
+            int size = CareerStandingsPage.ROWS_PER_PAGE;
+            int total = home.Table.Count;
+
+            Assert.AreEqual("Positions 1 to " + size + " of " + total,
+                text.StandingsHeading(home, CareerStandingsPage.At(in home, 0)));
+            CareerStandingsPage last = CareerStandingsPage.At(in home, total - 1);
+            Assert.AreEqual("Positions " + (last.First + 1) + " to " + total + " of " + total,
+                text.StandingsHeading(home, last));
+            Assert.AreEqual("", text.StandingsHeading(default, default));
+
+            Assert.AreEqual("Higher positions", text.Label("table.page.previous"));
+            Assert.AreEqual("Your position", text.Label("table.page.current"));
+            Assert.AreEqual("Lower positions", text.Label("table.page.next"));
+        }
+
         /// <summary>Both schedule views format fixture data through the same authored locale.</summary>
         [Test]
         public void ScheduleViewsUseLocalizedRowsAndRefreshFixtureStatus()
@@ -218,4 +242,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.2 | 2026-11-19 | — | Cover localized list and calendar rows and their matchday and played states. |
 // | 1.3 | 2026-11-19 | — | Cover the paged fixture list, its position heading and paging labels. |
 // | 1.4 | 2026-11-19 | — | Verify localized scorelines and signed goal differences. |
+// | 1.5 | 2026-11-20 | — | Cover the standings page heading and the Higher / Your / Lower position labels. |
 #endregion
