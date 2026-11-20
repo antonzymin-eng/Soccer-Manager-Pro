@@ -1,6 +1,6 @@
 // File:     Assets/Editor/UiToolkitSpike/Tests/UiToolkitSpikeTests.cs
 // Created:  2026-11-20
-// Modified: 2026-11-20 (initial T0a probe)
+// Modified: 2026-11-20 (Editor-panel Tab traversal)
 // Author:   —
 // Spec:     UI Toolkit presentation design §4, T0a (PR #560)
 // Purpose:  Establish what Unity EditMode can check on the spike's UXML and USS.
@@ -15,31 +15,17 @@ using UnityEngine.UIElements;
 
 namespace TacticalDirector.UiToolkitSpike.Tests
 {
-    /// <summary>Checks the spike's authored structure and the style/layout available in EditMode.</summary>
+    /// <summary>Checks the spike's authored structure, keyboard focus, and style/layout in EditMode.</summary>
     public sealed class UiToolkitSpikeTests
     {
         private const string UXML = "Assets/Editor/UiToolkitSpike/Spike.uxml";
 
         /// <summary>Clones the runtime markup without a panel and inspects its authored focus stops.</summary>
         [Test]
-        public void CloneContainsTheOrderedKeyboardStops()
+        public void DetachedCloneDeclaresFocusableControlsInOrder()
         {
-            TemplateContainer tree = CloneSpike();
-            var rail = tree.Q<VisualElement>("spike-rail");
-            Assert.That(rail, Is.Not.Null);
-            var scroll = rail.Q<ScrollView>("spike-scroll");
-            Assert.That(scroll, Is.Not.Null);
-            var scale = scroll.Q<Button>("cycle-scale");
-            var sample = scroll.Q<Label>("long-copy");
-            var submit = scroll.Q<Button>("submit-probe");
-            var returnFocus = scroll.Q<Button>("return-focus");
-            Assert.That(scale, Is.Not.Null);
-            Assert.That(sample, Is.Not.Null);
-            Assert.That(submit, Is.Not.Null);
-            Assert.That(returnFocus, Is.Not.Null);
-
-            var ordered = new VisualElement[] { scale, sample, submit, returnFocus };
-            VisualElement content = scale.parent;
+            VisualElement[] ordered = GetKeyboardStops(CloneSpike());
+            VisualElement content = ordered[0].parent;
             int lastIndex = -1;
             foreach (VisualElement element in ordered)
             {
@@ -52,6 +38,47 @@ namespace TacticalDirector.UiToolkitSpike.Tests
             }
         }
 
+        /// <summary>Dispatches Tab and Shift+Tab to the live Editor panel and observes where focus lands.</summary>
+        [UnityTest]
+        public IEnumerator TabMovesFocusForwardAndBackwardInAnEditorPanel()
+        {
+            var window = ScriptableObject.CreateInstance<SpikeLayoutWindow>();
+            try
+            {
+                TemplateContainer root = ShowSpike(window);
+                VisualElement[] ordered = GetKeyboardStops(root);
+                VisualElement first = ordered[0];
+                double deadline = EditorApplication.timeSinceStartup + 5;
+                while (EditorApplication.timeSinceStartup < deadline &&
+                    (first.panel == null || !(first.layout.height > 0f)))
+                    yield return null;
+
+                Assert.That(first.panel, Is.Not.Null, "The spike must be attached to a live Editor panel.");
+                Assert.That(first.layout.height, Is.GreaterThan(0f), "The spike must have completed its first layout.");
+                first.Focus();
+                yield return null;
+                AssertFocus(first);
+
+                for (int i = 1; i < ordered.Length; i++)
+                {
+                    SendTab(ordered[i - 1], EventModifiers.None);
+                    yield return null;
+                    AssertFocus(ordered[i]);
+                }
+
+                for (int i = ordered.Length - 2; i >= 0; i--)
+                {
+                    SendTab(ordered[i + 1], EventModifiers.Shift);
+                    yield return null;
+                    AssertFocus(ordered[i]);
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         /// <summary>Attaches the same markup to an Editor panel and checks text reflow at fixed width.</summary>
         [UnityTest]
         public IEnumerator UssDoublesTextSizeAndReflowsInAnEditorPanel()
@@ -59,11 +86,7 @@ namespace TacticalDirector.UiToolkitSpike.Tests
             var window = ScriptableObject.CreateInstance<SpikeLayoutWindow>();
             try
             {
-                window.ShowUtility();
-                var root = CloneSpike();
-                root.style.width = 420;
-                root.style.height = 360;
-                window.rootVisualElement.Add(root);
+                TemplateContainer root = ShowSpike(window);
                 var rail = root.Q<VisualElement>("spike-rail");
                 var sample = rail.Q<Label>("long-copy");
                 double deadline = EditorApplication.timeSinceStartup + 5;
@@ -92,6 +115,47 @@ namespace TacticalDirector.UiToolkitSpike.Tests
             }
         }
 
+        private static void SendTab(VisualElement focused, EventModifiers modifiers)
+        {
+            using var tab = KeyDownEvent.GetPooled('\t', KeyCode.Tab, modifiers);
+            tab.target = focused;
+            focused.SendEvent(tab);
+        }
+
+        private static void AssertFocus(VisualElement expected)
+        {
+            var focused = expected.focusController.focusedElement;
+            Assert.That(focused, Is.SameAs(expected),
+                $"Expected focus on {expected.name}, observed {(focused as VisualElement)?.name ?? "(none)"}.");
+        }
+
+        private static VisualElement[] GetKeyboardStops(VisualElement root)
+        {
+            var rail = root.Q<VisualElement>("spike-rail");
+            Assert.That(rail, Is.Not.Null);
+            var scroll = rail.Q<ScrollView>("spike-scroll");
+            Assert.That(scroll, Is.Not.Null);
+            var scale = scroll.Q<Button>("cycle-scale");
+            var sample = scroll.Q<Label>("long-copy");
+            var submit = scroll.Q<Button>("submit-probe");
+            var returnFocus = scroll.Q<Button>("return-focus");
+            Assert.That(scale, Is.Not.Null);
+            Assert.That(sample, Is.Not.Null);
+            Assert.That(submit, Is.Not.Null);
+            Assert.That(returnFocus, Is.Not.Null);
+            return new VisualElement[] { scale, sample, submit, returnFocus };
+        }
+
+        private static TemplateContainer ShowSpike(EditorWindow window)
+        {
+            window.ShowUtility();
+            TemplateContainer root = CloneSpike();
+            root.style.width = 420;
+            root.style.height = 360;
+            window.rootVisualElement.Add(root);
+            return root;
+        }
+
         private static TemplateContainer CloneSpike()
         {
             var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UXML);
@@ -105,3 +169,4 @@ namespace TacticalDirector.UiToolkitSpike.Tests
 
 // | Version | Date       | Author | Change |
 // | 0.1     | 2026-11-20 | —      | UXML structure and Editor-panel style/layout checks. |
+// | 0.2     | 2026-11-20 | —      | Dispatch Tab and Shift+Tab in a live Editor panel and assert the focused controls. |

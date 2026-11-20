@@ -1,6 +1,6 @@
 // File:     Assets/Editor/UiToolkitSpike/UiToolkitSpike.cs
 // Created:  2026-11-20
-// Modified: 2026-11-20 (initial T0a probe)
+// Modified: 2026-11-20 (focus handoff diagnostics)
 // Author:   —
 // Spec:     UI Toolkit presentation design §4, T0a (PR #560)
 // Purpose:  Attach a temporary comparison rail to the running client and record host observations.
@@ -51,6 +51,8 @@ namespace TacticalDirector.UiToolkitSpike
         private Label _status;
         private Button _scaleButton;
         private GameObject _previousSelection;
+        private int? _focusRequestFrame;
+        private bool _sawFocusIn;
         private bool _ownsFocus;
         private TextScale _scale;
         private int _submits;
@@ -159,7 +161,7 @@ namespace TacticalDirector.UiToolkitSpike
                 UpdateStatus();
                 Debug.Log(PREFIX + $"Probe activations: {_submits}");
             };
-            Require<Button>(_rail, "return-focus").clicked += ReturnToUgui;
+            Require<Button>(_rail, "return-focus").clicked += () => ReturnToUgui("return button");
             _rail.RegisterCallback<FocusInEvent>(OnRailFocus);
             _rail.RegisterCallback<KeyDownEvent>(ScrollWithKeyboard);
             BindFont(Require<Label>(_rail, "font-sample"));
@@ -177,7 +179,7 @@ namespace TacticalDirector.UiToolkitSpike
             _font.hideFlags = HideFlags.DontSave;
             sample.style.unityFontDefinition = FontDefinition.FromSDFFont(_font);
             bool complete = _font.HasCharacters(sample.text, out uint[] missing, tryAddCharacter: true);
-            Debug.Log(PREFIX + $"SDF sample from {source.name}: " + (complete ? "all probe glyphs available" :
+            Debug.Log(PREFIX + $"Runtime SDF asset from Unity's built-in {source.name}: " + (complete ? "all probe glyphs available" :
                 "missing " + string.Join(", ", missing?.Select(codePoint => $"U+{codePoint:X4}") ?? Array.Empty<string>())));
         }
 
@@ -213,14 +215,13 @@ namespace TacticalDirector.UiToolkitSpike
 
                 if (Input.GetKeyDown(KeyCode.F8))
                 {
-                    if (_ownsFocus || ToolkitFocus != null)
-                        ReturnToUgui();
+                    if (_focusRequestFrame.HasValue || _ownsFocus || ToolkitFocus != null)
+                        ReturnToUgui("F8");
                     else
                         EnterToolkit();
                 }
 
-                if (_ownsFocus && ToolkitFocus == null)
-                    ReturnToUgui();
+                CheckFocusHandoff();
                 if (Input.GetKeyDown(KeyCode.F9))
                     CycleScale();
                 if (Input.GetKeyDown(KeyCode.F10))
@@ -240,13 +241,16 @@ namespace TacticalDirector.UiToolkitSpike
 
         private void EnterToolkit()
         {
-            if (_isolate && (!_mainMenu.gameObject.activeInHierarchy || !_shell.enabled || !_screens.enabled))
+            if (_isolate && (_mainMenu == null || !_mainMenu.gameObject.activeInHierarchy || !_shell.enabled ||
+                _screens == null || !_screens.enabled))
             {
                 Debug.LogWarning(PREFIX + "Return to the running Main Menu before testing isolated focus.");
                 return;
             }
 
             _previousSelection = _eventSystem.currentSelectedGameObject;
+            _focusRequestFrame = Time.frameCount;
+            _sawFocusIn = false;
             if (_isolate)
             {
                 // Shell.Update calls S0.Refresh directly. S0 also recovers focus in LateUpdate.
@@ -256,14 +260,50 @@ namespace TacticalDirector.UiToolkitSpike
                 _ownsFocus = true;
             }
 
-            _scaleButton.Focus();
             Debug.Log(PREFIX + $"Frame {Time.frameCount}: requested UGUI → Toolkit focus.");
+            _scaleButton.Focus();
         }
 
-        private void ReturnToUgui()
+        private void CheckFocusHandoff()
+        {
+            if (_ownsFocus && (_mainMenu == null || !_mainMenu.gameObject.activeInHierarchy))
+            {
+                ReturnToUgui("Main Menu was left");
+                return;
+            }
+
+            VisualElement focus = ToolkitFocus;
+            if (_focusRequestFrame is int requestFrame)
+            {
+                // Allow the entry frame's queued focus events and S0 LateUpdate to settle.
+                if (Time.frameCount == requestFrame)
+                    return;
+
+                if (focus == null)
+                {
+                    string observed = _sawFocusIn ? "FocusIn was observed, then focus was lost" : "no FocusIn was observed";
+                    Debug.LogWarning(PREFIX + $"Frame {Time.frameCount}: handoff requested on frame {requestFrame} " +
+                        $"did not settle inside Toolkit ({observed}).");
+                    ReturnToUgui("focus entry did not settle");
+                    return;
+                }
+
+                _focusRequestFrame = null;
+                _sawFocusIn = false;
+                Debug.Log(PREFIX + $"Frame {Time.frameCount}: Toolkit focus confirmed on {focus.name}.");
+            }
+            else if (_ownsFocus && focus == null)
+            {
+                ReturnToUgui("Toolkit lost focus");
+            }
+        }
+
+        private void ReturnToUgui(string reason)
         {
             VisualElement focus = ToolkitFocus;
-            bool mayRestoreSelection = _ownsFocus || focus != null || _previousSelection != null;
+            bool hadProbeFocus = _focusRequestFrame.HasValue || _ownsFocus || focus != null || _previousSelection != null;
+            _focusRequestFrame = null;
+            _sawFocusIn = false;
             focus?.Blur();
             if (_ownsFocus)
             {
@@ -272,8 +312,15 @@ namespace TacticalDirector.UiToolkitSpike
                 _ownsFocus = false;
             }
 
-            if (mayRestoreSelection && _eventSystem != null && !IsUguiSelection(_eventSystem.currentSelectedGameObject))
-                _eventSystem.SetSelectedGameObject(IsUguiSelection(_previousSelection) ? _previousSelection : null);
+            if (hadProbeFocus && _eventSystem != null)
+            {
+                if (!IsUguiSelection(_eventSystem.currentSelectedGameObject))
+                    _eventSystem.SetSelectedGameObject(IsUguiSelection(_previousSelection) ? _previousSelection : null);
+
+                GameObject selection = _eventSystem.currentSelectedGameObject;
+                Debug.Log(PREFIX + $"Frame {Time.frameCount}: returned to UGUI ({reason}). " +
+                    $"EventSystem selection {(selection == null ? "(none)" : selection.name)}.");
+            }
 
             _previousSelection = null;
         }
@@ -283,6 +330,9 @@ namespace TacticalDirector.UiToolkitSpike
 
         private void OnRailFocus(FocusInEvent evt)
         {
+            if (_focusRequestFrame.HasValue)
+                _sawFocusIn = true;
+
             if (evt.target is VisualElement target && _scroll.contentContainer.Contains(target))
             {
                 _scroll.ScrollTo(target);
@@ -337,13 +387,14 @@ namespace TacticalDirector.UiToolkitSpike
 
         private void Dispose()
         {
-            ReturnToUgui();
+            ReturnToUgui("probe detached");
             if (_host != null)
             {
                 _host.SetActive(false);
                 Object.Destroy(_host);
             }
             if (_settings != null) Object.Destroy(_settings);
+            // A newly created TextCore FontAsset destroys its own atlas textures and material.
             if (_font != null) Object.Destroy(_font);
         }
     }
@@ -351,3 +402,4 @@ namespace TacticalDirector.UiToolkitSpike
 
 // | Version | Date       | Author | Change |
 // | 0.1     | 2026-11-20 | —      | Editor-only mixed-renderer feasibility probe. |
+// | 0.2     | 2026-11-20 | —      | Allow focus entry to settle and log handoff and restoration outcomes. |
