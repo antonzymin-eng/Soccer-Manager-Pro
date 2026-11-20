@@ -37,13 +37,14 @@ For the failing-before receipt, check out the pre-fix source, copy the post-fix
 `src/match-engine/tests/MatchEngineGkHeadingTests.cs` over it (that file does not call the changed
 signature), and run the first filter.
 
-The probe needs a throwaway project outside the repository that references the generated engine
-project of the tree being measured:
+The probe needs a throwaway directory outside the repository holding a copy of
+`PhysicalTrajectoryProbe.cs` and this project, which references the generated engine project of the
+tree being measured. The SDK compiles the `.cs` file by default; do not add a `Compile` item for it
+(that duplicate fails with `NETSDK1022`).
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup>
-  <ItemGroup><Compile Include="PhysicalTrajectoryProbe.cs" /></ItemGroup>
   <ItemGroup><ProjectReference Include="<tree>/src/match-engine/match-engine.gen.csproj" /></ItemGroup>
 </Project>
 ```

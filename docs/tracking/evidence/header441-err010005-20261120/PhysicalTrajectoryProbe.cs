@@ -1,4 +1,6 @@
-// Physical-trajectory fingerprint: ball and agent state only (excludes Heading's serialized attempt state).
+// Physical-trajectory fingerprint: ball and agent position/velocity and the score only. It does not read any
+// other serialized engine state (Heading attempt state, the KD-7 trigger latch, ...), so it cannot say which
+// snapshot fields differ between two trees.
 using System; using System.IO; using System.Security.Cryptography;
 using TacticalDirector.MatchEngine;
 static class P {

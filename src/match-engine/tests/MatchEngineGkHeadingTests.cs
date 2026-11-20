@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineGkHeadingTests.cs
 // Created:  2026-07-22
+// Modified: 2026-11-20 (ERR-010-005 review P2: KD-7 episode-latch locks, home/away)
 // Modified: 2026-11-20 (ERR-010-005: composed header-trigger approach-condition regressions, home/away)
 // Modified: 2026-09-22 (W3: Head-wins-Hand event provenance retains mixed-duel id)
 // Modified: 2026-09-22 (W3: composed home/away Head-wins-Hand route through real #10 geometry)
@@ -864,6 +865,114 @@ namespace TacticalDirector.MatchEngine
                 "The approached teammate, not the nearer passer, must receive the header commit.");
         }
 
+        // ── KD-7 latch under the ERR-010-005 approach condition (PR #559 review P2) ──────────
+        //
+        // Direction selects the candidate; it must not end the episode. KD-7 clears an agent's latch only
+        // when the ball is possessed, stops being airborne, or leaves that agent's head range. Each case
+        // drives the real tactical trigger several times with the ball restaged between drives.
+
+        private static List<int> ObserveCommits(MatchEngine engine)
+        {
+            var commits = new List<int>();
+            engine.TestOnly_Heading.TestOnly_ReachabilityObserver = sample =>
+            {
+                if (sample.Kind == HeadingReachabilityKind.Commit)
+                {
+                    commits.Add(sample.AgentId);
+                }
+            };
+            return commits;
+        }
+
+        private static void StageOnly(MatchEngine engine, params (int agent, Vector2 at)[] staged)
+        {
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                var far = AgentState.CreateAtPosition(new Vector2(10f + i, 5f), Vector2.right);
+                engine.TestOnly_SetAgent(i, in far);
+            }
+            foreach ((int agent, Vector2 at) in staged)
+            {
+                var placed = AgentState.CreateAtPosition(at, Vector2.right);
+                engine.TestOnly_SetAgent(agent, in placed);
+            }
+        }
+
+        private static void DriveWithBall(MatchEngine engine, Vector3 position, Vector3 velocity)
+        {
+            engine.TestOnly_ForceBallLoose(position, velocity);
+            engine.TestOnly_DriveGkHeadingTactical();
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_BallReversesInRange_SameAgentCommitsOnce(int team)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int agent = FirstOutfieldAgentOfTeam(engine, team);
+            StageOnly(engine, (agent, PasserSpot));
+            List<int> commits = ObserveCommits(engine);
+
+            float dir = team == 0 ? 1f : -1f;
+            var ball = new Vector3(PasserSpot.x + 0.4f * dir, PasserSpot.y, 1.0f);
+            DriveWithBall(engine, ball, new Vector3(-8f * dir, 0f, 0f));   // approaching: commits
+            DriveWithBall(engine, ball, new Vector3(8f * dir, 0f, 0f));    // moving away, still in range
+            DriveWithBall(engine, ball, new Vector3(-8f * dir, 0f, 0f));   // approaching again, same episode
+
+            CollectionAssert.AreEqual(new[] { agent }, commits,
+                "KD-7: one commit per agent per airborne episode; a direction change in range is not a new episode.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_BallLeavesHeadRange_NewEpisodeCommitsAgain(int team)
+        {
+            // Guard for the latch fix: leaving head range does end the episode.
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int agent = FirstOutfieldAgentOfTeam(engine, team);
+            StageOnly(engine, (agent, PasserSpot));
+            List<int> commits = ObserveCommits(engine);
+
+            float dir = team == 0 ? 1f : -1f;
+            var near = new Vector3(PasserSpot.x + 0.4f * dir, PasserSpot.y, 1.0f);
+            var far = new Vector3(PasserSpot.x + 5f * dir, PasserSpot.y, 1.0f);
+            var toward = new Vector3(-8f * dir, 0f, 0f);
+            DriveWithBall(engine, near, toward);
+            DriveWithBall(engine, far, toward);
+            DriveWithBall(engine, near, toward);
+
+            CollectionAssert.AreEqual(new[] { agent, agent }, commits,
+                "Leaving head range ends the episode, so the returning ball may be committed again.");
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void HeaderTrigger_NearerAgentInterrupts_FirstAgentKeepsLatch(int team)
+        {
+            // A commits; B becomes the nearer approached candidate and commits; A is nearest again while the
+            // ball never left A's range. KD-7 forbids A's second commit (the base loop cleared it whenever A
+            // was not the nearest candidate).
+            var engine = new MatchEngine(MatchSeed);
+            engine.EnableGkHeading();
+            int a = FirstOutfieldAgentOfTeam(engine, team);
+            int b = SecondOutfieldAgentOfTeam(engine, team, a);
+            float dir = team == 0 ? 1f : -1f;
+            var spotB = new Vector2(PasserSpot.x + 1.2f * dir, PasserSpot.y);
+            StageOnly(engine, (a, PasserSpot), (b, spotB));
+            List<int> commits = ObserveCommits(engine);
+
+            var nearA = new Vector3(PasserSpot.x + 0.3f * dir, PasserSpot.y, 1.0f);   // A 0.3 m, B 0.9 m
+            var nearB = new Vector3(PasserSpot.x + 0.9f * dir, PasserSpot.y, 1.0f);   // A 0.9 m, B 0.3 m
+            DriveWithBall(engine, nearA, new Vector3(-6f * dir, 0f, 0f));            // toward A (and away from B)
+            DriveWithBall(engine, nearB, new Vector3(6f * dir, 0f, 0f));             // toward B, away from A
+            DriveWithBall(engine, nearA, new Vector3(-6f * dir, 0f, 0f));            // toward A again
+
+            CollectionAssert.AreEqual(new[] { a, b }, commits,
+                "Each agent commits once in the episode; A's latch survives B's interruption while in range.");
+        }
+
         [Test]
         public void DistinctSquad_SaveCommitsRosterGoalkeeperAttrs()
         {
@@ -1060,4 +1169,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.8     | 2026-09-22 | —      | W3 event provenance: the mirrored mixed contest drains HeaderExecutedEvent and requires ContestedDuelId == W3 duel/frame id, preventing winner suppression from falsely reporting an uncontested header. |
 // | 1.9     | 2026-09-23 | —      | ERR-011-014: possession hard-cancels an active claim immediately; a pre-tactical loose ball cannot revive the stale Hand participant. |
 // | 1.10    | 2026-11-20 | —      | ERR-010-005: composed regressions through the real tactical drive and #10's Commit sample, home and away: a ball moving away from the passer commits nobody (failed pre-fix), the approached teammate beats a nearer passer (failed pre-fix), and a reversed flight still commits (control). |
+// | 1.11    | 2026-11-20 | —      | ERR-010-005 review P2: KD-7 latch locks through the real tactical drive, home and away: a ball reversing in range commits the agent once (failed at e6e2255), a nearer agent's interruption does not re-arm the first (failed at e6e2255 and 420c0730), and leaving head range starts a new episode. |
 #endregion

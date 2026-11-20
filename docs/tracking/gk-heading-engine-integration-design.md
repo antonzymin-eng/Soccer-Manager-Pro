@@ -351,6 +351,15 @@ the passer, a median nine frames after the kick
 the ball leaves head range or is possessed). Committing to only the single nearest eligible agent per
 tick keeps the trigger conservative and avoids 22 simultaneous headers.
 
+*Latch rule, made explicit 2026-11-20 (`ERR-010-005` review).* Agent *i*'s episode ends, and its latch
+clears, when the ball is possessed, when `p_b.z < HeaderTriggerMinBallHeightM`, or when
+`d_i² > HeaderTriggerRangeM²`. Nothing else clears it. In particular the approach condition and the
+nearest-candidate choice select who commits but never end an episode: a ball that turns back inside an
+agent's range, or returns after a nearer agent took a turn, does not commit that agent again. The
+implementation before `ERR-010-005` cleared every agent that was not the current nearest candidate. With
+the approach filter that let a ball reversing in range re-commit the same agent, which the PR #559 review
+reproduced; the nearer-agent case already re-committed on the base code.
+
 ### 4.2a Header aim target — `HeaderAimTarget` (added 2026-08-09, ERR-010-002)
 
 §4.2 above still describes `TargetIntent` as fixed ("toward the opponent goal"), which was accurate at
@@ -672,7 +681,15 @@ range and a worked example, and the code applies it. Locks: `GkHeadingIntentSour
 attack directions) and `MatchEngineGkHeadingTests` composed regressions through the real tactical drive
 and #10's Commit sample, home and away; the moving-away and nearer-passer cases fail on the pre-fix
 code. No new constant, cross-tick state, schema version, RNG stream, domain tag or draw site. The
-GK/Heading flag is on by default; on the six frozen seeds ball and agent trajectories and scores are bit-identical pre/post, and only the serialized Heading attempt state (so the snapshot digest) changes ([#441 §6.8](header-reachability-441-counters.md#68-post-fix-rerun--err-010-005-approach-condition-november-20-2026)).
+GK/Heading flag is on by default; on the six frozen seeds ball and agent position, velocity and scores are bit-identical pre/post ([#441 §6.8](header-reachability-441-counters.md#68-post-fix-rerun--err-010-005-approach-condition-november-20-2026)); the snapshot digests differ, and the probe does not establish which serialized fields (Heading attempt state, the KD-7 latch) account for it.
+
+**Review amendment (same day, PR #559 P2).** The first landing cleared the KD-7 latch for every
+non-nearest agent, as the base code did, so a ball moving away and then back inside one agent's range
+committed that agent twice. KD-7 above now states the latch rule, and `TryCommitHeaderIntents` clears a
+latch only on possession, landing or leaving that agent's range. Composed home/away locks: a ball
+reversing in range commits once (failed at the reviewed head `e6e2255`), a nearer agent's interruption
+does not re-arm the first agent (failed at both `e6e2255` and the base `420c0730`), and leaving range
+still starts a new episode (passes on all three).
 
 ## 10. Adversarial review log
 
