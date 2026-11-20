@@ -2,9 +2,9 @@
 
 Created November 20, 2026. Purpose: record owner decision D-16 (UI Toolkit for menus and management
 screens) and lay out the questions, phases and governance changes needed before any migration code lands.
-Version 0.3.
-Status: **DRAFT.** D-16 and its timing (Q1: start now, alongside PM-2) are decided; nothing else here is
-approved. This document amends no spec. It authorizes only the T0a feasibility spike, which changes no
+Version 0.4.
+Status: **DRAFT.** D-16, its timing (Q1: start now, alongside PM-2) and the PM-2 fallback rules (Q5, §4.1)
+are decided; nothing else here is approved. This document amends no spec. It authorizes only the T0a feasibility spike, which changes no
 spec, plan or shipped screen.
 
 Decision register: [roadmap §5.1, D-16](path-to-playable-roadmap.md) ·
@@ -65,7 +65,7 @@ makes PM-2 depend on, and what happens if the track stalls.
 | Q2 | Visual target: the July mock-ups' design system, the S0 H v0.2 look, or a new art direction? | Recommend the **July mock-ups' design system** (tokens, type, components) as the starting direction, finalized per screen through S1 Gate H image approval. **Q2 does not block T1 or PM-2** (§4.1): T1 can ship on provisional token values. |
 | Q3 | How is a rebuilt screen re-verified against S0 Gate J? | Recommend a **targeted Gate J rerun**, not a visual review alone. The view models do not change, but they can be bound wrongly, so each rebuilt screen reruns the Gate J checks the renderer can break: live command routing through public command paths, focus and keyboard, pseudo-locale and maximum text scale, fallback art, supported resolutions, and the required host behaviour. Match View's mixed UGUI and UI Toolkit layout reruns all of them. Evidence for paths the rebuild does not touch (engine, session, save) is reused by citation. |
 | Q4 | Fonts: the mock-ups use Barlow Condensed (display), Barlow or IBM Plex Sans (body) and JetBrains Mono. Adopt these? | Recommend adopting them. All are under the SIL Open Font License; record each font's license in the art asset register when it is added. |
-| Q5 | Confirm the PM-2 fallback rules in §4.1. | Open. The rules below are proposals until the owner confirms them. |
+| Q5 | Confirm the PM-2 fallback rules in §4.1. | **DECIDED November 20, 2026 by the owner: all three rules confirmed as written.** |
 
 ## 4. Proposed phases (not approved)
 
@@ -87,7 +87,7 @@ Because the owner chose to start now (Q1), roadmap career-lane item 4 makes seas
 built wait for T1. **T0a, T0b and T1 are therefore on the PM-2 path.** Screens already merged, or in an
 open PR, are not held back; T3 rebuilds them.
 
-To keep that dependency from stalling the career lane, this draft proposes three rules (Q5):
+To keep that dependency from stalling the career lane, the owner confirmed three rules on November 20, 2026 (Q5):
 
 1. **Q2 never blocks PM-2.** Components read every color, font and spacing value from USS variables.
    If Q2 is undecided when T1 starts, T1 uses the current H v0.2 values as provisional tokens and
@@ -97,7 +97,7 @@ To keep that dependency from stalling the career lane, this draft proposes three
    with TextMeshPro, sprites and a shared component library (§6 risk 1).
 3. **T0a is timeboxed.** If T0a has not produced a go/no-go after two host sessions, the career lane
    proceeds in UGUI as under rule 2, while T0a continues off the PM-2 path. The two-session figure is
-   a planning proposal, not a measured estimate.
+   a planning limit the owner accepted, not a measured estimate.
 
 ## 5. Governance changes this track needs
 
@@ -131,8 +131,7 @@ Both binding changes below land in **T0b, only after a T0a go**. A T0a no-go lea
    keeps the current focus code.
 2. **Host-only verification.** Like the current UGUI code, UI Toolkit adapters are not compiled by the
    Linux gate. Keep adapters thin and put logic in tested plain C#.
-3. **PM-2 delay.** T0a, T0b and T1 now sit on the PM-2 path. §4.1's rules bound the delay; without
-   them, a stalled spike would stall the career lane.
+3. **PM-2 delay.** T0a, T0b and T1 now sit on the PM-2 path. §4.1's confirmed rules bound the delay.
 4. **Double work during the transition.** UGUI screens already merged are rebuilt in T3.
 5. **Density against accessibility.** The mock-ups use 12 px tables. At 200% text these must reflow
    (wrap, stack or page), not clip. T1's data table component must show this before T3 depends on it.
@@ -141,6 +140,7 @@ Both binding changes below land in **T0b, only after a T0a go**. A T0a no-go lea
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4 | November 20, 2026 | Owner confirmed the three §4.1 PM-2 fallback rules as written (Q5). Status, §3, §4.1 and §6 updated. |
 | 0.3 | November 20, 2026 | PR #560 review: §4.1 records the PM-2 dependency and proposed fallback rules (Q5); T0 split into a spec-free T0a spike and a conditional T0b; master plan §3.4 added to §5; Q3 changed to a targeted Gate J rerun; risk 3 added. |
 | 0.2 | November 20, 2026 | Owner answered Q1: start now, alongside PM-2. Status, §1, §3 and §4 updated. |
 | 0.1 | November 20, 2026 | Created. Records owner decision D-16; lists open questions Q1–Q4, proposed phases T0–T5, governance changes and risks. Draft; nothing beyond D-16 approved. |
