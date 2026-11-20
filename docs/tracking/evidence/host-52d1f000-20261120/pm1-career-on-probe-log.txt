@@ -1,0 +1,71 @@
+06:08:50.737 f=0 boot mode=pm1 screen=1920x1080 display=1920 x 1080 @ 59.9992132798364Hz
+06:08:51.430 f=11 saves at start: 6 file(s)
+06:08:51.442 f=11   autosave.slot 403 B sha256/16=d875409472831896 :: format=2 sequence=14 seasonSaveFormat=8 worldSeed=3677821223376789727 managedClubId=15 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=20 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=48d033f7160f749aac3c347428e24320408f1f988866f4fdacf0d9ba4e2a1c0e managedClubName=Pendleton City 
+06:08:51.449 f=11   autosave.tdsave 116882 B sha256/16=48d033f7160f749a
+06:08:51.452 f=11   manual-1.slot 399 B sha256/16=d7cba10768c6e086 :: format=2 sequence=4 seasonSaveFormat=8 worldSeed=12320643717415727782 managedClubId=0 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=6 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=63e2a0c6e6612bb711d3baccee6afaa52e79701c5c037797a3bb257fa6cd5c8b managedClubName=Ashford Town 
+06:08:51.456 f=11   manual-1.tdsave 116818 B sha256/16=63e2a0c6e6612bb7
+06:08:51.459 f=11   manual-2.slot 403 B sha256/16=ec4b50b790c9e471 :: format=2 sequence=15 seasonSaveFormat=8 worldSeed=3677821223376789727 managedClubId=15 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=20 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=48d033f7160f749aac3c347428e24320408f1f988866f4fdacf0d9ba4e2a1c0e managedClubName=Pendleton City 
+06:08:51.464 f=11   manual-2.tdsave 116882 B sha256/16=48d033f7160f749a
+06:08:51.477 f=11 career ENABLED; S0 content sha256 836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29
+06:08:51.492 f=11 DUMP menu screen=MainMenu selected=From the touchline
+    BTN[on] New career
+    BTN[on] Continue career
+    BTN[on] Load career
+    BTN[on] Play a demo match
+06:08:51.495 f=11 PASS Main Menu offers the demo match next to the career actions
+06:08:51.497 f=11 click 'Continue career'
+06:08:51.831 f=84 DUMP career home screen=CareerHome selected=Career home
+    BTN[on] Advance one day
+    BTN[on] Schedule
+    BTN[on] Save to manual slot 1
+    BTN[on] Save to manual slot 2
+    BTN[on] Save to manual slot 3
+    BTN[on] Return to Main Menu (without saving)
+06:08:51.833 f=84 PASS Career Home has no Match, Tactics or Report edge
+06:08:51.834 f=84 click 'Return to Main Menu (without saving)'
+06:08:51.859 f=89 PASS on Main Menu before the journey
+06:08:51.861 f=89 click 'Play a demo match'
+06:08:51.886 f=94 PASS demo action opens Tactics Setup
+06:08:51.887 f=94 click 'Positive — Slightly more risk in on-ball choices; slightly higher defensive line.'
+06:08:51.900 f=97 setup Ready to start with Positive.
+06:08:51.953 f=97 shot 01-pm1-setup.bmp 1920x1080
+06:08:51.954 f=97 click 'Start match'
+06:08:52.241 f=114 PASS authored Mentality reaches the session (Positive)
+06:08:52.244 f=114 click 'Faster'
+06:08:52.307 f=117 click 'Faster'
+06:08:52.328 f=120 click 'Faster'
+06:08:52.356 f=123 speed 'Selected speed 10×'
+06:09:12.363 f=4741 click 'Change Mentality'
+06:09:12.413 f=4744 click 'Very Attacking — Most risk in on-ball choices; highest defensive line.'
+06:09:12.435 f=4746 click 'Submit change'
+06:09:12.462 f=4746 PASS live Mentality change applied (VeryAttacking)
+06:09:12.464 f=4746 click 'Make substitution'
+06:09:12.530 f=4749 click 'Home: Felix Arden — shirt 6'
+06:09:12.558 f=4751 click 'Home: Miles West — shirt 13 — bench slot 2'
+06:09:12.587 f=4753 click 'Submit change'
+06:09:13.251 f=4903 PASS substitution applied (Applied, used 'Substitutions used: 1 / 5')
+06:09:13.319 f=4903 shot 02-pm1-match.bmp 1920x1080
+06:17:52.405 f=113361 full time 23 – 13
+06:17:52.406 f=113361 click 'View match report'
+06:17:52.438 f=113366 PASS View match report opens the Post-Match Report
+06:17:52.448 f=113366 PASS report has match statistics
+06:17:52.449 f=113366 REPORT Territorial % ¦ Statistic ¦ 23 – 13 ¦ 5.6% ¦ Offsides ¦ 1 ¦ Yellow car…
+06:17:52.496 f=113366 shot 03-pm1-report.bmp 1920x1080
+06:17:52.498 f=113366 DUMP report screen=PostMatchReport selected=Post-Match Report
+    BTN[on] Return to main menu
+06:17:52.499 f=113366 PASS Report offers no Career Home edge
+06:17:52.500 f=113366 click 'Return to main menu'
+06:17:52.520 f=113371 PASS Return lands on Main Menu and clears the match
+06:17:52.524 f=113371 PASS S0 content identity unchanged after the journey
+06:17:52.524 f=113371 PASS career actions still available after the demo
+06:17:52.524 f=113371 click 'Continue career'
+06:17:52.593 f=113382 PASS the career is unchanged by the demo match
+06:17:52.595 f=113382 click 'Return to Main Menu (without saving)'
+06:17:52.618 f=113387 saves at end: 6 file(s)
+06:17:52.620 f=113387   autosave.slot 403 B sha256/16=d875409472831896 :: format=2 sequence=14 seasonSaveFormat=8 worldSeed=3677821223376789727 managedClubId=15 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=20 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=48d033f7160f749aac3c347428e24320408f1f988866f4fdacf0d9ba4e2a1c0e managedClubName=Pendleton City 
+06:17:52.624 f=113387   autosave.tdsave 116882 B sha256/16=48d033f7160f749a
+06:17:52.626 f=113387   manual-1.slot 399 B sha256/16=d7cba10768c6e086 :: format=2 sequence=4 seasonSaveFormat=8 worldSeed=12320643717415727782 managedClubId=0 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=6 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=63e2a0c6e6612bb711d3baccee6afaa52e79701c5c037797a3bb257fa6cd5c8b managedClubName=Ashford Town 
+06:17:52.629 f=113387   manual-1.tdsave 116818 B sha256/16=63e2a0c6e6612bb7
+06:17:52.631 f=113387   manual-2.slot 403 B sha256/16=ec4b50b790c9e471 :: format=2 sequence=15 seasonSaveFormat=8 worldSeed=3677821223376789727 managedClubId=15 seasonNumber=0 worldDay=14 roundsPlayed=2 roundCount=38 leaguePosition=20 nestedFormats=world=3,worldSnapshot=1,seasonState=1,training=1,medical=1,appearance=1,progression=1,discipline=1,finance=1,transfers=1 saveDigest=48d033f7160f749aac3c347428e24320408f1f988866f4fdacf0d9ba4e2a1c0e managedClubName=Pendleton City 
+06:17:52.635 f=113387   manual-2.tdsave 116882 B sha256/16=48d033f7160f749a
+06:17:52.635 f=113387 SUMMARY pass=14 fail=0 consoleErrors=0

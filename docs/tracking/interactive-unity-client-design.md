@@ -1,6 +1,8 @@
 # Interactive Unity Client — High-Level Implementation Plan
 
-**Last Updated:** November 18, 2026 (v0.43 — §5-P7 cooperative career shutdown and write admission.)
+**Last Updated:** November 20, 2026 (v0.44 — §5-P7b career startup accepted on the pinned host; Career on in the tracked scene.)
+
+**Last Updated (prior):** November 18, 2026 (v0.43 — §5-P7 cooperative career shutdown and write admission.)
 
 **Last Updated (prior):** November 5, 2026 (v0.42 — T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage.)
 
@@ -774,7 +776,8 @@ rate band, corpus fit or perf baseline is perturbed.
 
 **Remaining PM-2 work and deferred interactive follow-up.**
 
-1. **P7b — opt-in UGUI candidate implemented; pinned-host validation remains.** Career Home,
+1. **P7b — UGUI binding accepted on the pinned host; Career on at startup since November 20, 2026**
+   ([evidence](evidence/host-52d1f000-20261120/README.md)). As first implemented: Career Home,
    New Career, Load Career and menu entries consume cached worker-backed snapshots. Seven-screen
    visibility/root validation and optional shell composition exist; `_enableCareer` defaults false.
    The binding uses the S0 formatter/focus/layout system. Career matchday work uses the existing
@@ -1181,6 +1184,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.44 | 2026-11-20 | §5-P7b: startup checklist items 6–8 passed on the pinned host at `52d1f000`; the tracked scene enables Career. |
 | 0.43 | 2026-11-18 | §5-P7 cooperative career shutdown, discard of unfinished rounds and writer admission. Pinned host acceptance remains open. |
 | 0.42 | 2026-11-05 | T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage. |
 | 0.41 | 2026-11-05 | §5-P8 brought up to the code after two review rounds (`c1b43e0`, `b57c6cf`): `TransferResult` / `LastTransferResult` replaces `LastTransferOutcome`; `TransferOfferCheck` + `TransferOfferIssue` typed refusals (closed window refused at the coordinator, the session still throws); wage bound 0..50,000,000 (ERR-031-016 filed Open) and fee/length rules; independent projections with `LastProjectionError`; `SquadCount`, saturated wage line, `IsWageBillTracked`, `L` money type; D-P8-1 fog condition on #32; "no framework change" superseded by ERR-038-006 (#38 Appendix C.2); Unity shell rejection recorded as the known limitation; ClientApp 252 / 0 / 3. |

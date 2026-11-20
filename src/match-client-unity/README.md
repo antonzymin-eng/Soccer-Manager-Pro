@@ -352,15 +352,17 @@ S0 skin follows H v0.2 (`docs/design/s0-high-fidelity/`):
 ## P7b career binding
 
 The build scene, `Assets/Scenes/Scene.unity`, assigns inactive Career Home, New Career and
-Load Career roots under the active shell. It starts in demo mode because `_enableCareer`
-is off. The pinned-host runs at `cd3c7b99` (items 1–5) and `52d1f000` (items 6–8, including the
-round scores and standings) cover this checklist; see `open-issues.md#career-startup-unity-acceptance`
-for what remains open.
+Load Career roots under the active shell, and `_enableCareer` is on. The Main Menu offers
+New, Continue and Load Career next to the demo match. The field's code default stays false,
+so a shell that does not set it keeps the four-root PM-1 flow. Career startup was switched on
+November 20, 2026, after the checks below passed on the pinned host: items 1–5 at
+[`cd3c7b99`](../../docs/tracking/evidence/host-cd3c7b99-20261119/README.md) and items 6–8 at
+[`52d1f000`](../../docs/tracking/evidence/host-52d1f000-20261120/README.md).
 
 To validate in an isolated host checkout:
 
-1. Open the tracked scene and check the three career root references on the shell.
-   Enable the Career checkbox on the shell in this checkout for the career Play checks.
+1. Open the tracked scene and check the three career root references on the shell and that
+   Career is on. Turn it off in the checkout only to recheck the demo-only shell (item 8).
 2. Force recursive source reimport and verify zero compiler errors in Unity **6000.4.9f1** before Play.
    MatchClientUnity explicitly references SeasonSave and is excluded from the Linux shim.
 3. Enter Play and verify that startup shows career actions and the demo match on the Main Menu.
@@ -378,8 +380,9 @@ To validate in an isolated host checkout:
 7. Test keyboard-only Tab/Shift-Tab, focus recovery after disabled controls, every Back path, focus return after a successful save, visible feedback on failure, the smallest
    desktop/reference/high-resolution layouts, maximum 200% text scale, long club names and expanded
    career labels. At the smallest supported layout and 200% text scale, verify that all ten standings
-   columns align with their headers, long club names wrap without clipping or overlap, and the entire
-   scores block is readable when scrolled. All career pages use the existing wrapped/scrolled factory
+   columns align with their headers, long club names wrap without clipping or overlap, the entire
+   scores block is readable when scrolled, and every standings page (Higher / Your / Lower positions)
+   comes fully on screen by keyboard. All career pages use the existing wrapped/scrolled factory
    and shared focus rings.
 8. Recheck the PM-1 journey with career enabled and disabled. Confirm that the original S0 content
    identity and report return behavior are preserved. No Career Home → Match or Report → Career Home
@@ -395,5 +398,4 @@ resolution, then reopen the same save directory and resume the previous complete
 Repeat with a write already in progress and verify the save pair commits or rolls back.
 Use the `SeasonSave.Encode` and `CareerSaveSlots.Write` Profiler markers for timings.
 See the [shutdown design](../../docs/tracking/career-shutdown-cancellation-design.md)
-for the race and replay acceptance cases. The tracked scene remains opt-in pending the
-pinned Unity checks.
+for the race and replay acceptance cases.

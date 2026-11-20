@@ -6,7 +6,9 @@
 (latest-round scores and goal difference on Career Home), merged without a Unity run; and
 (2) the remaining [P7b career startup checklist](../../../../src/match-client-unity/README.md#p7b-career-binding)
 items 6, 7 and 8 left open by the [`cd3c7b99` run](../host-cd3c7b99-20261119/README.md), tracked in
-[open issues](../../open-issues.md#career-startup-unity-acceptance). The run found a keyboard-reach gap in the
+the [open issue](../../open-issues-resolved.md#career-startup-unity-acceptance). It ran in parallel with PR #556's run of
+the same items at the same commit ([`host-52d1f000-20261120`](../host-52d1f000-20261120/README.md)), which merged first,
+closed the issue and turned Career on at startup; this folder was renamed to avoid that name. This run found a keyboard-reach gap in the
 standings; the same folder records the paging fix the owner chose and its re-run.\
 **Host:** the owner's Windows 11 machine, Unity 6000.4.9f1 (f7258d6eebbe), Mono. This is the certified host.
 Its only display is 1920×1080.\
@@ -98,7 +100,7 @@ With the mouse wheel (scrolled to the bottom), all 21 rows show at 100%. At 200%
 12 rows show at the bottom and the rest further up. This is the same class of gap the #551 run found for
 the fixture list, which was fixed by paging. The owner chose the same fix here (below).
 
-**Not tested:** 2560×1440. The host's only display is 1920×1080, and the windowed player could not be
+**Not tested here:** 2560×1440 (PR #556's run emulated it at canvas scale 0.75). The host's only display is 1920×1080, and the windowed player could not be
 made larger, so the high-resolution layout remains open. Because the screens use a constant-pixel-size
 canvas, 2560×1440 gives every column more room than the two sizes tested.
 
@@ -175,3 +177,4 @@ Scene settings, the probe and the build script are recorded in `source-identity.
 | --- | --- | --- |
 | 1.0 | 2026-11-20 | Created: #554 compile and EditMode; P7b checklist items 6, 7 and 8 on the pinned host. |
 | 1.1 | 2026-11-20 | Standings paging fix chosen by the owner: compile, EditMode and keyboard re-run at 100%, 200% and 200% long names. |
+| 1.2 | 2026-11-20 | Folder renamed from `host-52d1f000-20261120` (taken by PR #556's run, merged first); links point at the archived issue. |

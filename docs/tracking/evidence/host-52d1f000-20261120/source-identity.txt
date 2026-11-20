@@ -1,0 +1,23 @@
+Created: 2026-11-20. Source identity for the career startup checks (README P7b items 6-8).
+
+commit: 52d1f0003012a3be60e9f5345610451632577eee (main, PR #555 merge)
+parents: c04feb052707eb6c66fe396d3e93c3091a553c2d 30592f08e3bc2ec5a170458f51ac753bd71a1784
+tree src: 4db2b694aa2268b265e99ee0db74793ac79a7cad
+tree Assets: 7f23fb73ad31cf86f070118b03db5b7f6c1a5b04
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+unity: 6000.4.9f1 (f7258d6eebbe), Mono, Windows 11; display 1920x1080 at 96 DPI
+worktree: fresh detached worktree, GIT_LFS_SKIP_SMUDGE=1 then git lfs pull for Assets/** and src/**; Assets/Scripts = junction to its own src
+saves: the player's careers folder did not exist before the first run; runs.txt gives each run's starting saves
+compile: 2026-11-20T05:43:09Z - 2026-11-20T05:44:20Z, empty Library (see compile.txt for the AI Assistant package-cache copy)
+
+Untracked or modified in the worktree for the player builds only (never committed):
+  ?? Assets/CareerProbe/CareerProbe.cs (+ .meta)   scratch driver, archived as career-probe-driver.cs.txt
+  M  Assets/Scenes/Scene.unity                    _enableCareer and _textScale per build variant (build.sh.txt); restored to 0 / 1 afterwards
+  M  ProjectSettings/UnityConnectSettings.asset   written by Unity during the build
+porcelain under src and Packages after all runs: 0 lines
+
+Build variant A is byte-for-byte the tracked scene this change commits (_enableCareer: 1, _textScale: 1).
+build A: start 2026-11-20T05:44:54Z exit 0 end 2026-11-20T05:45:55Z
+build B: start 2026-11-20T05:45:55Z exit 0 end 2026-11-20T05:46:08Z
+build C: start 2026-11-20T05:46:09Z exit 0 end 2026-11-20T05:46:21Z

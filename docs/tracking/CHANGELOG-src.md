@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.243 — Career Home standings paged.** New `src/client-app/CareerStandingsPage.cs` v1.0 (+ `.meta`): a fixed-size page of the league table by row index, `[FIXED] ROWS_PER_PAGE = 8`, `Current` (page holding the managed club) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.10: `StandingsHeading(in home, in page)` (*Positions {first} to {last} of {total}*); new roles `table.page`, `table.page.previous` (*Higher positions*), `table.page.current` (*Your position*), `table.page.next` (*Lower positions*). `S0ScreensBehaviour.Career.cs` v1.10: the rows move into a *Standings rows* column under the heading, only the page's rows are active, and the three controls follow the rows and reuse `RefreshSchedulePaging`'s boundary-focus rule; the page resets with the season. Tests: `CareerScreensTests` v1.7 (+3: coverage and bounds, managed-club page, career required), `CareerScreenTextTests` v1.5 (+1: heading and labels). Unity EditMode ClientApp + UiFramework 350 / 0 / 3.
+> **Last Updated:** November 20, 2026 — **v2.244 — Career Home standings paged.** New `src/client-app/CareerStandingsPage.cs` v1.0 (+ `.meta`): a fixed-size page of the league table by row index, `[FIXED] ROWS_PER_PAGE = 8`, `Current` (page holding the managed club) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.10: `StandingsHeading(in home, in page)` (*Positions {first} to {last} of {total}*); new roles `table.page`, `table.page.previous` (*Higher positions*), `table.page.current` (*Your position*), `table.page.next` (*Lower positions*). `S0ScreensBehaviour.Career.cs` v1.10: rows move into a *Standings rows* column under the heading; only the page's rows are active; the three controls follow the rows and reuse `RefreshSchedulePaging`'s boundary-focus rule; the page resets with the season. `src/match-client-unity/README.md` P7b item 7 adds the standings keyboard check. Tests: `CareerScreensTests` v1.7 (+3), `CareerScreenTextTests` v1.5 (+1). Unity EditMode ClientApp + UiFramework 350 / 0 / 3.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.243 — Career on at startup.** `src/match-client-unity/README.md` (P7b career binding): the tracked scene now sets `_enableCareer: 1`, step 1 checks that Career is on, and the section links the `cd3c7b99` and `52d1f000` pinned-host runs; the "remains opt-in" sentence is removed. No `.cs` file, asmdef, schema, RNG stream or draw order changed. Full account: `docs/tracking/CHANGELOG.md`.
 
 > **Last Updated (prior):** November 19, 2026 — **v2.242 — Career Home round scores and standings.** Project results by completed-round index and world day. Keep the projection in the coordinator’s busy snapshot and publish it alongside the standings. Regression tests cover season rollover, interrupted fixture resolution and retry, resume, worker publication and localized copy.
 
@@ -2959,7 +2961,8 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.243 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
+| 2.244 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
+| 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |
 | 2.242 | 2026-11-19 | — | Show completed-round scores and aligned standings with goal difference. |
 | 2.241 | 2026-11-19 | — | Page the Career Home fixture list (`CareerFixturePage`) for keyboard reach at 200% text scale. |
 | 2.240 | 2026-11-19 | — | Integrate Career Home schedule controls and snapshot tests with PR #550. |
