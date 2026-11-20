@@ -2,7 +2,7 @@
 
 **Created:** November 18, 2026
 
-**Version:** 0.6
+**Version:** 0.7
 
 **Status:** Implemented and merged (PR #550, `5a3c310e`). Pinned-host acceptance recorded November 19, 2026; the [open issue](open-issues-resolved.md#career-shutdown-main-thread-wait) is closed. Career startup remains opt-in under its own startup issue.
 
@@ -12,7 +12,7 @@
 
 Closing the game or stopping Play during matchday requests cancellation. The last completed save remains available. On relaunch, the player resumes from that save and plays any unfinished matchday again. Days, transfers, or other changes since that save follow the existing unsaved-progress policy. If a save transaction has already begun, shutdown waits for it to finish or for its existing error recovery to run. A quit confirmation is optional follow-up work. Cancellation and writer safety must also work for Editor Stop, scene teardown, and other paths that bypass a confirmation.
 
-The tracked scene defaults to the demo shell. Use explicit career opt-in for Play testing. Enable career by default in the shutdown-fix follow-up once the fix and pinned Unity acceptance are complete.
+The tracked scene starts with Career on since November 20, 2026, after the shutdown fix and the startup checklist were accepted on the pinned host ([evidence](evidence/host-52d1f000-20261120/README.md)).
 
 ## Season loop and cancellation points
 
@@ -70,6 +70,7 @@ The small Unity focus guard reported in review can use explicit Unity-object nul
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.7 | 2026-11-20 | Career on at startup in the tracked scene after the startup checks passed (`52d1f000` run). |
 | 0.6 | 2026-11-19 | Record the merged-main run: player close during a save, steady-state allocations, throughput and result identity. Acceptance recorded; issue closed. |
 | 0.5 | 2026-11-19 | Record the pinned-host run at `cd3c7b99`: stop latencies, byte-identical resume, admitted-write waits and marker timings. Four acceptance-item-4 checks remain. |
 | 0.4 | 2026-11-19 | Record owner approval of the #30 FR-SN-012 cancellation wording. Pinned-host acceptance remains due. |

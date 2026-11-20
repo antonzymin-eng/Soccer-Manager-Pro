@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 19, 2026 — **v2.242 — Career Home round scores and standings.** Project results by completed-round index and world day. Keep the projection in the coordinator’s busy snapshot and publish it alongside the standings. Regression tests cover season rollover, interrupted fixture resolution and retry, resume, worker publication and localized copy.
+> **Last Updated:** November 20, 2026 — **v2.243 — Career on at startup.** `src/match-client-unity/README.md` (P7b career binding): the tracked scene now sets `_enableCareer: 1`, step 1 checks that Career is on, and the section links the `cd3c7b99` and `52d1f000` pinned-host runs; the "remains opt-in" sentence is removed. No `.cs` file, asmdef, schema, RNG stream or draw order changed. Full account: `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** November 19, 2026 — **v2.242 — Career Home round scores and standings.** Project results by completed-round index and world day. Keep the projection in the coordinator’s busy snapshot and publish it alongside the standings. Regression tests cover season rollover, interrupted fixture resolution and retry, resume, worker publication and localized copy.
 
 > **Last Updated (prior):** November 19, 2026 — **v2.241 — Career Home fixture list paged.** New `src/client-app/CareerFixturePage.cs` v1.0 (+ `.meta`): a fixed-size page of the managed club's fixtures by index, `[FIXED] FIXTURES_PER_PAGE = 8`, `Current` (page holding the next unplayed fixture, or the last page) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.8: `FixtureList(in home, in page)` replaces the unpaged overload and opens with a *Fixtures {first} to {last} of {total}* heading; new roles `schedule.page`, `schedule.page.previous` (*Earlier fixtures*), `schedule.page.current` (*Upcoming fixtures*), `schedule.page.next` (*Later fixtures*). `S0ScreensBehaviour.Career.cs` v1.8: a *Fixture navigation* column with the three controls, shown when Fixtures is selected; the page resets to the current one on a new season; week and fixture paging share `RefreshSchedulePaging`, which moves focus from a disabled end control to the current-page control. Tests: `CareerScreensTests` v1.5 (+3: page coverage and bounds, current page follows play, career required) and `CareerScreenTextTests` v1.3 (+1: heading, page rows, labels; the localized-row test uses a page). Unity 6000.4.9f1 on the pinned host: ClientApp.Tests + UiFramework.Tests 343 passed / 0 failed / 3 skipped; development players at 100% and 200% text scale reach every fixture by keyboard.
 
@@ -2957,6 +2959,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |
 | 2.242 | 2026-11-19 | — | Show completed-round scores and aligned standings with goal difference. |
 | 2.241 | 2026-11-19 | — | Page the Career Home fixture list (`CareerFixturePage`) for keyboard reach at 200% text scale. |
 | 2.240 | 2026-11-19 | — | Integrate Career Home schedule controls and snapshot tests with PR #550. |

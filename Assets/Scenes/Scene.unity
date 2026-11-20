@@ -731,7 +731,7 @@ MonoBehaviour:
   _postMatchReportRoot: {fileID: 7200400}
   _matchRenderer: {fileID: 1995368569}
   _screens: {fileID: 7200003}
-  _enableCareer: 0
+  _enableCareer: 1
   _careerHomeRoot: {fileID: 7200500}
   _newCareerRoot: {fileID: 7200600}
   _loadCareerRoot: {fileID: 7200700}
