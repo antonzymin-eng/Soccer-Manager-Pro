@@ -15,8 +15,12 @@ Pre-fix source: `420c0730` (PR #558 head; its `src/` tree equals `ceb0384a`). Po
 | `post-fix-regressions.trx.xz` | The same composed cases plus every `NearestHeaderCandidate` lock on post-fix source: 19 passed, 0 failed. |
 | `post-fix-match-engine-suite.trx.xz` | Unfiltered `MatchEngine.Tests` on post-fix source: 1,071 passed, 17 skipped (environment-gated diagnostics), 0 failed. |
 | `post-fix-strict-corpus.trx.xz` | `HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters` with `TD_HEADER441_DIAGNOSTIC=1` on post-fix source. Pre-fix is `../header441-current-main-20261120/strict-corpus.trx.xz`. |
-| `PhysicalTrajectoryProbe.cs` | Runs the six frozen seeds to full time and hashes the ball position/velocity and every agent position/velocity after every tick. It excludes Heading's serialized attempt state, which the fix changes by construction. |
-| `physical-trajectory.txt` | The probe's output for pre-fix and post-fix source. |
+| `reviewed-head-kd7-regressions.trx.xz` | PR #559 review P2: all composed `HeaderTrigger_*` cases on the reviewed head `e6e2255` with the KD-7 latch tests added: 4 failed (ball reversing in range commits twice; nearer agent's interruption re-arms the first; home and away). |
+| `base-kd7-regressions.trx.xz` | The same file on the pre-fix base `420c0730`: 6 failed (the four approach-condition cases plus the nearer-agent interruption, home and away); the reversal case passes there. |
+| `post-review-regressions.trx.xz` | All `MatchEngineGkHeadingTests` plus the `NearestHeaderCandidate` locks with the KD-7 correction: 50 passed, 0 failed. |
+| `post-review-strict-corpus.trx.xz` | The six-seed census with the KD-7 correction. Aggregates equal `post-fix-strict-corpus`; snapshot digests differ. |
+| `PhysicalTrajectoryProbe.cs` | Runs the six frozen seeds to full time and hashes the ball position/velocity and every agent position/velocity after every tick, plus the score. It reads no other serialized state, so it cannot attribute a snapshot-digest difference to particular fields. |
+| `physical-trajectory.txt` | The probe's output for pre-fix, the first landing `e6e2255`, and the KD-7 correction. All three agree on every seed. |
 
 ## Reproduce
 

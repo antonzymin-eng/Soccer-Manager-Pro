@@ -5,7 +5,8 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.17 — §6.8 measures the `ERR-010-005` trigger fix: commits fall from 1,765 to 142 and
+> **Status:** v0.18 — §6.8 also records the KD-7 latch correction from the PR #559 review (census unchanged).
+> v0.17: §6.8 measures the `ERR-010-005` trigger fix: commits fall from 1,765 to 142 and
 > passer self-commits from 1,600 to 3, with still 0 prepared and 0 executed headers.
 > §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
 > Current main has one missed arrival with a tactical-stride geometric witness. A commit
@@ -779,7 +780,20 @@ the 113400 stride) and Heading's terminal early rule are untouched by this fix. 
 `otherPlayerCommit` flag for that passage drops from 1 to 0 because agent 9 no longer commits on
 their own pass at 113394.
 
-**Physical trajectories.** A probe hashing ball and agent position and velocity after every tick (Heading attempt state excluded) gives identical hashes pre/post on all six seeds, with the same final scores (2–3, 1–4, 8–1, 3–5, 4–8, 4–5). No prepared contact existed before or after, and an unprepared attempt changes no ball or agent state, so on this corpus the fix changes only Heading's serialized attempt state and therefore the snapshot digests. A match in which a removed passer commit would otherwise have reached contact could differ; none occurred here.
+**Physical trajectories.** A probe hashing ball and agent position and velocity after every tick gives
+identical hashes pre/post on all six seeds, with the same final scores (2–3, 1–4, 8–1, 3–5, 4–8, 4–5).
+No prepared contact existed before or after. The snapshot digests differ. The probe reads no other
+engine state, so it does not establish which serialized fields account for that (Heading attempt state
+and the trigger's KD-7 latch are both serialized). A match in which a removed passer commit would
+otherwise have reached contact could differ physically; none occurred here.
+
+**Review amendment (PR #559 P2).** The first landing (`e6e2255`) kept the base rule of clearing the
+KD-7 latch for every non-nearest agent, so a ball reversing inside an agent's range could commit that
+agent twice. The latch now clears only on possession, landing or leaving that agent's range
+([design §4.2 KD-7](gk-heading-engine-integration-design.md#42-header-trigger)). Rerun with the
+correction: every aggregate above is unchanged (142 commits, 0 overwrites, 14 predicted, 0 prepared,
+0 executed, the same missed arrival), the six snapshot digests change again, and the physical hashes
+are unchanged.
 
 **Reading.** `ERR-010-005` is a correctness fix to the trigger's selection, not a reachability
 fix. #441's first zero remains prepared Head contacts, and the remaining levers are those §6.7
@@ -806,3 +820,4 @@ named: the 10 Hz producer timing and the terminal early verdict. #441 remains op
 | v0.15 | November 20, 2026 | Reruns #526's diagnostics on six seeds after W8 C, #434 and #440 A′. Records one current missed arrival, its stride-aligned early failure and its composed off-stride contact, plus the historical replay. |
 | v0.16 | November 20, 2026 | Quantifies the recorded passer/committer overlap and explains the 113399 early verdict against the existing window. Adds the scripted digest check and exact-tree Linux pre-commit receipt. |
 | v0.17 | November 20, 2026 | Adds §6.8, the six-seed rerun after `ERR-010-005` (trigger skips an agent the ball is moving away from): commits 1,765 → 142, passer self-commits 1,600 → 3, prepared/executed unchanged at 0; the §6.7 arrival is still missed. |
+| v0.18 | November 20, 2026 | §6.8: KD-7 latch correction rerun (aggregates and physical hashes unchanged, digests change); physical-identity wording narrowed to position, velocity and score. |
