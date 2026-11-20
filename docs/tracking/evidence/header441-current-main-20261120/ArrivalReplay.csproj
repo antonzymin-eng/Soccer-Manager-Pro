@@ -1,0 +1,14 @@
+<!-- Created 2026-11-20. Replays archived and current #441 witnesses through the composed Heading path. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TacticalDirector.MatchEngine.Tests</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ArchivedArrivalReplay.cs" />
+    <Compile Include="CurrentArrivalReplay.cs" />
+    <ProjectReference Include="../../../../src/match-engine/match-engine.gen.csproj" />
+  </ItemGroup>
+</Project>

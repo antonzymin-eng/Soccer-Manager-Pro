@@ -90,7 +90,7 @@
 > frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
 > horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
 > Not measured: missed genuine aerial arrivals and launch origin.
-> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.14) §6.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.15) §6.
 >
 > **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
@@ -368,7 +368,9 @@ the witnesses prove geometry only, not a prepared or executed contact. The first
 withdrawn. Delivery, positioning and the contact/start contract still require investigation.
 [#441's definitions and result](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census)
 and [preserved evidence](evidence/header441-reachability-20261020/README.md) bound this reading.
-#441 stays open and gates W9. Develop it independently now; land after W8 C measurement.
+The November 20 [current-main rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
+found one different strict arrival after W8 C, #434 and #440 A′. Its stride-aligned start failed early
+in live replay, while an experimental off-stride start executed the header. #441 stays open and gates W9.
 
 **Owner decision recorded September 23, 2026:** classify W3 **wired but dormant**. The Hand path and
 cross-claim plumbing are live; production Head participation is dormant upstream and remains owned by

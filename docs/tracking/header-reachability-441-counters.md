@@ -5,15 +5,11 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.14 — corrected local six-seed result in §6.4: one geometric arrival, whose two
-> witness starts cannot be selected under the existing 10 Hz/first-eligible-start contract on the
-> observed trajectories. A 1–2-frame delayed take-off remains a timing-only #10 contract-change
-> candidate, not a demonstrated composed contact. The independent sanity definition in §3.8 is
-> frozen October 20; its cadence was corrected October 22 after the invalid October 21 attempt.
-> The accepted October 22 sanity result in §6.6 records sparse broad height/proximity overlap,
-> without establishing head-contact reachability or a football rate.
-> The earlier arrival result (§6.3) remains withdrawn. #441 remains open and gates W9; development
-> proceeds independently of W8 C, with landing held until the C measurement completes.
+> **Status:** v0.15 — §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
+> Current main has one missed arrival with a tactical-stride geometric witness. A commit
+> on that stride fails early. An experimental off-stride start executes the header.
+> §6.4 preserves the corrected October census, §6.6 preserves the independent proximity
+> check, and §6.3 records the withdrawn initial arrival result. #441 remains open and gates W9.
 > **Authority:** a measurement record, not a spec. It changes no `[GT]` value, gameplay path, schema,
 > RNG stream or draw order. KD-W1 still applies: nothing here authorizes tuning.
 
@@ -652,6 +648,93 @@ follows. This local shim result is neither Linux CI nor Unity/Mono certification
 prerequisite remain open.** Land #441 only after the W8 C measurement; #434/#440 retain D-05's
 after-B→C placement.
 
+### 6.7 Current-main rerun — November 20, 2026
+
+**Measured source:** `ceb0384afbe393dcb3d4cf6c8ed89796e9ba95a3`, after W8 C, #434,
+and #440 A′. Linux x64, .NET 8.0.32 (SDK 8.0.426), Debug Unity shim. The focused
+`HeaderReachabilityDiagnosticTests` and `MatchEngineGkHeadingTests` run passed 40 cases,
+with the opt-in corpus skipped in that invocation. The per-frame observer-neutrality case
+passed. [Commands and raw receipts](evidence/header441-current-main-20261120/README.md).
+
+#### Frozen corpus
+
+| Counter | Total |
+|---|---:|
+| Commits / jump starts | 1,765 / 1,765 |
+| Ever predicted / prepared / executed | 15 / 0 / 0 |
+| `PositionedPoorly` / `MistimedEarly` | 1,754 / 10 |
+| Overwritten attempts | 1 |
+| `PositionedPoorly`: aerial check / no contact frame | 33 / 1,721 |
+| Timing-valid trajectory-height forecast, static XY / moving XY, among `PositionedPoorly` | 0 / 1 |
+| Replica mismatches | 0 |
+| Strict geometric arrival passages / covered by actual start | 1 / 0 |
+| Passages with a stride-aligned geometric witness | 1 |
+
+The first zero in the shipped attempt chain remains prepared Head contacts. The counter
+recorded 1,692 of 1,765 commits below 1 m, and 1,729 of 1,754 `PositionedPoorly` forecasts
+put closest XY approach before the attempt window. Latest-observed commit provenance was
+Pass 1,702, Deflection 6 and Bounce 57. These labels describe the last observed ball event
+and do not establish which pass profile or movement decision caused the miss. The lone
+timing-valid moving-head forecast was seed `0xD1A6D05E`, agent 7, commit 192360. It had no
+corresponding observed strict arrival.
+
+The broad check observed 1,943,994 callbacks across 1,944,000 completed ticks. Of 36,902
+loose frames in the 1.5–2.6 m band, 285 (0.77%) had an active outfielder within 1 m XY,
+across 33 passages. The nearest active outfielder was more than 2 m away in 35,245
+frames (95.51%). All six end digests matched the independently observed strict corpus.
+
+#### Current missed passage
+
+Seed `0x1`, away agent 15, flight 1840. The latest observed source was home agent 9's
+PassKick at frame 113385. Agent 9 committed at 113394. Agent 15 was eligible to start at
+113400, but the tactical producer saw them 1.6295 m from the loose ball, outside its 1.5 m
+range. After the same tick's ball and agent integration, the separation was 1.4709 m.
+Production waited until the next stride, 113406. The attempt finished `PositionedPoorly`
+at 113427.
+
+The strict census and bounded replay found three timing-valid geometric pairs at
+contact frames 113410–113411. Only 113400 is a legal start under the current 10 Hz
+selection and first-eligible-start rule. The live replay follows the real seed from
+kickoff and supplies the same HeadingIntent at each experimental start. The test
+holds the receiver's latch at 113406 in the experimental arms to prevent the
+later shipped commit from overwriting the injected intent.
+
+| Take-off frame | Geometric witness frame | Observed live replay |
+|---:|---:|---|
+| 113406 (shipped) | — | `PositionedPoorly` at 113427 |
+| 113400 (tactical stride) | 113411 | `MistimedEarly` at 113409, on a prediction for 113410 |
+| 113399 | 113410 | `MistimedEarly` at 113409, on the current frame |
+| 113398 | 113410 | Prepared and executed at 113410, with one `HeaderExecutedEvent` |
+
+This passage has both a producer timing miss and a realization boundary. Selecting the
+outfielder on the existing stride still lets Heading's terminal early rule discard the
+attempt before the legal contact frame. The successful experimental start at 113398 is
+four frames after the previous tactical stride. It is a verified contact under existing
+geometry and contact timing, with the take-off externally supplied by the diagnostic.
+A production change needs a supported selection and take-off policy or a revision of
+the terminal early rule. The replay does not establish either policy. #441 remains open.
+
+#### Archived passage replay
+
+The same bounded seed-1 production replay from §6.4 found zero
+witnesses for agent 6 across frames 125430–125500 on current main. The historical passage
+can still distinguish the take-off arms when staged. The replay feeds the archived
+pre-Heading ball positions and velocities and agent XY positions into the live tactical
+commit at 125454 and the 60 Hz Heading/GK drive. The delayed arms withhold the first
+one or two drives for the isolated intent. It observes the prepared contact, executed
+contact and drained `HeaderExecutedEvent`.
+
+| Delay (frames) | Take-off frame | Prepared and executed frame | Published header events | Terminal failure |
+|---:|---:|---:|---:|---|
+| 0 | 125454 | — | 0 | `PositionedPoorly` at 125475 |
+| 1 | 125455 | 125466 | 1 | — |
+| 2 | 125456 | 125467 | 1 | — |
+
+The replay isolates the historical passage from other participants and stages the original
+loose flight each frame. It demonstrates that both witnesses can reach execution through
+the existing contact pipeline. Production would need a take-off selection rule to select
+a different frame; a fixed delay across live play has no support from this staged result alone.
+
 ## Version history
 
 | Version | Date | Change |
@@ -670,3 +753,4 @@ after-B→C placement.
 | v0.12 | October 20, 2026 | Narrows Run 3's exclusion to selection under the existing 10 Hz/first-eligible-start contract; retains delayed take-off by one or two physics frames as an unproven timing-only #10 contract-change candidate. Links the stable archive and distinguishes measured source bytes from a later history-date correction. Freezes the independent §3.8 height-band sanity definition, controls and reconciliations before its run; results remain pending. |
 | v0.13 | October 22, 2026 | H1: correct §3.8 cadence to 324000 attempted/completed calls and 323999 callbacks at frames 1–323999, preserving the tick-324000 digest comparison. Adds exact per-attempt validation, real first-tick/full-time controls, rejected cadence defects, flushed diagnostics and modest progress. Records the invalid October 21 first attempt in §6.6; corrected sanity results pending. Historical October 20 freeze, Run 3 strict census and delayed-takeoff candidate remain unchanged. |
 | v0.14 | October 22, 2026 | Records the accepted corrected six-seed independent height-band sanity result and preserved raw/self-test identities. All six 324000-call runs observed 323999 callbacks, matched the Run 3 digest pins, and reconciled 35417 band frames, 355 near frames/pairs and 39 passages. Interprets sparse broad proximity narrowly; #441/W9 remain open, W8 C landing gate and D-05 unchanged. |
+| v0.15 | November 20, 2026 | Reruns #526's diagnostics on six seeds after W8 C, #434 and #440 A′. Records one current missed arrival, its stride-aligned early failure and its composed off-stride contact, plus the historical replay. |
