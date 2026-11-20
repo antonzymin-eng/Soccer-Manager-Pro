@@ -1,0 +1,15 @@
+Created: 2026-11-20. Clean batch-mode import of a fresh detached worktree at 52d1f000 (full redacted log: compile-editor-log.txt.xz).
+
+Command: Unity.exe -batchmode -quit -nographics -projectPath <worktree> -logFile <log>
+Start 2026-11-20T02:21:08Z  End 2026-11-20T02:22:00Z  EXIT=0
+*** Tundra build success (25.86 seconds), 1150 items updated, 1203 evaluated
+error CS lines: 0
+warning CS lines (distinct):
+  Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+  Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(172,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+  Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(180,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+
+Two earlier attempts in the same worktree exited 1 before compiling: the Package Manager could not rename its
+temporary folder for com.unity.ai.assistant into Library/PackageCache (EPERM, both times). The unpacked package
+com.unity.ai.assistant@8d1e3e89e3a7 was then copied from the main checkout's Library/PackageCache (same version
+and hash as Packages/packages-lock.json) and the import above ran clean. Library was otherwise empty.

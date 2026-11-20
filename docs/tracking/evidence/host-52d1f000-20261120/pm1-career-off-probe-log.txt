@@ -1,0 +1,40 @@
+02:38:00.105 f=0 boot mode=pm1 screen=1920x1080 display=1920 x 1080 @ 59.9992132798364Hz
+02:38:00.849 f=11 career DISABLED; S0 content sha256 836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29
+02:38:00.869 f=11 DUMP menu screen=MainMenu selected=From the touchline
+    BTN[on] Play a demo match
+02:38:00.873 f=11 PASS no career action exists with Career disabled
+02:38:00.875 f=11 PASS on Main Menu before the journey
+02:38:00.878 f=11 click 'Play a demo match'
+02:38:00.919 f=16 PASS demo action opens Tactics Setup
+02:38:00.921 f=16 click 'Positive — Slightly more risk in on-ball choices; slightly higher defensive line.'
+02:38:00.940 f=19 setup Ready to start with Positive.
+02:38:01.018 f=19 shot 01-pm1-setup.bmp 1920x1080
+02:38:01.020 f=19 click 'Start match'
+02:38:01.430 f=39 PASS authored Mentality reaches the session (Positive)
+02:38:01.434 f=39 click 'Faster'
+02:38:01.580 f=42 click 'Faster'
+02:38:01.609 f=45 click 'Faster'
+02:38:01.646 f=48 speed 'Selected speed 10×'
+02:38:21.653 f=3492 click 'Change Mentality'
+02:38:21.734 f=3495 click 'Very Attacking — Most risk in on-ball choices; highest defensive line.'
+02:38:21.770 f=3497 click 'Submit change'
+02:38:21.817 f=3497 PASS live Mentality change applied (VeryAttacking)
+02:38:21.820 f=3497 click 'Make substitution'
+02:38:21.921 f=3500 click 'Home: Felix Arden — shirt 6'
+02:38:21.967 f=3502 click 'Home: Miles West — shirt 13 — bench slot 2'
+02:38:22.014 f=3504 click 'Submit change'
+02:38:22.514 f=3579 PASS substitution applied (Applied, used 'Substitutions used: 1 / 5')
+02:38:22.602 f=3579 shot 02-pm1-match.bmp 1920x1080
+02:47:01.670 f=70353 full time 16 – 15
+02:47:01.672 f=70353 click 'View match report'
+02:47:01.720 f=70358 PASS View match report opens the Post-Match Report
+02:47:01.725 f=70358 PASS report has match statistics
+02:47:01.727 f=70358 REPORT 5 ¦ Post-Match Report ¦ Applied — Felix Arden (shirt 6) → Miles West (…
+02:47:01.800 f=70358 shot 03-pm1-report.bmp 1920x1080
+02:47:01.803 f=70358 DUMP report screen=PostMatchReport selected=Post-Match Report
+    BTN[on] Return to main menu
+02:47:01.805 f=70358 PASS Report offers no Career Home edge
+02:47:01.808 f=70358 click 'Return to main menu'
+02:47:01.841 f=70363 PASS Return lands on Main Menu and clears the match
+02:47:01.844 f=70363 PASS S0 content identity unchanged after the journey
+02:47:01.845 f=70363 SUMMARY pass=11 fail=0 consoleErrors=0

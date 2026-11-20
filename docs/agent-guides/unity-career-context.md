@@ -17,9 +17,9 @@
   projections; UiFramework owns generic substrate. MatchClientCore owns session/command playback.
   SeasonSave owns round/day/save state. Domain code cannot reference presentation assemblies.
 - `ClientShellBehaviour` defaults to the four-root PM-1 flow. With `_enableCareer`, three additional
-  roots and `ClientCareerCoordinator` compose the seven-screen flow. `S0ScreensBehaviour.Career.cs`
-  binds cached career snapshots. Follow the binding README for setup; career runtime/copy/layout
-  acceptance and pinned-editor compile remain due. No interactive career-match edge exists yet.
+  roots and `ClientCareerCoordinator` compose the seven-screen flow; the tracked scene sets it on
+  (November 20, 2026). `S0ScreensBehaviour.Career.cs` binds cached career snapshots. The binding
+  README checklist passed on the pinned host. No interactive career-match edge exists yet.
 - Read `CLAUDE.md` and `src/CLAUDE.md`; public XML docs, standard headers and append-only version history,
   explicit asmdef references, no random/clock state in domain logic. Keep decisions outside MonoBehaviours.
 - Supplemental Linux tests: use the configured .NET SDK, generate projects via

@@ -1,0 +1,57 @@
+03:14:40.790 f=0 boot mode=pm1 screen=1920x1080 display=1920 x 1080 @ 59.9992132798364Hz
+03:14:41.420 f=11 career ENABLED; S0 content sha256 836f9e7943c582ac2b83e53f4efc2d54ca6ddc51d74b227377a260fc3520ef29
+03:14:41.431 f=11 DUMP menu screen=MainMenu selected=From the touchline
+    BTN[on] New career
+    BTN[on] Continue career
+    BTN[on] Load career
+    BTN[on] Play a demo match
+03:14:41.433 f=11 PASS Main Menu offers the demo match next to the career actions
+03:14:41.434 f=11 click 'Continue career'
+03:14:41.654 f=65 DUMP career home screen=CareerHome selected=Career home
+    BTN[on] Advance one day
+    BTN[on] Schedule
+    BTN[on] Save to manual slot 1
+    BTN[on] Save to manual slot 2
+    BTN[on] Save to manual slot 3
+    BTN[on] Return to Main Menu (without saving)
+03:14:41.657 f=65 PASS Career Home has no Match, Tactics or Report edge
+03:14:41.658 f=65 click 'Return to Main Menu (without saving)'
+03:14:41.675 f=70 PASS on Main Menu before the journey
+03:14:41.677 f=70 click 'Play a demo match'
+03:14:41.696 f=75 PASS demo action opens Tactics Setup
+03:14:41.699 f=75 click 'Positive — Slightly more risk in on-ball choices; slightly higher defensive line.'
+03:14:41.708 f=78 setup Ready to start with Positive.
+03:14:41.741 f=78 shot 01-pm1-setup.bmp 1920x1080
+03:14:41.741 f=78 click 'Start match'
+03:14:41.926 f=93 PASS authored Mentality reaches the session (Positive)
+03:14:41.927 f=93 click 'Faster'
+03:14:41.999 f=96 click 'Faster'
+03:14:42.017 f=99 click 'Faster'
+03:14:42.040 f=102 speed 'Selected speed 10×'
+03:15:02.044 f=5645 click 'Change Mentality'
+03:15:02.088 f=5648 click 'Very Attacking — Most risk in on-ball choices; highest defensive line.'
+03:15:02.107 f=5650 click 'Submit change'
+03:15:02.130 f=5650 PASS live Mentality change applied (VeryAttacking)
+03:15:02.131 f=5650 click 'Make substitution'
+03:15:02.181 f=5653 click 'Home: Felix Arden — shirt 6'
+03:15:02.204 f=5655 click 'Home: Miles West — shirt 13 — bench slot 2'
+03:15:02.227 f=5657 click 'Submit change'
+03:15:04.069 f=6155 PASS substitution applied (Applied, used 'Substitutions used: 1 / 5')
+03:15:04.117 f=6155 shot 02-pm1-match.bmp 1920x1080
+03:23:42.003 f=126439 full time 19 – 11
+03:23:42.004 f=126439 click 'View match report'
+03:23:42.031 f=126444 PASS View match report opens the Post-Match Report
+03:23:42.032 f=126444 PASS report has match statistics
+03:23:42.034 f=126444 REPORT 19 ¦ 0 ¦ Offsides ¦ Post-Match Report ¦ 42.9% ¦ 57.1% ¦ Match statisti…
+03:23:42.072 f=126444 shot 03-pm1-report.bmp 1920x1080
+03:23:42.074 f=126444 DUMP report screen=PostMatchReport selected=Post-Match Report
+    BTN[on] Return to main menu
+03:23:42.075 f=126444 PASS Report offers no Career Home edge
+03:23:42.075 f=126444 click 'Return to main menu'
+03:23:42.093 f=126449 PASS Return lands on Main Menu and clears the match
+03:23:42.094 f=126449 PASS S0 content identity unchanged after the journey
+03:23:42.096 f=126449 PASS career actions still available after the demo
+03:23:42.097 f=126449 click 'Continue career'
+03:23:42.155 f=126460 PASS the career is unchanged by the demo match
+03:23:42.157 f=126460 click 'Return to Main Menu (without saving)'
+03:23:42.176 f=126465 SUMMARY pass=14 fail=0 consoleErrors=0

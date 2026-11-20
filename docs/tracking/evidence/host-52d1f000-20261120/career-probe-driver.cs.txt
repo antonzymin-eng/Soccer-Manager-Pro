@@ -1,0 +1,942 @@
+// Scratch host-validation driver for P7b career startup checklist items 6-8. Never committed; archived with the
+// evidence. Active only with -careerProbe <item6|layout|pm1> -probeDir <dir>. Clicks the real UGUI buttons
+// (Button.onClick), sends real OS keystrokes only to this player's own foreground window, and reads state only.
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using TacticalDirector.ClientApp;
+using TacticalDirector.MatchClientUnity;
+using TacticalDirector.SeasonSave;
+using TacticalDirector.TacticalInstructions;
+using TacticalDirector.UiFramework;
+
+public sealed class CareerProbe : MonoBehaviour
+{
+    const BindingFlags BF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+    string _mode, _dir, _shots;
+    int _pass, _fail, _errors, _shotIndex;
+    bool _accumulate = true;
+    readonly List<string> _errorLines = new List<string>();
+    readonly Dictionary<int, int[]> _expected = new Dictionary<int, int[]>(); // clubId -> P W D L GF GA
+
+    // ---------------------------------------------------------------- boot
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Boot()
+    {
+        string[] a = Environment.GetCommandLineArgs();
+        string mode = null, dir = null;
+        for (int i = 0; i < a.Length - 1; i++)
+        {
+            if (a[i] == "-careerProbe") mode = a[i + 1];
+            if (a[i] == "-probeDir") dir = a[i + 1];
+        }
+        if (mode == null || dir == null) return;
+        Application.runInBackground = true;
+        var go = new GameObject("CareerProbe");
+        DontDestroyOnLoad(go);
+        var p = go.AddComponent<CareerProbe>();
+        p._mode = mode; p._dir = dir; p._shots = Path.Combine(dir, "shots");
+        Directory.CreateDirectory(p._shots);
+        Application.logMessageReceivedThreaded += p.OnLog;
+        p.Log("boot mode=" + mode + " screen=" + Screen.width + "x" + Screen.height + " display=" + Screen.currentResolution);
+    }
+
+    void OnLog(string message, string stack, LogType type)
+    {
+        if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert) return;
+        lock (_errorLines) { _errors++; _errorLines.Add(type + ": " + message.Replace("\n", " / ")); }
+    }
+
+    IEnumerator Start()
+    {
+        yield return Frames(10);
+        IEnumerator run = _mode == "item6" ? Item6() : _mode == "layout" ? Layout() : _mode == "pm1" ? Pm1() : null;
+        if (run == null) { Log("unknown mode"); Application.Quit(1); yield break; }
+        yield return Guard(run);
+        lock (_errorLines)
+            Log("SUMMARY pass=" + _pass + " fail=" + _fail + " consoleErrors=" + _errors + (_errorLines.Count > 0 ? " :: " + string.Join(" || ", _errorLines.Take(20)) : ""));
+        File.WriteAllText(Path.Combine(_dir, "done.flag"), _fail == 0 && _errors == 0 ? "PASS" : "FAIL");
+        yield return new WaitForSecondsRealtime(1f);
+        Application.Quit(0);
+    }
+
+    // Runs a routine with nested IEnumerators; an exception is logged as a FAIL and stops the routine.
+    IEnumerator Guard(IEnumerator root)
+    {
+        var stack = new Stack<IEnumerator>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            object current;
+            try
+            {
+                if (!stack.Peek().MoveNext()) { stack.Pop(); continue; }
+                current = stack.Peek().Current;
+            }
+            catch (Exception e) { Check(false, "ABORT " + e.GetType().Name + ": " + e.Message + " @ " + e.StackTrace.Split('\n').FirstOrDefault()); yield break; }
+            if (current is IEnumerator nested) stack.Push(nested); else yield return current;
+        }
+    }
+
+    // ---------------------------------------------------------------- logging
+    void Log(string s) => File.AppendAllText(Path.Combine(_dir, "probe-log.txt"),
+        DateTime.UtcNow.ToString("HH:mm:ss.fff") + " f=" + Time.frameCount + " " + s + "\n", Encoding.UTF8);
+    void Check(bool ok, string what) { if (ok) _pass++; else _fail++; Log((ok ? "PASS " : "FAIL ") + what); }
+    IEnumerator Shot(string name)
+    {
+        string path = Path.Combine(_shots, (++_shotIndex).ToString("00") + "-" + name + ".bmp");
+        yield return new WaitForEndOfFrame();
+        int w = Screen.width, h = Screen.height;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+        tex.Apply();
+        Color32[] px = tex.GetPixels32();
+        Destroy(tex);
+        int stride = (w * 3 + 3) & ~3;
+        var bmp = new byte[54 + stride * h];
+        void I32(int o, int v) { bmp[o] = (byte)v; bmp[o + 1] = (byte)(v >> 8); bmp[o + 2] = (byte)(v >> 16); bmp[o + 3] = (byte)(v >> 24); }
+        bmp[0] = (byte)'B'; bmp[1] = (byte)'M'; I32(2, bmp.Length); I32(10, 54); I32(14, 40); I32(18, w); I32(22, h);
+        bmp[26] = 1; bmp[28] = 24; I32(34, stride * h);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                Color32 c = px[y * w + x]; int o = 54 + y * stride + x * 3;
+                bmp[o] = c.b; bmp[o + 1] = c.g; bmp[o + 2] = c.r;
+            }
+        File.WriteAllBytes(path, bmp);
+        Log("shot " + Path.GetFileName(path) + " " + w + "x" + h);
+    }
+    static IEnumerator Frames(int n) { for (int i = 0; i < n; i++) yield return null; }
+    IEnumerator Until(Func<bool> done, float timeout, string what)
+    {
+        float t0 = Time.realtimeSinceStartup;
+        while (!done())
+        {
+            if (Time.realtimeSinceStartup - t0 > timeout) { Check(false, "timeout waiting for " + what); throw new TimeoutException(what); }
+            yield return null;
+        }
+    }
+
+    // ---------------------------------------------------------------- state access
+    static T Get<T>(object o, string field) where T : class
+    {
+        for (Type t = o?.GetType(); t != null; t = t.BaseType)
+        {
+            FieldInfo fi = t.GetField(field, BF);
+            if (fi != null) return fi.GetValue(o) as T;
+        }
+        return null;
+    }
+    static object Prop(object o, string name) => o?.GetType().GetProperty(name, BF)?.GetValue(o);
+    static S0ScreensBehaviour Screens => FindFirstObjectByType<S0ScreensBehaviour>(FindObjectsInactive.Include);
+    static S0ScreenPresenter View => Get<S0ScreenPresenter>(Screens, "_view");
+    static ClientCareerCoordinator Career => Get<ClientCareerCoordinator>(Screens, "_career");
+    static ClientMatchCoordinator MatchCoordinator => Get<ClientMatchCoordinator>(View, "_coordinator");
+    static ClientChangeRequests Changes => Prop(Prop(MatchCoordinator, "Context"), "Changes") as ClientChangeRequests;
+    static bool On(ScreenId id) => View.Screen.Equals(id);
+    static string ScreenName()
+    {
+        var v = View.Screen;
+        foreach (var f in typeof(ClientScreens).GetFields(BindingFlags.Public | BindingFlags.Static))
+            if (f.FieldType == typeof(ScreenId) && v.Equals((ScreenId)f.GetValue(null))) return f.Name;
+        return v.ToString();
+    }
+    static Selectable Selected => EventSystem.current?.currentSelectedGameObject?.GetComponent<Selectable>();
+    static string LabelOf(Selectable s)
+    {
+        if (s == null) return "null";
+        var t = s.GetComponentsInChildren<Text>(false).Where(x => x.gameObject.name != "Selection").Select(x => x.text);
+        return string.Join(" ", t).Replace("\n", " ");
+    }
+    static IEnumerable<Button> Buttons() => FindObjectsByType<Button>(FindObjectsSortMode.None).Where(b => b.gameObject.activeInHierarchy);
+    static Button Find(string label) => Buttons().FirstOrDefault(b => LabelOf(b) == label);
+    static Button FindPrefix(string prefix) => Buttons().FirstOrDefault(b => LabelOf(b).StartsWith(prefix, StringComparison.Ordinal));
+    bool Click(Button b, string what = null)
+    {
+        if (b == null || !b.IsInteractable()) { Log("click refused: " + (what ?? LabelOf(b))); return false; }
+        Log("click '" + LabelOf(b) + "'");
+        b.onClick.Invoke();
+        return true;
+    }
+    bool Click(string label) => Click(Find(label), label);
+    string Notice()
+    {
+        var notices = Get<List<Text>>(Screens, "_careerNotices");
+        return notices == null ? "" : string.Join("", notices.Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).Distinct());
+    }
+    string Summary() => Get<Text>(Screens, "_careerSummary")?.text.Replace("\n", " / ") ?? "";
+    IEnumerator WaitIdle(float timeout = 600f)
+    {
+        yield return Frames(2);
+        yield return Until(() => !Career.IsBusy, timeout, "career idle");
+        yield return Frames(3);
+    }
+    void Dump(string label)
+    {
+        var sb = new StringBuilder("DUMP " + label + " screen=" + ScreenName() + " selected=" + LabelOf(Selected));
+        foreach (var b in Buttons().OrderBy(b => b.transform.GetSiblingIndex())) sb.Append("\n    BTN[" + (b.IsInteractable() ? "on" : "off") + "] " + LabelOf(b));
+        Log(sb.ToString());
+    }
+
+    // ---------------------------------------------------------------- career helpers
+    string SavesDir => Path.Combine(Application.persistentDataPath, "careers");
+    string SlotFile(string stem, string ext) => Path.Combine(SavesDir, stem + ext);
+    static string Sha(string path)
+    {
+        if (!File.Exists(path)) return "absent";
+        using (var s = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        using (var h = System.Security.Cryptography.SHA256.Create())
+            return BitConverter.ToString(h.ComputeHash(s)).Replace("-", "").Substring(0, 16).ToLowerInvariant();
+    }
+    string SlotState(string stem) => stem + "{save=" + Sha(SlotFile(stem, ".tdsave")) + " slot=" + Sha(SlotFile(stem, ".slot")) + "}";
+    string SidecarText(string stem) { string p = SlotFile(stem, ".slot"); return File.Exists(p) ? File.ReadAllText(p).Replace("\n", " ").Replace("\r", "") : "absent"; }
+
+    IEnumerator NewCareer(int clubIndex)
+    {
+        yield return Until(() => On(ClientScreens.MainMenu) && Career.IsInitialized && !Career.IsBusy, 60, "main menu ready");
+        Click("New career");
+        yield return WaitIdle();
+        Check(On(ClientScreens.NewCareer), "New career opens the setup page");
+        var clubs = Get<List<Button>>(Screens, "_careerClubButtons").Where(b => b.gameObject.activeInHierarchy).ToList();
+        Check(!Find("Start career").IsInteractable(), "Start is disabled before a club is chosen (" + clubs.Count + " clubs)");
+        Click(clubs[clubIndex % clubs.Count]);
+        yield return WaitIdle();
+        Click("Start career");
+        yield return WaitIdle();
+        Check(On(ClientScreens.CareerHome) && Career.Home.HasCareer, "Start reaches Career Home: " + Summary());
+    }
+
+    IEnumerator ToMatchday()
+    {
+        for (int i = 0; i < 40 && Career.Home.NextAction == CareerProgressAction.AdvanceDay; i++)
+        {
+            Click("Advance one day");
+            yield return WaitIdle();
+        }
+        Check(Career.Home.NextAction == CareerProgressAction.PlayMatchday, "reached a matchday: " + Summary());
+    }
+
+    // Resolves one round and checks the score block and table on the first idle frame.
+    IEnumerator ResolveRound(string label)
+    {
+        int roundsBefore = Career.Home.RoundsPlayed;
+        Click("Resolve matchday (on Career Home)");
+        float t0 = Time.realtimeSinceStartup;
+        yield return Frames(2);
+        Check(Career.IsBusy && Notice().StartsWith("Working", StringComparison.Ordinal), label + ": busy notice while the round runs");
+        while (Career.IsBusy) yield return null;
+        int idleFrame = Time.frameCount;
+        yield return null; // one frame for the shell's Refresh
+        Text scores = Get<Text>(Screens, "_careerRoundResults");
+        Log(label + ": round took " + (Time.realtimeSinceStartup - t0).ToString("0.0") + " s; scores visible " + (Time.frameCount - idleFrame) + " frame(s) after idle");
+        var home = Career.Home;
+        Check(home.RoundsPlayed == roundsBefore + 1, label + ": rounds played " + roundsBefore + " -> " + home.RoundsPlayed);
+        CheckResultsAndTable(label, home, scores, true);
+    }
+
+    void CheckResultsAndTable(string label, CareerHomeViewModel home, Text scores, bool accumulate)
+    {
+        var results = home.LatestRoundResults;
+        int clubs = home.Table.Count;
+        Check(results != null && results.Count == clubs / 2, label + ": latest round has " + (results?.Count ?? 0) + " results for " + clubs + " clubs");
+        bool allShown = scores.gameObject.activeInHierarchy && results != null;
+        var lines = scores.text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (results != null)
+            foreach (var r in results)
+            {
+                string line = Named(r.HomeClubName, r.Result.HomeClubId, home) + " " + r.Result.HomeGoals + " - " + r.Result.AwayGoals + " " + Named(r.AwayClubName, r.Result.AwayClubId, home);
+                if (!lines.Contains(line)) { allShown = false; Log("missing score line: " + line); }
+                if (accumulate)
+                {
+                    Add(r.Result.HomeClubId, r.Result.HomeGoals, r.Result.AwayGoals);
+                    Add(r.Result.AwayClubId, r.Result.AwayGoals, r.Result.HomeGoals);
+                }
+            }
+        Check(allShown && lines[0] == "Round " + home.RoundsPlayed + " results", label + ": score block shows every fixture of round " + home.RoundsPlayed + " under '" + lines[0] + "'");
+        Log(label + " SCORES: " + scores.text.Replace("\n", " | "));
+        CheckTable(label, home);
+    }
+
+    static string Named(string name, int id, CareerHomeViewModel home) => id == home.ManagedClubId ? name + " (you)" : name;
+
+    void Add(int club, int gf, int ga)
+    {
+        if (!_expected.TryGetValue(club, out int[] e)) _expected[club] = e = new int[6];
+        e[0]++; if (gf > ga) e[1]++; else if (gf == ga) e[2]++; else e[3]++; e[4] += gf; e[5] += ga;
+    }
+
+    void CheckTable(string label, CareerHomeViewModel home)
+    {
+        var rows = Get<List<Text[]>>(Screens, "_careerTableRows");
+        bool cellsMatch = true, arithmetic = true, order = true, expected = _expected.Count > 0, negative = false;
+        var dump = new StringBuilder();
+        for (int i = 0; i < home.Table.Count; i++)
+        {
+            LeagueTableRow r = home.Table[i];
+            string[] c = rows[i].Select(t => t.text).ToArray();
+            dump.Append("\n    " + string.Join(" | ", c));
+            string name = home.TableClubNames[i];
+            string[] want = { (i + 1).ToString(), r.ClubId == home.ManagedClubId ? name + " (you)" : name, r.Played.ToString(), r.Won.ToString(), r.Drawn.ToString(), r.Lost.ToString(), r.GoalsFor.ToString(), r.GoalsAgainst.ToString(), r.GoalDifference.ToString(), r.Points.ToString() };
+            for (int k = 0; k < want.Length; k++)
+                if (Normalize(c[k]) != Normalize(want[k])) { cellsMatch = false; Log("cell mismatch row " + i + " col " + k + ": shown '" + c[k] + "' model '" + want[k] + "'"); }
+            if (r.Played != r.Won + r.Drawn + r.Lost || r.GoalDifference != r.GoalsFor - r.GoalsAgainst || r.Points != 3 * r.Won + r.Drawn) arithmetic = false;
+            if (i > 0 && LeagueTableRow.CompareByTieBreak(home.Table[i - 1], r) > 0) order = false;
+            if (r.GoalDifference < 0) negative = negative || c[8].StartsWith("-") || c[8].StartsWith("−");
+            if (_expected.Count > 0)
+            {
+                int[] e = _expected.TryGetValue(r.ClubId, out int[] x) ? x : new int[6];
+                if (r.Played != e[0] || r.Won != e[1] || r.Drawn != e[2] || r.Lost != e[3] || r.GoalsFor != e[4] || r.GoalsAgainst != e[5])
+                { expected = false; Log("table row for club " + r.ClubId + " differs from the accumulated round scores"); }
+            }
+        }
+        Log(label + " TABLE:" + dump);
+        Check(cellsMatch, label + ": every displayed cell matches the table model (" + home.Table.Count + " rows)");
+        Check(arithmetic, label + ": P = W + D + L, GD = GF - GA, Pts = 3W + D on every row");
+        Check(order, label + ": rows are in tie-break order");
+        Check(negative, label + ": a negative goal difference is displayed with its sign");
+        if (_accumulate && _expected.Count > 0) Check(expected, label + ": table equals the totals of every round's displayed scores");
+    }
+    static string Normalize(string s) => s.Replace("−", "-").Trim();
+
+    // ---------------------------------------------------------------- item 6
+    IEnumerator Item6()
+    {
+        yield return NewCareer(0);
+        Check(File.Exists(SlotFile("autosave", ".tdsave")), "creation autosave written: " + SlotState("autosave"));
+        Click("Save to manual slot 1");
+        yield return WaitIdle();
+        Check(Notice() == "" && File.Exists(SlotFile("manual-1", ".tdsave")), "manual slot 1 saved: " + SlotState("manual-1"));
+        yield return ToMatchday();
+        yield return ResolveRound("round 1");
+        yield return Shot("item6-round1");
+        string autoAfter1 = SlotState("autosave");
+
+        // Autosave failure: hold the autosave file open without sharing while round 2 resolves.
+        yield return ToMatchday();
+        using (var hold = new FileStream(SlotFile("autosave", ".tdsave"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Log("autosave.tdsave held with FileShare.None");
+            yield return ResolveRound("round 2 (autosave blocked)");
+        }
+        Log("autosave lock released");
+        string n2 = Notice();
+        Check(n2.StartsWith("Autosave failed:", StringComparison.Ordinal), "autosave failure is shown on Career Home: '" + n2 + "'");
+        Check(Career.Home.AutosaveError != null, "the view model carries the autosave error");
+        Check(SlotState("autosave") == autoAfter1, "the autosave pair still holds round 1 after the failed write: " + SlotState("autosave"));
+        Check(!Directory.GetFiles(SavesDir).Any(f => f.EndsWith(".tmp") || f.EndsWith(".bak")), "no temporary or backup files left: " + string.Join(",", Directory.GetFiles(SavesDir).Select(Path.GetFileName)));
+        yield return Shot("item6-autosave-failed");
+
+        // Manual-save failure and retry.
+        string manualBefore = SlotState("manual-1");
+        Button save1 = Find("Save to manual slot 1");
+        using (var hold = new FileStream(SlotFile("manual-1", ".tdsave"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            EventSystem.current.SetSelectedGameObject(save1.gameObject);
+            Click(save1);
+            yield return WaitIdle();
+            string n = Notice();
+            Check(!string.IsNullOrEmpty(n) && !n.StartsWith("Autosave failed", StringComparison.Ordinal), "a failed manual save shows its own error: '" + n + "'");
+            yield return Shot("item6-manual-save-failed");
+        }
+        Check(SlotState("manual-1") == manualBefore, "manual slot 1 unchanged after the failed save");
+        Click(save1);
+        yield return WaitIdle();
+        string n3 = Notice();
+        Check(SlotState("manual-1") != manualBefore, "retrying the manual save writes slot 1: " + SlotState("manual-1"));
+        // Notice precedence is coordinator error, then the held autosave error: the autosave text alone means the manual error cleared.
+        Check(Career.LastError == null && n3.StartsWith("Autosave failed:", StringComparison.Ordinal), "the manual-save error clears after the retry; the still-pending autosave failure is shown again (notice now '" + n3 + "')");
+        Log("manual-1 sidecar after retry: " + SidecarText("manual-1"));
+
+        // Recovery: the next round's autosave succeeds and clears the failure.
+        yield return ToMatchday();
+        yield return ResolveRound("round 3 (autosave released)");
+        Check(Career.Home.AutosaveError == null && !Notice().StartsWith("Autosave failed", StringComparison.Ordinal), "the next round's autosave succeeds and clears the failure (notice '" + Notice() + "')");
+        Check(SlotState("autosave") != autoAfter1, "autosave rewritten after recovery: " + SlotState("autosave"));
+        Log("autosave sidecar after recovery: " + SidecarText("autosave"));
+        yield return Shot("item6-recovered");
+
+        // Continue restores the standings; scores return after the next round.
+        var before = Get<List<Text[]>>(Screens, "_careerTableRows").Take(Career.Home.Table.Count).Select(r => string.Join("|", r.Select(t => t.text))).ToList();
+        Click("Return to Main Menu (without saving)");
+        yield return WaitIdle();
+        Check(On(ClientScreens.MainMenu), "quit returns to Main Menu");
+        Click("Continue career");
+        yield return WaitIdle();
+        var after = Get<List<Text[]>>(Screens, "_careerTableRows").Take(Career.Home.Table.Count).Select(r => string.Join("|", r.Select(t => t.text))).ToList();
+        Check(On(ClientScreens.CareerHome) && before.SequenceEqual(after), "Continue restores the standings exactly (" + after.Count + " rows): " + Summary());
+        Text scores = Get<Text>(Screens, "_careerRoundResults");
+        Log("score block after Continue: active=" + scores.gameObject.activeInHierarchy + " text='" + scores.text.Replace("\n", " | ") + "'");
+        yield return Shot("item6-continued");
+        yield return ToMatchday();
+        yield return ResolveRound("round 4 (after Continue)");
+        yield return Shot("item6-round4");
+
+        // Repeated new / load / continue / quit cycles.
+        for (int cycle = 1; cycle <= 5; cycle++)
+        {
+            string tag = "cycle " + cycle + ": ";
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+            Check(On(ClientScreens.MainMenu), tag + "quit to Main Menu");
+            yield return NewCareer(cycle * 3);
+            string club = Career.Home.ManagedClubName;
+            Check(SidecarText("autosave").Contains(club), tag + "new career autosave names " + club);
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+            Click("Load career");
+            yield return WaitIdle();
+            Check(On(ClientScreens.LoadCareer), tag + "Load career opens the picker");
+            Dump(tag + "picker");
+            Click(FindPrefix("Autosave: Ready"), "Autosave: Ready");
+            yield return WaitIdle();
+            Check(On(ClientScreens.CareerHome) && Career.Home.ManagedClubName == club, tag + "loading the autosave resumes " + club);
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+            Click("Load career");
+            yield return WaitIdle();
+            Click(FindPrefix("Manual slot 1: Ready"), "Manual slot 1: Ready");
+            yield return WaitIdle();
+            Check(On(ClientScreens.CareerHome) && Career.Home.RoundsPlayed == 2, tag + "manual slot 1 loads the round-2 save: " + Summary());
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+            Click("Continue career");
+            yield return WaitIdle();
+            Check(On(ClientScreens.CareerHome) && Career.Home.ManagedClubName == club, tag + "Continue resumes the newest save (" + club + ")");
+            Check(Notice() == "" && Career.LastError == null, tag + "no error notice");
+        }
+        Click("Return to Main Menu (without saving)");
+        yield return WaitIdle();
+        Check(On(ClientScreens.MainMenu), "final quit to Main Menu");
+        Log("save directory: " + string.Join(", ", Directory.GetFiles(SavesDir).Select(Path.GetFileName)));
+    }
+
+    // ---------------------------------------------------------------- item 7: layouts, scale, long names, keyboard
+    IEnumerator Layout()
+    {
+        string[] sizes = Arg("-probeSizes", "1366x768,1920x1080,2560x1440").Split(',');
+        bool keys = Arg("-probeKeys", "0") == "1";
+        float scale = (float)typeof(S0ScreensBehaviour).GetField("_textScale", BF).GetValue(Screens);
+        Log("text scale " + scale + "; content " + Screens.LoadedContentSha256);
+        _accumulate = false; // the continued career has rounds from earlier runs; only this run's round is seen here
+        yield return Until(() => Career.IsInitialized && !Career.IsBusy, 60, "career ready");
+        // Menu, New Career and Load Career first: leaving Career Home later would clear the score block.
+        foreach (string size in sizes)
+        {
+            string tag = size + "@" + (scale * 100) + "%";
+            yield return Resize(size);
+            yield return AuditEntryPages(tag, false);
+            yield return AuditEntryPages(tag + " long-names", true);
+        }
+        // Then populate scores and standings once and audit Career Home at every size without leaving it.
+        Click("Continue career");
+        yield return WaitIdle();
+        yield return ToMatchday();
+        yield return ResolveRound("layout round");
+        foreach (string size in sizes)
+        {
+            string tag = size + "@" + (scale * 100) + "%";
+            yield return Resize(size);
+            yield return AuditHomePages(tag, false);
+            yield return AuditHomePages(tag + " long-names", true);
+        }
+        if (keys) yield return Keyboard();
+    }
+
+    IEnumerator Resize(string size)
+    {
+        int w = int.Parse(size.Split('x')[0]), h = int.Parse(size.Split('x')[1]);
+        CanvasScaler scaler = FindObjectsByType<CanvasScaler>(FindObjectsSortMode.None).Single();
+        // The host panel is 1920x1080. A larger layout is emulated: the shell's ConstantPixelSize canvas gets
+        // scaleFactor = window / asked, so the canvas has the asked logical size and is drawn downscaled.
+        int dw = Screen.currentResolution.width, dh = Screen.currentResolution.height;
+        bool emulate = w > dw || h > dh;
+        int ww = emulate ? dw : w, wh = emulate ? dw * h / w : h;
+        Screen.SetResolution(ww, wh, FullScreenMode.Windowed);
+        yield return new WaitForSecondsRealtime(1.5f);
+        scaler.scaleFactor = emulate ? (float)Screen.width / w : 1f;
+        yield return Frames(3);
+        Canvas.ForceUpdateCanvases();
+        Vector2 logical = ((RectTransform)scaler.transform).rect.size;
+        Check(Mathf.Abs(logical.x - w) < 1f && Mathf.Abs(logical.y - h) < 1f, "canvas is " + logical.x.ToString("0") + "x" + logical.y.ToString("0") + " (asked " + size + "; window " + Screen.width + "x" + Screen.height + (emulate ? ", emulated at scale factor " + scaler.scaleFactor.ToString("0.###") : "") + ")");
+    }
+
+    string Arg(string name, string fallback)
+    {
+        string[] a = Environment.GetCommandLineArgs();
+        for (int i = 0; i < a.Length - 1; i++) if (a[i] == name) return a[i + 1];
+        return fallback;
+    }
+
+    IEnumerator AuditHomePages(string tag, bool longNames)
+    {
+        yield return Frames(2);
+        if (longNames) InjectLongNames();
+        yield return AuditHome(tag, "home");
+        RestoreTexts();
+        Click(Find("Schedule"));
+        yield return WaitIdle();
+        if (longNames) InjectLongNames();
+        yield return AuditHome(tag, "fixtures");
+        RestoreTexts();
+        Click(Find("Calendar"));
+        yield return WaitIdle();
+        if (longNames) InjectLongNames();
+        yield return AuditHome(tag, "calendar");
+        RestoreTexts();
+        Click(Find("Fixtures"));
+        Click(Find("Schedule"));
+        yield return WaitIdle();
+    }
+
+    IEnumerator AuditEntryPages(string tag, bool longNames)
+    {
+        Check(On(ClientScreens.MainMenu), tag + ": on Main Menu");
+        if (longNames) InjectLongNames();
+        yield return AuditPage(tag, "menu");
+        RestoreTexts();
+        Click("New career");
+        yield return WaitIdle();
+        var clubs = Get<List<Button>>(Screens, "_careerClubButtons").Where(b => b.gameObject.activeInHierarchy).ToList();
+        Click(clubs[clubs.Count - 1]);
+        yield return WaitIdle();
+        if (longNames) InjectLongNames(clubs.Select(LabelOf).Select(l => l.Substring(l.IndexOf(' ') + 1)).ToList());
+        yield return AuditPage(tag, "new-career");
+        RestoreTexts();
+        Click("Back");
+        yield return WaitIdle();
+        Click("Load career");
+        yield return WaitIdle();
+        if (longNames) InjectLongNames();
+        yield return AuditPage(tag, "load-career");
+        RestoreTexts();
+        Click("Back");
+        yield return WaitIdle();
+    }
+
+    // Long names are injected into the rendered Text components (the generated league has no long names):
+    // club names gain " Athletic Football Association Club" and other career and menu labels grow by about
+    // 40%, then layout is rebuilt. RestoreTexts puts every original string back before the next click.
+    readonly Dictionary<Text, string> _originals = new Dictionary<Text, string>();
+    void InjectLongNames(List<string> extraNames = null)
+    {
+        var home = Career.Home;
+        var names = home.HasCareer ? home.TableClubNames.ToList() : new List<string>();
+        if (extraNames != null) names.AddRange(extraNames);
+        foreach (Text t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+        {
+            if (!t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text) || t.transform.GetComponentInParent<S0ScreensBehaviour>() == null) continue;
+            string s = t.text;
+            foreach (string n in names.Where(n => n.Length > 0).Distinct().OrderByDescending(n => n.Length))
+                s = s.Replace(n, n + " Athletic Football Association Club");
+            if (s == t.text && s.Length > 3 && !char.IsDigit(s[0]) && s != "-" && !IsHeaderCell(t))
+                s = s + " " + s.Substring(0, Math.Max(1, s.Length * 2 / 5));
+            if (!_originals.ContainsKey(t)) _originals[t] = t.text;
+            t.text = s;
+        }
+        Rebuild();
+    }
+    void RestoreTexts()
+    {
+        foreach (var pair in _originals) if (pair.Key != null) pair.Key.text = pair.Value;
+        _originals.Clear();
+        Rebuild();
+    }
+    static void Rebuild()
+    {
+        foreach (var root in FindObjectsByType<RectTransform>(FindObjectsSortMode.None).Where(r => r.parent == null))
+            LayoutRebuilder.ForceRebuildLayoutImmediate(root);
+        Canvas.ForceUpdateCanvases();
+    }
+    bool IsHeaderCell(Text t)
+    {
+        var standings = Get<RectTransform>(Screens, "_careerStandings");
+        return standings != null && t.transform.IsChildOf(standings) && t.transform.parent.GetSiblingIndex() <= 1;
+    }
+
+    IEnumerator AuditHome(string tag, string part)
+    {
+        Canvas.ForceUpdateCanvases();
+        var standings = Get<RectTransform>(Screens, "_careerStandings");
+        var rows = Get<List<Text[]>>(Screens, "_careerTableRows");
+        Text[] header = standings.GetComponentsInChildren<Text>(false).Where(t => t.transform.parent != standings).Take(10).ToArray();
+        bool aligned = true, wraps = true, overlap = false;
+        int visibleRows = 0;
+        foreach (Text[] row in rows)
+        {
+            if (!row[0].gameObject.activeInHierarchy) continue;
+            visibleRows++;
+            for (int c = 0; c < row.Length; c++)
+            {
+                Rect a = WorldRect(row[c].rectTransform), b = WorldRect(header[c].rectTransform);
+                if (Mathf.Abs(a.xMin - b.xMin) > 0.5f || Mathf.Abs(a.xMax - b.xMax) > 0.5f) { aligned = false; Log(tag + " misaligned col " + c + " row '" + row[1].text + "' " + a + " vs header " + b); }
+                if (NeedHeight(row[c]) > row[c].rectTransform.rect.height + 1f) { wraps = false; Log(tag + " clipped cell '" + row[c].text + "'"); }
+                if (c > 0 && WorldRect(row[c - 1].rectTransform).xMax > a.xMin + 0.5f) { overlap = true; Log(tag + " overlap col " + c + " row '" + row[1].text + "'"); }
+            }
+        }
+        Check(aligned, tag + " " + part + ": all ten standings columns align with their headers (" + visibleRows + " rows)");
+        Check(wraps && !overlap, tag + " " + part + ": standings cells wrap without clipping or overlap (club column " + rows[0][1].rectTransform.rect.width.ToString("0") + " px)");
+        Text scores = Get<Text>(Screens, "_careerRoundResults");
+        Check(!scores.gameObject.activeInHierarchy || NeedHeight(scores) <= scores.rectTransform.rect.height + 1f, tag + " " + part + ": score block fully laid out (" + scores.text.Split('\n').Length + " lines)");
+        yield return AuditPage(tag, part, scores);
+    }
+
+    IEnumerator AuditPage(string tag, string part, Text revealLast = null)
+    {
+        Canvas.ForceUpdateCanvases();
+        int clip = 0, offscreen = 0, unreachable = 0;
+        foreach (Text t in FindObjectsByType<Text>(FindObjectsSortMode.None))
+        {
+            if (!t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text)) continue;
+            Rect r = t.rectTransform.rect;
+            bool h = t.horizontalOverflow == HorizontalWrapMode.Overflow && t.preferredWidth > r.width + 1f;
+            bool v = t.verticalOverflow == VerticalWrapMode.Truncate && NeedHeight(t) > r.height + 1f;
+            bool glyph = t.font != null && t.text.Any(ch => !char.IsWhiteSpace(ch) && !t.font.HasCharacter(ch));
+            if (h || v || glyph || t.resizeTextForBestFit) { clip++; Log(tag + " " + part + " CLIP '" + Short(t.text) + "' h=" + h + " v=" + v + " glyph=" + glyph + " bestFit=" + t.resizeTextForBestFit); }
+        }
+        foreach (Button b in Buttons())
+        {
+            Rect w = WorldRect((RectTransform)b.transform);
+            if (w.xMin < -1 || w.xMax > Screen.width + 1) { offscreen++; Log(tag + " " + part + " horizontally offscreen '" + Short(LabelOf(b)) + "' " + w); }
+            ScrollRect scroll = b.GetComponentInParent<ScrollRect>();
+            if (scroll == null && (w.yMin < -1 || w.yMax > Screen.height + 1)) { unreachable++; Log(tag + " " + part + " unreachable (no scroll) '" + Short(LabelOf(b)) + "'"); }
+        }
+        Check(clip == 0, tag + " " + part + ": no clipped, truncated, best-fit or missing-glyph text");
+        Check(offscreen == 0 && unreachable == 0, tag + " " + part + ": every control is on screen or inside a scroll view");
+        yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-top");
+        // Scroll the page to the bottom so the end of the standings and the score block are captured.
+        ScrollRect page = FindObjectsByType<ScrollRect>(FindObjectsSortMode.None).Where(s => s.gameObject.activeInHierarchy && s.content != null)
+            .OrderByDescending(s => s.content.rect.height).FirstOrDefault();
+        if (page != null && page.content.rect.height > page.viewport.rect.height + 1f)
+        {
+            if (revealLast != null && revealLast.gameObject.activeInHierarchy)
+            {
+                // Reveal the score block's last line inside the viewport.
+                page.verticalNormalizedPosition = 1f;
+                Canvas.ForceUpdateCanvases();
+                bool readable = false;
+                for (float p = 1f; p >= -0.001f; p -= 0.05f)
+                {
+                    page.verticalNormalizedPosition = Mathf.Max(0, p);
+                    Canvas.ForceUpdateCanvases();
+                    Rect s = WorldRect(revealLast.rectTransform), vp = WorldRect(page.viewport);
+                    if (s.yMin >= vp.yMin - 1 && s.yMax <= vp.yMax + 1) { readable = true; break; }
+                }
+                bool tall = WorldRect(revealLast.rectTransform).height > WorldRect(page.viewport).height;
+                Check(readable || tall, tag + " " + part + ": the whole score block fits the viewport at some scroll position" + (tall ? " (taller than the viewport; scrolled through)" : ""));
+                yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-scores");
+            }
+            page.verticalNormalizedPosition = 0f;
+            yield return Frames(2);
+            yield return Shot(tag.Replace("@", "-").Replace("%", "pct").Replace(" ", "-") + "-" + part + "-bottom");
+            page.verticalNormalizedPosition = 1f;
+            yield return Frames(2);
+        }
+    }
+
+    static string Short(string s) { s = s.Replace("\n", "\\n"); return s.Length > 70 ? s.Substring(0, 70) + "…" : s; }
+    static float NeedHeight(Text t)
+    {
+        var settings = t.GetGenerationSettings(new Vector2(t.rectTransform.rect.width, 0));
+        return t.cachedTextGeneratorForLayout.GetPreferredHeight(t.text, settings) / t.pixelsPerUnit;
+    }
+    static Rect WorldRect(RectTransform rt)
+    {
+        var c = new Vector3[4];
+        rt.GetWorldCorners(c);
+        return Rect.MinMaxRect(c[0].x, c[0].y, c[2].x, c[2].y);
+    }
+
+    // ---------------------------------------------------------------- keyboard (real keystrokes, own window only)
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    [DllImport("user32.dll")] static extern bool AttachThreadInput(uint a, uint b, bool attach);
+    [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+    [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    [DllImport("user32.dll")] static extern uint MapVirtualKey(uint code, uint mapType);
+    delegate bool EnumProc(IntPtr h, IntPtr l);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr l);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    const byte VK_TAB = 0x09, VK_RETURN = 0x0D, VK_SHIFT = 0xA0;
+    IntPtr _hwnd;
+    static int Pid => System.Diagnostics.Process.GetCurrentProcess().Id;
+    IntPtr OwnWindow()
+    {
+        if (_hwnd != IntPtr.Zero) return _hwnd;
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, l) => { GetWindowThreadProcessId(h, out uint p); if (p == Pid && IsWindowVisible(h)) { found = h; return false; } return true; }, IntPtr.Zero);
+        return _hwnd = found;
+    }
+    bool IsForeground() { GetWindowThreadProcessId(GetForegroundWindow(), out uint p); return p == Pid; }
+    void TakeForeground()
+    {
+        IntPtr h = OwnWindow(), fg = GetForegroundWindow();
+        uint fgThread = GetWindowThreadProcessId(fg, out _), me = GetCurrentThreadId();
+        AttachThreadInput(me, fgThread, true);
+        BringWindowToTop(h);
+        SetForegroundWindow(h);
+        AttachThreadInput(me, fgThread, false);
+    }
+    static bool Ext(byte vk) => vk >= 0x21 && vk <= 0x2E;
+    static void Down(byte vk) => keybd_event(vk, (byte)MapVirtualKey(vk, 0), Ext(vk) ? 1u : 0u, UIntPtr.Zero);
+    static void Up(byte vk) => keybd_event(vk, (byte)MapVirtualKey(vk, 0), (Ext(vk) ? 1u : 0u) | 2u, UIntPtr.Zero);
+    int _keys;
+    IEnumerator Key(byte vk, bool shift = false)
+    {
+        if (!IsForeground()) { TakeForeground(); yield return new WaitForSecondsRealtime(0.3f); }
+        if (!IsForeground()) throw new InvalidOperationException("player is not the foreground window; no key sent");
+        if (shift) { Down(VK_SHIFT); yield return new WaitForSecondsRealtime(0.05f); }
+        Down(vk);
+        yield return new WaitForSecondsRealtime(0.1f);
+        Up(vk);
+        if (shift) { yield return new WaitForSecondsRealtime(0.05f); Up(VK_SHIFT); }
+        _keys++;
+        yield return new WaitForSecondsRealtime(0.15f);
+        yield return Frames(2);
+    }
+    bool Ring()
+    {
+        var rings = Get<Dictionary<Selectable, GameObject>>(Screens, "_focusRings");
+        Selectable s = Selected;
+        return s != null && rings != null && rings.TryGetValue(s, out GameObject r) && r.activeInHierarchy;
+    }
+    // Every interactable, visible tab stop on the page, in hierarchy order (the shell's own Tab order).
+    List<Selectable> Stops()
+    {
+        var order = Screens.GetComponentsInChildren<Selectable>(false);
+        return order.Where(s => s.IsInteractable() && s.gameObject.activeInHierarchy && s is Button).ToList();
+    }
+
+    // Tabs forward until the cycle repeats, then Shift-Tabs back; checks every stop is visited once and the order reverses.
+    IEnumerator Cycle(string page)
+    {
+        var expectedStops = Stops();
+        var fwd = new List<Selectable>();
+        bool rings = true;
+        for (int i = 0; i < expectedStops.Count + 3; i++)
+        {
+            yield return Key(VK_TAB);
+            if (Selected == null) { Log(page + " Tab left focus nowhere"); break; }
+            rings &= Ring();
+            if (fwd.Count > 0 && Selected == fwd[0]) break;
+            fwd.Add(Selected);
+        }
+        var buttonsVisited = fwd.Where(s => s is Button).ToList();
+        Log(page + " Tab order: " + string.Join(" > ", fwd.Select(LabelOf).Select(Short)));
+        Check(expectedStops.All(fwd.Contains) && buttonsVisited.Count == buttonsVisited.Distinct().Count(), page + ": Tab visits every enabled control once (" + buttonsVisited.Count + "/" + expectedStops.Count + ") and wraps");
+        Check(fwd.All(s => s.IsInteractable()), page + ": Tab never lands on a disabled control");
+        Check(rings, page + ": focus ring visible on every Tab stop");
+        var back = new List<Selectable>();
+        for (int i = 0; i < Math.Min(fwd.Count, 6); i++) { yield return Key(VK_TAB, true); back.Add(Selected); }
+        var want = Enumerable.Range(1, back.Count).Select(k => fwd[(fwd.Count * 4 - k) % fwd.Count]).ToList();
+        Log(page + " Shift-Tab order: " + string.Join(" > ", back.Select(LabelOf).Select(Short)));
+        Check(back.SequenceEqual(want), page + ": Shift-Tab reverses the Tab order");
+    }
+    IEnumerator TabTo(string label, int max = 60)
+    {
+        for (int i = 0; i < max && LabelOf(Selected) != label; i++) yield return Key(VK_TAB);
+        Check(LabelOf(Selected) == label, "Tab reaches '" + label + "'");
+    }
+    IEnumerator Enter(string expectLabel)
+    {
+        Check(LabelOf(Selected) == expectLabel, "focus on '" + expectLabel + "' before Enter");
+        Log("Enter on '" + LabelOf(Selected) + "'");
+        yield return Key(VK_RETURN);
+        yield return WaitIdle();
+    }
+    bool HeadingFocused() => Selected != null && Selected.GetComponent<Button>() == null && !(Selected is Scrollbar);
+
+    IEnumerator Keyboard()
+    {
+        yield return Resize(Arg("-probeKeySize", "1920x1080"));
+        TakeForeground();
+        yield return new WaitForSecondsRealtime(0.5f);
+        Log("keyboard at " + Screen.width + "x" + Screen.height + "; foreground=" + IsForeground());
+        Click("Return to Main Menu (without saving)");
+        yield return WaitIdle();
+        Check(HeadingFocused(), "Main Menu: heading focused on arrival (" + LabelOf(Selected) + ")");
+        yield return Cycle("Main Menu");
+        // New Career by keyboard: Start is skipped until a club is chosen, then reachable; Back returns.
+        yield return TabTo("New career");
+        yield return Enter("New career");
+        Check(On(ClientScreens.NewCareer) && HeadingFocused(), "Enter opens New Career with the heading focused");
+        yield return Cycle("New Career (no club)");
+        Check(!Stops().Any(s => LabelOf(s) == "Start career"), "disabled Start is not a tab stop");
+        yield return Key(VK_TAB);
+        yield return TabTo(LabelOf(Get<List<Button>>(Screens, "_careerClubButtons")[2]));
+        yield return Enter(LabelOf(Selected));
+        Check(Career.NewCareer.HasSelection, "Enter selects a club");
+        yield return Cycle("New Career (club selected)");
+        Check(Stops().Any(s => LabelOf(s) == "Start career"), "Start becomes a tab stop after selection");
+        yield return TabTo("Back");
+        yield return Enter("Back");
+        Check(On(ClientScreens.MainMenu) && HeadingFocused(), "Back from New Career returns to Main Menu with the heading focused");
+        // Load Career by keyboard.
+        yield return TabTo("Load career");
+        yield return Enter("Load career");
+        Check(On(ClientScreens.LoadCareer) && HeadingFocused(), "Enter opens Load Career with the heading focused");
+        yield return Cycle("Load Career");
+        yield return TabTo("Back");
+        yield return Enter("Back");
+        Check(On(ClientScreens.MainMenu) && HeadingFocused(), "Back from Load Career returns to Main Menu");
+        // Continue, then Career Home.
+        yield return TabTo("Continue career");
+        yield return Enter("Continue career");
+        Check(On(ClientScreens.CareerHome) && HeadingFocused(), "Enter on Continue opens Career Home with the heading focused");
+        yield return Cycle("Career Home");
+        // Successful save by keyboard: focus goes to the heading while busy, then back to the Save button.
+        yield return TabTo("Save to manual slot 2");
+        yield return Key(VK_RETURN);
+        Log("after Enter on save: busy=" + Career.IsBusy + " selected=" + LabelOf(Selected));
+        yield return WaitIdle();
+        Check(LabelOf(Selected) == "Save to manual slot 2" && Notice() == "", "focus returns to 'Save to manual slot 2' after the save (now '" + LabelOf(Selected) + "')");
+        // Failed save by keyboard: visible feedback.
+        using (new FileStream(SlotFile("manual-2", ".tdsave"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            yield return Key(VK_RETURN);
+            yield return WaitIdle();
+            Check(Notice().Length > 0, "a failed save by keyboard shows feedback: '" + Short(Notice()) + "' (focus '" + LabelOf(Selected) + "')");
+            yield return Shot("keyboard-save-failed");
+        }
+        // Schedule by keyboard: open, calendar, focus recovery at the first week.
+        yield return TabTo("Schedule");
+        yield return Enter("Schedule");
+        yield return TabTo("Calendar");
+        yield return Enter("Calendar");
+        yield return TabTo("Current week");
+        yield return Cycle("Career Home (calendar open)");
+        Check(!Stops().Any(s => LabelOf(s) == "Previous week") || Find("Previous week").IsInteractable(), "a disabled week control is not a tab stop");
+        yield return TabTo("Next week");
+        yield return Enter("Next week");
+        yield return TabTo("Previous week");
+        yield return Enter("Previous week");
+        // Page back to the first week: the boundary control disables and focus must move to Current week.
+        for (int i = 0; i < 10 && Find("Previous week").IsInteractable() && LabelOf(Selected) == "Previous week"; i++)
+            yield return Enter("Previous week");
+        Check(!Find("Previous week").IsInteractable() && LabelOf(Selected) == "Current week" && Ring(),
+            "at the first week Previous week disables and focus moves to Current week with its ring (focus '" + LabelOf(Selected) + "')");
+        yield return Key(VK_TAB, true);
+        Check(LabelOf(Selected) == "Calendar", "Shift-Tab from Current week skips the disabled Previous week (now '" + LabelOf(Selected) + "')");
+        yield return Shot("keyboard-first-week");
+        Check(Selected != null && Selected.IsInteractable() && Ring(), "focus stays on an enabled control after paging back to the first week ('" + LabelOf(Selected) + "')");
+        yield return Shot("keyboard-calendar");
+        yield return TabTo("Schedule");
+        yield return Enter("Schedule");
+        // Busy: a round by keyboard; focus parks on the heading and every control is disabled.
+        if (Career.Home.NextAction == CareerProgressAction.AdvanceDay)
+        {
+            yield return TabTo("Advance one day");
+            yield return Enter("Advance one day");
+        }
+        Check(LabelOf(Selected) == "Advance one day" || LabelOf(Selected).StartsWith("Resolve", StringComparison.Ordinal), "focus returns to the progress control after a day ('" + LabelOf(Selected) + "')");
+        yield return TabTo("Return to Main Menu (without saving)");
+        yield return Enter("Return to Main Menu (without saving)");
+        Check(On(ClientScreens.MainMenu) && HeadingFocused(), "Return to Main Menu by keyboard lands on the Main Menu heading");
+        Log("keystrokes sent: " + _keys);
+    }
+
+    // ---------------------------------------------------------------- item 8: PM-1 journey
+    IEnumerator Pm1()
+    {
+        var career = Career;
+        string sha = Screens.LoadedContentSha256;
+        Log("career " + (career != null ? "ENABLED" : "DISABLED") + "; S0 content sha256 " + sha);
+        string careerBefore = null;
+        if (career != null)
+        {
+            yield return Until(() => career.IsInitialized && !career.IsBusy, 60, "career ready");
+            Dump("menu");
+            Check(Find("Play a demo match") != null && Find("New career") != null, "Main Menu offers the demo match next to the career actions");
+            Click("Continue career");
+            yield return WaitIdle();
+            careerBefore = Summary() + " || " + string.Join("|", Get<List<Text[]>>(Screens, "_careerTableRows").Select(r => r[1].text + r[9].text));
+            Dump("career home");
+            Check(!Buttons().Any(b => { string l = LabelOf(b); return l.Contains("Start match") || l.Contains("demo") || l.Contains("report"); }), "Career Home has no Match, Tactics or Report edge");
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+        }
+        else
+        {
+            Dump("menu");
+            Check(Find("New career") == null && Find("Continue career") == null && Find("Load career") == null, "no career action exists with Career disabled");
+        }
+        Check(On(ClientScreens.MainMenu), "on Main Menu before the journey");
+        Click("Play a demo match");
+        yield return Frames(5);
+        Check(On(ClientScreens.TacticsSetup), "demo action opens Tactics Setup");
+        var setup = Get<Button[]>(Screens, "_setupChoices");
+        Click(setup[4]);
+        yield return Frames(3);
+        Mentality chosen = View.CurrentMentality;
+        Log("setup " + Short(string.Join(" ", FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy && t.text.StartsWith("Ready", StringComparison.Ordinal)).Select(t => t.text))));
+        yield return Shot("pm1-setup");
+        Click(Find("Start match"));
+        yield return Until(() => On(ClientScreens.MatchView) && View.CanChangeMentality, 120, "first frame");
+        Check(Changes.CurrentMentality == chosen, "authored Mentality reaches the session (" + chosen + ")");
+        while (View.CanFaster) { Click(Get<Button>(Screens, "_faster")); yield return Frames(3); }
+        Log("speed '" + View.Speed + "'");
+        yield return new WaitForSecondsRealtime(20f);
+        // Live Mentality change.
+        Click(Get<Button>(Screens, "_mentality"));
+        yield return Frames(3);
+        var ment = Get<Button[]>(Screens, "_mentalityChoices");
+        int target = (S0ScreenPresenter.Mentalities.IndexOf(View.CurrentMentality) + 2) % 7;
+        Click(ment[target]);
+        yield return Frames(2);
+        Click(Get<Button>(Screens, "_submit"));
+        var m = Changes.Records.Last();
+        yield return Until(() => m.Status != ClientChangeStatus.Pending, 120, "mentality outcome");
+        Check(m.Status == ClientChangeStatus.Applied && View.CurrentMentality == S0ScreenPresenter.Mentalities[target], "live Mentality change applied (" + View.CurrentMentality + ")");
+        // Substitution.
+        Click(Get<Button>(Screens, "_substitution"));
+        yield return Frames(3);
+        var outgoing = Get<List<Button>>(Screens, "_outgoing");
+        var incoming = Get<List<Button>>(Screens, "_incoming");
+        string gk = View.Text.Label("identity.goalkeeper");
+        bool outKeeper = View.Outgoing[5].Label.Contains(gk);
+        int inc = Enumerable.Range(0, View.Incoming.Count).First(i => View.Incoming[i].Label.Contains(gk) == outKeeper);
+        Click(outgoing[5]);
+        yield return Frames(2);
+        Click(incoming[inc]);
+        yield return Frames(2);
+        Click(Get<Button>(Screens, "_submit"));
+        var s = Changes.Records.Last();
+        yield return Until(() => s.Status != ClientChangeStatus.Pending, 900, "substitution outcome");
+        Check(s.Status == ClientChangeStatus.Applied, "substitution applied (" + s.Status + ", used '" + View.SubstitutionsUsed + "')");
+        yield return Shot("pm1-match");
+        yield return Until(() => View.IsFullTime && View.CanReport, 1800, "full time");
+        Log("full time " + View.Score);
+        Click(Get<Button>(Screens, "_report"));
+        yield return Frames(5);
+        Check(On(ClientScreens.PostMatchReport), "View match report opens the Post-Match Report");
+        Check(View.HasStatistics, "report has match statistics");
+        Log("REPORT " + Short(string.Join(" ¦ ", FindObjectsByType<Text>(FindObjectsSortMode.None).Where(t => t.gameObject.activeInHierarchy && t.text.Length > 0).Select(t => t.text.Replace("\n", "\\n")))));
+        yield return Shot("pm1-report");
+        Dump("report");
+        Check(!Buttons().Any(b => LabelOf(b).StartsWith("Career", StringComparison.Ordinal) || LabelOf(b).Contains("career")), "Report offers no Career Home edge");
+        Click("Return to main menu");
+        yield return Frames(5);
+        Check(On(ClientScreens.MainMenu) && !MatchCoordinator.HasMatch, "Return lands on Main Menu and clears the match");
+        Check(Screens.LoadedContentSha256 == sha, "S0 content identity unchanged after the journey");
+        if (career != null)
+        {
+            Check(Find("Continue career") != null && Find("Continue career").IsInteractable(), "career actions still available after the demo");
+            Click("Continue career");
+            yield return WaitIdle();
+            string after = Summary() + " || " + string.Join("|", Get<List<Text[]>>(Screens, "_careerTableRows").Select(r => r[1].text + r[9].text));
+            Check(after.Replace("Career resumed", "") == careerBefore.Replace("Career resumed", ""), "the career is unchanged by the demo match");
+            Click("Return to Main Menu (without saving)");
+            yield return WaitIdle();
+        }
+    }
+}

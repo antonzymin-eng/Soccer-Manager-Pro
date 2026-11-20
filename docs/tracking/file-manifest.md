@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 19, 2026 — (v2.255) **Career Home round scores and standings.** Adds `src/client-app/CareerFixtureResult.cs` and its Unity `.meta`. Updates the Career Home source and view model, career text, the existing Unity Career Home binding and their regression tests.
+**Last Updated:** November 20, 2026 — (v2.256) **Career on at startup.** **New evidence directory** `docs/tracking/evidence/host-52d1f000-20261120/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `compile-editor-log.txt.xz`, `runs.txt`, `item6-probe-log.txt`, `layout-100-probe-log.txt`, `layout-200-probe-log.txt`, `pm1-career-on-probe-log.txt`, `pm1-career-off-probe-log.txt`, `shots-1.tar` … `shots-6.tar`, `shots-index.txt`, `career-probe-driver.cs.txt`, `build.sh.txt`. **Modified:** `Assets/Scenes/Scene.unity` (`_enableCareer: 1`), `src/match-client-unity/README.md`, `docs/tracking/open-issues.md`, `open-issues-resolved.md`, `path-to-playable-roadmap.md` v1.8, `career-shutdown-cancellation-design.md` v0.7, `interactive-unity-client-design.md` v0.44, `CHANGELOG.md`, `CHANGELOG-src.md` v2.243, `docs/agent-guides/project-reference.md` (49 active / 78 archived), `docs/agent-guides/unity-career-context.md`, `tools/dotnet-ci/check_evidence_manifests.py` (one contract), `tools/tests/test_evidence_manifests.py` (53 registered directories) and this manifest. No assembly added, no removals.
+
+**Last Updated (prior):** November 19, 2026 — (v2.255) **Career Home round scores and standings.** Adds `src/client-app/CareerFixtureResult.cs` and its Unity `.meta`. Updates the Career Home source and view model, career text, the existing Unity Career Home binding and their regression tests.
 
 **Last Updated (prior):** November 19, 2026 — (v2.254) **Status sync: #434, #440 A′ and W13.1/W13.1c merged.** No new files. **Modified (documentation only):** `open-issues.md`, `docs/agent-guides/project-reference.md`, `match-engine-wiring-backlog.md` v1.51, `path-to-playable-roadmap.md` v1.6, `w-434-formation-duty-preflight.md` v1.7, `w-440-ball-loose-design.md` v1.9, `w-defender-marking-wiring-plan.md` v0.9, `tackle-duel-design.md` v0.8, `CHANGELOG.md`, this file.
 
@@ -3952,7 +3954,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7/P8; current v0.43). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7/P8; current v0.44). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
@@ -4875,6 +4877,7 @@ Current approved-spec / tracking amendments in the same review-fix landing:
 
 | Revision | Date | Author | Notes |
 |---|---|---|---|
+| 2.256 | 2026-11-20 | — | Career on at startup: pinned-host evidence `host-52d1f000-20261120`. |
 | 2.255 | 2026-11-19 | — | Career Home round scores and standings: add `CareerFixtureResult.cs` (+ `.meta`). |
 | 2.254 | 2026-11-19 | — | Status sync: #434, #440 A′ and W13.1/W13.1c merged; eight tracking documents updated. Documentation only. |
 | 2.251 | 2026-11-19 | — | Reconcile Career Home schedule files with PR #550 and record schedule UX acceptance criteria. |
