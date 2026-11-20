@@ -1,6 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 20, 2026 — v1.10: C3's Career Home standings are paged for keyboard reach at 200% (the #551 fix), after a second pinned-host run at `52d1f000` found them unreachable by keyboard. C3 row updated.
+**Last Updated:** November 20, 2026 — v1.11: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
+
+**Last Updated (prior):** November 20, 2026 — v1.10: C3's Career Home standings are paged for keyboard reach at 200% (the #551 fix), after a second pinned-host run at `52d1f000` found them unreachable by keyboard. C3 row updated.
 
 **Last Updated (prior):** November 20, 2026 — v1.9: Step 9 and the engine lane now cite the [post-C #441 diagnosis](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026). #441 remains open and gates W9.
 
@@ -505,6 +507,7 @@ the owning document and link it here before the blocked landing/capture/closeout
 | D-13 | Anton: **PM-3 product scope** (reframed November 3, 2026; formerly *Early Access release scope*): content (generated vs authored database, #47), leagues, cups, promotion/relegation (#43), deliberate exclusions; plus the recorded career-integrity choices ([genesis transfer budget](open-issues-resolved.md#genesis-transfer-budget), [transfer counterparty ledger](open-issues.md#transfer-counterparty-ledger), [regen club strength](open-issues.md#regen-club-strength)) and finance revenue-tier enablement | **Partly decided November 4, 2026:** (1) clubs get a starting transfer budget — **done**, ERR-040-004 (genesis ceilings = the zero-prize base, 100,000 / 50,000); (2) **PM-3 includes transfer and finance screens** (today neither the client nor the Unity code calls `SubmitTransferBid` or shows finances, so a "transfer window ran" was invisible to the player); (3) the regen question is **measured** ([evidence](evidence/career-drift-20261104/README.md): the genesis strength gap keeps 79% at season 5, 56% at season 10, ~0 by season 23–24; genesis squads lack a youth discount too). A read-only check found nothing reads AI clubs' finances, so the one-sided counterparty ledger can stay the interim through PM-3. **Still pending, before PM-3 implementation:** content, competitions/promotion (#43 T2 only if wanted as gameplay; its T0/T1 is behaviour-neutral), exclusions, the regen fix shape and revenue-tier enablement. Platforms and languages move to the D-14 checkpoint | A written PM-3 scope record linked here; the integrity choices in their open-issues entries |
 | D-14 | Anton: public release (Early Access) | **DECIDED November 3, 2026: no Early Access is planned at this time.** Release work is parked until a release-readiness checkpoint the owner calls: external alpha and closed beta, #39 packaging and release engineering, store/legal/notices, release candidate, D-10 replacement and #50, platforms and languages, and #49 localization/accessibility beyond approved contracts. §5.1a keeps the November 2 list as the starting draft | This roadmap §5.1a |
 | D-15 | Anton: order of the depth-phase tranches after PM-3 | **Pending; decide at PM-2** (November 3, 2026) | This roadmap §5.1a |
+| D-16 | Anton: client UI rendering technology and visual quality bar | **DECIDED November 20, 2026:** the client moves to **UI Toolkit** (UXML/USS) for menus and management screens; **UGUI stays** for the match pitch and effects-heavy match-day pieces; the two coexist in one scene. Reason: the owner judged the current UGUI screens well below modern-game quality, and UI Toolkit suits a table- and form-heavy management game and the HTML/CSS mock-ups. The decision does not by itself amend #38 (FR-UI-021 names UGUI), schedule the migration, or adopt the July mock-ups as the visual target; those are open in the design supplement. **Timing (Q1) decided the same day: start now, alongside PM-2;** PM-2 season screens not yet built are built in UI Toolkit once T1's components exist. **Fallback rules (Q5) confirmed the same day:** Q2 never blocks T1; a T0a no-go, or no go/no-go after two host sessions, releases those screens to UGUI. **Q6 (same day):** T1 gets the same two-host-session limit, and a released lane stays in UGUI through PM-2 acceptance | [UI Toolkit presentation design](ui-toolkit-presentation-design.md); #38 and master plan §3.4 amendments at T0b, only after a T0a go |
 
 Deferred substitutions now have their execution contract (match-flow §6, approved October 13, 2026),
 implemented by PR #505: duplicate requests, dismissal and full-time cancellation, incoming eligibility
@@ -588,6 +591,15 @@ decided.
    Gate F. The later interactive/delegation slice needs its own contract-backed UX delta.
 4. **Season screens (M).** Fixture list, calendar, table, squad/selection, availability
    (injury/suspension), board objective, progress controls; not every approved #38 screen.
+   **D-16 (November 20, 2026):** season screens not yet built wait for the UI Toolkit T1 components and
+   are built once in UI Toolkit; screens already merged are rebuilt in T3. This puts the T0a spike, T0b
+   and T1 on the PM-2 path. Owner-confirmed fallbacks (Q5, November 20, 2026): an undecided visual
+   target (Q2) does not block T1, which uses provisional tokens; a T0a no-go, or no go/no-go after two
+   host sessions, releases these screens to UGUI at once. Owner-added the same day (Q6): T1 gets the same
+   two-host-session limit after a T0a go, and a released lane stays in UGUI through PM-2 acceptance
+   even if T0a or T1 later succeeds. **Residual risk:** a pending T0b approval, or a delay in scheduling
+   host sessions, still holds unbuilt season screens; neither is timeboxed
+   ([UI Toolkit presentation design §4.1](ui-toolkit-presentation-design.md#41-pm-2-dependency-and-fallbacks)).
 5. **#44 T3 (M).** Quick-sim card synthesis for league-wide discipline. It stays in PM-2: today
    suspensions apply to one club in twenty. **Cross-lane dependency (v0.85; PM-2 placement
    owner-confirmed November 2, 2026):** synthesis draws on #30's existing `0x22` stream (FR-DC-019,
@@ -871,6 +883,14 @@ What the reversal actually costs and does not cost:
   runs report green — the ERR-030-014 failure mode, one layer up. **Do not shim the engine to buy
   coverage.**
 
+### Amended November 20, 2026 — owner decision D-16: UI Toolkit for menus and management screens
+
+> The August 3 entry above still stands: the Unity client is the shipping surface. D-16 changes only
+> the rendering technology inside it. Menus and management screens move from UGUI to UI Toolkit;
+> UGUI stays for the match pitch and effects-heavy pieces. The "keep logic out of `MonoBehaviour`s" rule
+> below applies unchanged to UI Toolkit adapters. See
+> [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
+
 **The mitigation that follows from this, and the rule P4 is built under: keep logic out of
 `MonoBehaviour`s.** Everything that *decides* — what to draw, where the camera goes, how frames
 interpolate, what a click means, what an intent maps to — belongs in plain C# in `match-client-core` /
@@ -973,6 +993,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.11 | November 20, 2026 | Record owner decision D-16 (UI Toolkit for menus and management screens; UGUI for the match pitch) in the decision register and §7; link the new design supplement. Owner answered Q1: the migration starts now, alongside PM-2; career-lane item 4 note records the PM-2 dependency and the owner-confirmed fallbacks (Q5, extended by Q6; PR #560 review). |
 | v1.10 | November 20, 2026 | C3: Career Home standings paged for keyboard reach at 200% after the second `52d1f000` run. |
 | v1.9 | November 20, 2026 | Step 9 and the engine lane point at the current #441 evidence after W8 C, #434 and #440 A′. W9 still depends on #441. |
 | v1.8 | November 20, 2026 | C4 complete: career startup checks 6–8 passed on the pinned host; Career on at startup. |
