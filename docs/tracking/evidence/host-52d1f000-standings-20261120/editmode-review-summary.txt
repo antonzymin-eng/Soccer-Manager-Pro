@@ -1,0 +1,16 @@
+# PR #557 review-fix candidate: compile and EditMode in the same sparse worktree (<scratch>/standings-paging).
+# Candidate src tree 511aa40e72b2edfb00e1119b7842c85a5699d145 (the code of the review-fix commit; the P7b README
+# checklist line in the same tree was edited while this run was in progress and is not compiled).
+compile + EditMode: Unity.exe -batchmode -nographics -projectPath <scratch>/standings-paging -runTests -testPlatform EditMode
+  -assemblyNames "TacticalDirector.ClientApp.Tests;TacticalDirector.UiFramework.Tests"  -> exit=0
+start: 2026-11-20T17:43:22Z   end: 2026-11-20T17:50:01Z
+Players E, B and C were then built from the same tree with 0 "error CS" each (C with long-copy-patch.py for its build only).
+
+assembly                                 total  passed  failed  skipped
+TacticalDirector.ClientApp.Tests.dll       302     299       0        3
+TacticalDirector.UiFramework.Tests.dll      52      52       0        0
+all                                        354     351       0        3
+
+New and passing: ContentRegionIsATabStopBetweenActionsButAnAnchorIsNot (S0FocusNavigationTests 23/23).
+Unchanged and passing: CareerScreensTests 21/21, CareerScreenTextTests 14/14, ClientCareerCoordinatorTests 47/47.
+Skips: the same three opt-in diagnostics.

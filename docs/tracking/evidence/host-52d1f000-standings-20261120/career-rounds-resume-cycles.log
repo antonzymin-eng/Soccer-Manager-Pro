@@ -1,0 +1,300 @@
+2026-11-20T14:56:07.1850112Z frame=30 boot mode=rounds window=1903080 screen=1366x768 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe A\careers
+2026-11-20T14:56:07.2714015Z frame=32 click 'New career'
+2026-11-20T14:56:07.4579125Z frame=38 click 'Select Thorncliff United'
+2026-11-20T14:56:07.4987456Z frame=44 click 'Start career'
+2026-11-20T14:56:08.2118884Z frame=112 PASS new career for 'Thorncliff United' shows its Career Home (Thorncliff United | Season 1, day 0 | Position 20 | Rounds 0/38 / Last action: Career started / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Kesgrave Rovers (away), day 7, in 7 days.)
+2026-11-20T14:56:08.2191457Z frame=112 PASS standings list 20 clubs at career start
+2026-11-20T14:56:08.2589517Z frame=112 PASS no score block before any round
+2026-11-20T14:56:08.2796270Z frame=112 TABLE start:
+Pos | Club | P | W | D | L | GF | GA | GD | Pts | 
+1 | Ashford Town | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+2 | Belmont Rovers | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+3 | Carrowmore City | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+4 | Dunhaven United | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+5 | Eastvale Athletic | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+6 | Fernbrook FC | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+7 | Granton Wanderers | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+8 | Halloway City | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+9 | Ironbridge United | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+10 | Juniper Park FC | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+11 | Kesgrave Rovers | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+12 | Langmere Athletic | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+13 | Marlow Heath | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+14 | Northgate United | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+15 | Oakenfield FC | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+16 | Pendleton City | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+17 | Quarrywood Town | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+18 | Redmarsh Rovers | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+19 | Stanbury Athletic | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+20 | Thorncliff United (you) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 
+--- end
+2026-11-20T14:56:08.2842424Z frame=112 PASS start: 20 standings rows for 20 clubs
+2026-11-20T14:56:08.2858513Z frame=112 PASS start: ten headers in order Pos Club P W D L GF GA GD Pts
+2026-11-20T14:56:08.2883830Z frame=112 PASS start: every row's P W D L GF GA GD Pts and position match the scores (0 mismatches)
+2026-11-20T14:56:08.2909654Z frame=112 PASS start: order follows Pts, then GD, then GF (0 breaks; full ties fall back to club id, which is not shown)
+2026-11-20T14:56:08.2919453Z frame=112 INFO start: 0 clubs with negative goal difference
+2026-11-20T14:56:08.3692702Z frame=112 screenshot rounds-00-start.bmp 1366x768
+2026-11-20T14:56:08.3811533Z frame=113 click 'Advance one day'
+2026-11-20T14:56:08.6216000Z frame=126 click 'Advance one day'
+2026-11-20T14:56:08.8559390Z frame=139 click 'Advance one day'
+2026-11-20T14:56:09.1145336Z frame=152 click 'Advance one day'
+2026-11-20T14:56:09.3368219Z frame=165 click 'Advance one day'
+2026-11-20T14:56:09.5694252Z frame=178 click 'Advance one day'
+2026-11-20T14:56:09.7794699Z frame=191 click 'Advance one day'
+2026-11-20T14:56:10.0120713Z frame=203 INFO round 1: advanced 7 days; Thorncliff United | Season 1, day 7 | Position 20 | Rounds 0/38 / Last action: Day advanced / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Kesgrave Rovers (away), day 7, in 0 days.
+2026-11-20T14:56:10.0176512Z frame=203 click 'Resolve matchday (on Career Home)'
+2026-11-20T14:56:10.1985090Z frame=207 PASS round 1: every control disabled while busy (0 interactable)
+2026-11-20T14:56:10.2035904Z frame=207 INFO round 1: focus while busy 'Career home'
+2026-11-20T15:05:51.9328003Z frame=68192 PASS round 1: score block shown in the first frame after progress finished (581.8 s round)
+2026-11-20T15:05:52.0343946Z frame=68195 INFO round 1: focus after completion 'Career home' (progress control was 'Advance one day')
+2026-11-20T15:05:52.0401630Z frame=68195 INFO round 1: Thorncliff United | Season 1, day 7 | Position 14 | Rounds 1/38 / Last action: Round resolved / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ironbridge United (away), day 14, in 7 days.
+2026-11-20T15:05:52.0715132Z frame=68195 INFO score block uses CRLF line breaks
+2026-11-20T15:05:52.0766692Z frame=68195 PASS round 1: score block heading is 'Round 1 results'
+2026-11-20T15:05:52.0909912Z frame=68195 PASS round 1: score block lists 10 fixtures covering 20 of 20 clubs
+2026-11-20T15:05:52.0935149Z frame=68195 SCORES round 1:
+Round 1 results
+Kesgrave Rovers 5 - 3 Thorncliff United (you)
+Fernbrook FC 3 - 0 Halloway City
+Eastvale Athletic 0 - 4 Ironbridge United
+Oakenfield FC 0 - 1 Quarrywood Town
+Granton Wanderers 1 - 1 Ashford Town
+Dunhaven United 0 - 1 Carrowmore City
+Northgate United 1 - 3 Marlow Heath
+Langmere Athletic 2 - 0 Belmont Rovers
+Redmarsh Rovers 4 - 1 Stanbury Athletic
+Juniper Park FC 1 - 3 Pendleton City
+--- end
+2026-11-20T15:05:52.0971797Z frame=68195 TABLE after round 1:
+Pos | Club | P | W | D | L | GF | GA | GD | Pts | 
+1 | Ironbridge United | 1 | 1 | 0 | 0 | 4 | 0 | 4 | 3 | 
+2 | Redmarsh Rovers | 1 | 1 | 0 | 0 | 4 | 1 | 3 | 3 | 
+3 | Fernbrook FC | 1 | 1 | 0 | 0 | 3 | 0 | 3 | 3 | 
+4 | Kesgrave Rovers | 1 | 1 | 0 | 0 | 5 | 3 | 2 | 3 | 
+5 | Marlow Heath | 1 | 1 | 0 | 0 | 3 | 1 | 2 | 3 | 
+6 | Pendleton City | 1 | 1 | 0 | 0 | 3 | 1 | 2 | 3 | 
+7 | Langmere Athletic | 1 | 1 | 0 | 0 | 2 | 0 | 2 | 3 | 
+8 | Carrowmore City | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3 | 
+9 | Quarrywood Town | 1 | 1 | 0 | 0 | 1 | 0 | 1 | 3 | 
+10 | Ashford Town | 1 | 0 | 1 | 0 | 1 | 1 | 0 | 1 | 
+11 | Granton Wanderers | 1 | 0 | 1 | 0 | 1 | 1 | 0 | 1 | 
+12 | Dunhaven United | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0 | 
+13 | Oakenfield FC | 1 | 0 | 0 | 1 | 0 | 1 | -1 | 0 | 
+14 | Thorncliff United (you) | 1 | 0 | 0 | 1 | 3 | 5 | -2 | 0 | 
+15 | Juniper Park FC | 1 | 0 | 0 | 1 | 1 | 3 | -2 | 0 | 
+16 | Northgate United | 1 | 0 | 0 | 1 | 1 | 3 | -2 | 0 | 
+17 | Belmont Rovers | 1 | 0 | 0 | 1 | 0 | 2 | -2 | 0 | 
+18 | Stanbury Athletic | 1 | 0 | 0 | 1 | 1 | 4 | -3 | 0 | 
+19 | Halloway City | 1 | 0 | 0 | 1 | 0 | 3 | -3 | 0 | 
+20 | Eastvale Athletic | 1 | 0 | 0 | 1 | 0 | 4 | -4 | 0 | 
+--- end
+2026-11-20T15:05:52.1012170Z frame=68195 PASS after round 1: 20 standings rows for 20 clubs
+2026-11-20T15:05:52.1095892Z frame=68195 PASS after round 1: ten headers in order Pos Club P W D L GF GA GD Pts
+2026-11-20T15:05:52.1278228Z frame=68195 PASS after round 1: every row's P W D L GF GA GD Pts and position match the scores (0 mismatches)
+2026-11-20T15:05:52.1328757Z frame=68195 PASS after round 1: order follows Pts, then GD, then GF (0 breaks; full ties fall back to club id, which is not shown)
+2026-11-20T15:05:52.1348894Z frame=68195 INFO after round 1: 9 clubs with negative goal difference
+2026-11-20T15:05:52.2349553Z frame=68195 screenshot rounds-01-after-round1.bmp 1366x768
+2026-11-20T15:05:52.3440263Z frame=68195 INFO locking autosave.tdsave for round 2; files autosave.slot:404 autosave.tdsave:116844 
+2026-11-20T15:05:52.3652141Z frame=68196 click 'Advance one day'
+2026-11-20T15:05:52.7315974Z frame=68209 click 'Advance one day'
+2026-11-20T15:05:53.0125186Z frame=68222 click 'Advance one day'
+2026-11-20T15:05:53.3035021Z frame=68235 click 'Advance one day'
+2026-11-20T15:05:53.6170915Z frame=68248 click 'Advance one day'
+2026-11-20T15:05:53.9261257Z frame=68261 click 'Advance one day'
+2026-11-20T15:05:54.2768516Z frame=68274 click 'Advance one day'
+2026-11-20T15:05:54.6386551Z frame=68286 INFO round 2: advanced 7 days; Thorncliff United | Season 1, day 14 | Position 14 | Rounds 1/38 / Last action: Day advanced / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ironbridge United (away), day 14, in 0 days.
+2026-11-20T15:05:54.6448406Z frame=68286 click 'Resolve matchday (on Career Home)'
+2026-11-20T15:05:54.8221248Z frame=68290 PASS round 2: every control disabled while busy (0 interactable)
+2026-11-20T15:05:54.8241997Z frame=68290 INFO round 2: focus while busy 'Career home'
+2026-11-20T15:12:05.4592379Z frame=145271 PASS round 2: score block shown in the first frame after progress finished (370.7 s round)
+2026-11-20T15:12:05.5048664Z frame=145274 INFO round 2: focus after completion 'Career home' (progress control was 'Advance one day')
+2026-11-20T15:12:05.5089716Z frame=145274 INFO round 2: Thorncliff United | Season 1, day 14 | Position 19 | Rounds 2/38 / Last action: Round resolved / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ashford Town (home), day 21, in 7 days.
+2026-11-20T15:12:05.5130105Z frame=145274 PASS autosave failure reported on Career Home: 'Autosave failed: The process cannot access the file because it is being used by another process.'
+2026-11-20T15:12:06.1719780Z frame=145274 INFO autosave notice on screen: True (inView)
+2026-11-20T15:12:06.2258908Z frame=145274 screenshot rounds-02-autosave-failed.bmp 1366x768
+2026-11-20T15:12:06.2372108Z frame=145274 PASS autosave file unchanged by the failed write
+2026-11-20T15:12:06.2399426Z frame=145274 INFO files after failed autosave: autosave.slot:404 autosave.tdsave:116844 
+2026-11-20T15:12:06.2429541Z frame=145274 INFO score block uses CRLF line breaks
+2026-11-20T15:12:06.2434630Z frame=145274 PASS round 2: score block heading is 'Round 2 results'
+2026-11-20T15:12:06.2450151Z frame=145274 PASS round 2: score block lists 10 fixtures covering 20 of 20 clubs
+2026-11-20T15:12:06.2470951Z frame=145274 SCORES round 2:
+Round 2 results
+Halloway City 0 - 2 Kesgrave Rovers
+Ironbridge United 10 - 7 Thorncliff United (you)
+Quarrywood Town 2 - 5 Fernbrook FC
+Ashford Town 0 - 2 Eastvale Athletic
+Carrowmore City 0 - 2 Oakenfield FC
+Marlow Heath 7 - 0 Granton Wanderers
+Belmont Rovers 1 - 2 Dunhaven United
+Stanbury Athletic 1 - 1 Northgate United
+Pendleton City 1 - 1 Langmere Athletic
+Juniper Park FC 0 - 1 Redmarsh Rovers
+--- end
+2026-11-20T15:12:06.2496698Z frame=145274 TABLE after round 2:
+Pos | Club | P | W | D | L | GF | GA | GD | Pts | 
+1 | Marlow Heath | 2 | 2 | 0 | 0 | 10 | 1 | 9 | 6 | 
+2 | Ironbridge United | 2 | 2 | 0 | 0 | 14 | 7 | 7 | 6 | 
+3 | Fernbrook FC | 2 | 2 | 0 | 0 | 8 | 2 | 6 | 6 | 
+4 | Kesgrave Rovers | 2 | 2 | 0 | 0 | 7 | 3 | 4 | 6 | 
+5 | Redmarsh Rovers | 2 | 2 | 0 | 0 | 5 | 1 | 4 | 6 | 
+6 | Pendleton City | 2 | 1 | 1 | 0 | 4 | 2 | 2 | 4 | 
+7 | Langmere Athletic | 2 | 1 | 1 | 0 | 3 | 1 | 2 | 4 | 
+8 | Oakenfield FC | 2 | 1 | 0 | 1 | 2 | 1 | 1 | 3 | 
+9 | Dunhaven United | 2 | 1 | 0 | 1 | 2 | 2 | 0 | 3 | 
+10 | Carrowmore City | 2 | 1 | 0 | 1 | 1 | 2 | -1 | 3 | 
+11 | Quarrywood Town | 2 | 1 | 0 | 1 | 3 | 5 | -2 | 3 | 
+12 | Eastvale Athletic | 2 | 1 | 0 | 1 | 2 | 4 | -2 | 3 | 
+13 | Northgate United | 2 | 0 | 1 | 1 | 2 | 4 | -2 | 1 | 
+14 | Ashford Town | 2 | 0 | 1 | 1 | 1 | 3 | -2 | 1 | 
+15 | Stanbury Athletic | 2 | 0 | 1 | 1 | 2 | 5 | -3 | 1 | 
+16 | Granton Wanderers | 2 | 0 | 1 | 1 | 1 | 8 | -7 | 1 | 
+17 | Belmont Rovers | 2 | 0 | 0 | 2 | 1 | 4 | -3 | 0 | 
+18 | Juniper Park FC | 2 | 0 | 0 | 2 | 1 | 4 | -3 | 0 | 
+19 | Thorncliff United (you) | 2 | 0 | 0 | 2 | 10 | 15 | -5 | 0 | 
+20 | Halloway City | 2 | 0 | 0 | 2 | 0 | 5 | -5 | 0 | 
+--- end
+2026-11-20T15:12:06.2536598Z frame=145274 PASS after round 2: 20 standings rows for 20 clubs
+2026-11-20T15:12:06.2546947Z frame=145274 PASS after round 2: ten headers in order Pos Club P W D L GF GA GD Pts
+2026-11-20T15:12:06.2557417Z frame=145274 PASS after round 2: every row's P W D L GF GA GD Pts and position match the scores (0 mismatches)
+2026-11-20T15:12:06.2567553Z frame=145274 PASS after round 2: order follows Pts, then GD, then GF (0 breaks; full ties fall back to club id, which is not shown)
+2026-11-20T15:12:06.2584669Z frame=145274 INFO after round 2: 11 clubs with negative goal difference
+2026-11-20T15:12:06.3140336Z frame=145275 screenshot rounds-03-after-round2.bmp 1366x768
+2026-11-20T15:12:06.3205949Z frame=145276 click 'Save to manual slot 3'
+2026-11-20T15:12:06.4315452Z frame=145288 PASS slot 3 save: no failure notice (Autosave failed: The process cannot access the file because it is being used by another process.)
+2026-11-20T15:12:06.4404409Z frame=145289 click 'Save to manual slot 2'
+2026-11-20T15:12:06.5508332Z frame=145302 click 'Save to manual slot 2'
+2026-11-20T15:12:06.6428306Z frame=145314 PASS manual save to a locked slot 2 reports a failure: 'The process cannot access the file because it is being used by another process.'
+2026-11-20T15:12:06.6877362Z frame=145314 screenshot rounds-04-manual-save-failed.bmp 1366x768
+2026-11-20T15:12:06.6958832Z frame=145315 click 'Save to manual slot 2'
+2026-11-20T15:12:06.8267905Z frame=145327 PASS retrying slot 2 after the lock is released clears the manual-save failure (notice now 'Autosave failed: The process cannot access the file because it is being used by another process.')
+2026-11-20T15:12:06.8339629Z frame=145328 click 'Save to manual slot 1'
+2026-11-20T15:12:06.9516415Z frame=145340 PASS slot 1 save succeeds (notice 'Autosave failed: The process cannot access the file because it is being used by another process.')
+2026-11-20T15:12:06.9541621Z frame=145340 INFO files after manual saves: autosave.slot:404 autosave.tdsave:116844 manual-1.slot:405 manual-1.tdsave:116860 manual-2.slot:405 manual-2.tdsave:116860 manual-3.slot:405 manual-3.tdsave:116860 
+2026-11-20T15:12:06.9705920Z frame=145341 click 'Return to Main Menu (without saving)'
+2026-11-20T15:12:07.0204586Z frame=145348 click 'Continue career'
+2026-11-20T15:12:07.1889243Z frame=145379 PASS in-process Continue restores the standings exactly
+2026-11-20T15:12:07.1934929Z frame=145379 INFO after in-process Continue: score block hidden; Thorncliff United | Season 1, day 14 | Position 19 | Rounds 2/38 / Last action: Career resumed / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ashford Town (home), day 21, in 7 days.
+2026-11-20T15:12:07.2559544Z frame=145379 screenshot rounds-05-continued.bmp 1366x768
+2026-11-20T15:12:07.2687825Z frame=145380 click 'Return to Main Menu (without saving)'
+2026-11-20T15:12:07.3106018Z frame=145386 DONE mode=rounds pass=30 fail=0 keys=0
+2026-11-20T15:12:16.8689203Z frame=30 boot mode=resume window=1968616 screen=1366x768 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe A\careers
+2026-11-20T15:12:16.9149468Z frame=32 click 'Load career'
+2026-11-20T15:12:17.0231059Z frame=47 INFO PICKER [Manual slot 3: Incompatible with this build - cannot load | Thorncliff United | Season 1, day 14, round 2/38, position 19 (disabled)] [Manual slot 2: Damaged or unreadable - cannot load (disabled)] [Manual slot 1: Ready | Thorncliff United | Season 1, day 14, round 2/38, position 19] [Autosave: Ready | Thorncliff United | Season 1, day 7, round 1/38, position 14] 
+2026-11-20T15:12:17.0256335Z frame=47 PASS picker: autosave and slot 1 Ready
+2026-11-20T15:12:17.0261418Z frame=47 PASS picker: slot 2 Damaged and slot 3 Incompatible, both disabled
+2026-11-20T15:12:17.0861840Z frame=47 screenshot resume-01-picker.bmp 1366x768
+2026-11-20T15:12:17.0907558Z frame=48 click 'Back'
+2026-11-20T15:12:17.1170690Z frame=54 click 'Continue career'
+2026-11-20T15:12:17.6241923Z frame=116 PASS Continue in a new process restores the standings exactly
+2026-11-20T15:12:17.6482800Z frame=116 PASS no score block right after Continue (scores return with the next completed round)
+2026-11-20T15:12:17.6534576Z frame=116 INFO after Continue: Thorncliff United | Season 1, day 14 | Position 19 | Rounds 2/38 / Last action: Career resumed / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ashford Town (home), day 21, in 7 days.
+2026-11-20T15:12:17.7102856Z frame=116 screenshot resume-02-continued.bmp 1366x768
+2026-11-20T15:12:17.7257251Z frame=117 click 'Advance one day'
+2026-11-20T15:12:17.9598355Z frame=130 click 'Advance one day'
+2026-11-20T15:12:18.1744551Z frame=143 click 'Advance one day'
+2026-11-20T15:12:18.3708189Z frame=156 click 'Advance one day'
+2026-11-20T15:12:18.5640313Z frame=169 click 'Advance one day'
+2026-11-20T15:12:18.7821451Z frame=182 click 'Advance one day'
+2026-11-20T15:12:19.0049764Z frame=195 click 'Advance one day'
+2026-11-20T15:12:19.2288083Z frame=207 INFO round 3: advanced 7 days; Thorncliff United | Season 1, day 21 | Position 19 | Rounds 2/38 / Last action: Day advanced / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Ashford Town (home), day 21, in 0 days.
+2026-11-20T15:12:19.2330335Z frame=207 click 'Resolve matchday (on Career Home)'
+2026-11-20T15:12:19.3679008Z frame=211 PASS round 3: every control disabled while busy (0 interactable)
+2026-11-20T15:12:19.3726586Z frame=211 INFO round 3: focus while busy 'Career home'
+2026-11-20T15:17:43.1480227Z frame=76550 PASS round 3: score block shown in the first frame after progress finished (323.8 s round)
+2026-11-20T15:17:43.2012854Z frame=76553 INFO round 3: focus after completion 'Career home' (progress control was 'Advance one day')
+2026-11-20T15:17:43.2048643Z frame=76553 INFO round 3: Thorncliff United | Season 1, day 21 | Position 15 | Rounds 3/38 / Last action: Round resolved / Injured players: 2. Board target: position 10 or better. Objective off track. / Next: Marlow Heath (away), day 28, in 7 days.
+2026-11-20T15:17:43.2104615Z frame=76553 INFO score block uses CRLF line breaks
+2026-11-20T15:17:43.2119711Z frame=76553 PASS round 3: score block heading is 'Round 3 results'
+2026-11-20T15:17:43.2165476Z frame=76553 PASS round 3: score block lists 10 fixtures covering 20 of 20 clubs
+2026-11-20T15:17:43.2175603Z frame=76553 SCORES round 3:
+Round 3 results
+Kesgrave Rovers 1 - 1 Ironbridge United
+Halloway City 0 - 2 Quarrywood Town
+Thorncliff United (you) 4 - 1 Ashford Town
+Fernbrook FC 2 - 2 Carrowmore City
+Eastvale Athletic 0 - 0 Marlow Heath
+Oakenfield FC 0 - 0 Belmont Rovers
+Granton Wanderers 0 - 1 Stanbury Athletic
+Dunhaven United 2 - 2 Pendleton City
+Northgate United 2 - 1 Juniper Park FC
+Langmere Athletic 0 - 2 Redmarsh Rovers
+--- end
+2026-11-20T15:17:43.2221220Z frame=76553 TABLE after round 3 (resumed):
+Pos | Club | P | W | D | L | GF | GA | GD | Pts | 
+1 | Redmarsh Rovers | 3 | 3 | 0 | 0 | 7 | 1 | 6 | 9 | 
+2 | Marlow Heath | 3 | 2 | 1 | 0 | 10 | 1 | 9 | 7 | 
+3 | Ironbridge United | 3 | 2 | 1 | 0 | 15 | 8 | 7 | 7 | 
+4 | Fernbrook FC | 3 | 2 | 1 | 0 | 10 | 4 | 6 | 7 | 
+5 | Kesgrave Rovers | 3 | 2 | 1 | 0 | 8 | 4 | 4 | 7 | 
+6 | Quarrywood Town | 3 | 2 | 0 | 1 | 5 | 5 | 0 | 6 | 
+7 | Pendleton City | 3 | 1 | 2 | 0 | 6 | 4 | 2 | 5 | 
+8 | Oakenfield FC | 3 | 1 | 1 | 1 | 2 | 1 | 1 | 4 | 
+9 | Dunhaven United | 3 | 1 | 1 | 1 | 4 | 4 | 0 | 4 | 
+10 | Langmere Athletic | 3 | 1 | 1 | 1 | 3 | 3 | 0 | 4 | 
+11 | Northgate United | 3 | 1 | 1 | 1 | 4 | 5 | -1 | 4 | 
+12 | Carrowmore City | 3 | 1 | 1 | 1 | 3 | 4 | -1 | 4 | 
+13 | Stanbury Athletic | 3 | 1 | 1 | 1 | 3 | 5 | -2 | 4 | 
+14 | Eastvale Athletic | 3 | 1 | 1 | 1 | 2 | 4 | -2 | 4 | 
+15 | Thorncliff United (you) | 3 | 1 | 0 | 2 | 14 | 16 | -2 | 3 | 
+16 | Belmont Rovers | 3 | 0 | 1 | 2 | 1 | 4 | -3 | 1 | 
+17 | Ashford Town | 3 | 0 | 1 | 2 | 2 | 7 | -5 | 1 | 
+18 | Granton Wanderers | 3 | 0 | 1 | 2 | 1 | 9 | -8 | 1 | 
+19 | Juniper Park FC | 3 | 0 | 0 | 3 | 2 | 6 | -4 | 0 | 
+20 | Halloway City | 3 | 0 | 0 | 3 | 0 | 7 | -7 | 0 | 
+--- end
+2026-11-20T15:17:43.2236320Z frame=76553 PASS after round 3 (resumed): 20 standings rows for 20 clubs
+2026-11-20T15:17:43.2236320Z frame=76553 PASS after round 3 (resumed): ten headers in order Pos Club P W D L GF GA GD Pts
+2026-11-20T15:17:43.2257742Z frame=76553 PASS after round 3 (resumed): every row's P W D L GF GA GD Pts and position match the scores (0 mismatches)
+2026-11-20T15:17:43.2267862Z frame=76553 PASS after round 3 (resumed): order follows Pts, then GD, then GF (0 breaks; full ties fall back to club id, which is not shown)
+2026-11-20T15:17:43.2272964Z frame=76553 INFO after round 3 (resumed): 10 clubs with negative goal difference
+2026-11-20T15:17:43.2828071Z frame=76553 screenshot resume-03-after-round3.bmp 1366x768
+2026-11-20T15:17:43.2884057Z frame=76554 click 'Save to manual slot 1'
+2026-11-20T15:17:43.4493180Z frame=76567 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:43.4967196Z frame=76574 click 'New career'
+2026-11-20T15:17:43.5760646Z frame=76580 click 'Select Quarrywood Town'
+2026-11-20T15:17:43.6092201Z frame=76586 click 'Start career'
+2026-11-20T15:17:43.7535355Z frame=76606 PASS new career for 'Quarrywood Town' shows its Career Home (Quarrywood Town | Season 1, day 0 | Position 17 | Rounds 0/38 / Last action: Career started / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Marlow Heath (away), day 7, in 7 days.)
+2026-11-20T15:17:43.7768704Z frame=76607 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:43.8182084Z frame=76614 click 'Load career'
+2026-11-20T15:17:43.8825725Z frame=76629 INFO cycle 1 PICKER [Manual slot 3: Incompatible with this build - cannot load | Thorncliff United | Season 1, day 14, round 2/38, position 19 (disabled)] [Manual slot 2: Damaged or unreadable - cannot load (disabled)] [Manual slot 1: Ready | Thorncliff United | Season 1, day 21, round 3/38, position 15] [Autosave: Ready | Quarrywood Town | Season 1, day 0, round 0/38, position 17] 
+2026-11-20T15:17:43.8908519Z frame=76630 click 'Back'
+2026-11-20T15:17:43.9164097Z frame=76636 click 'Continue career'
+2026-11-20T15:17:43.9913375Z frame=76645 PASS cycle 1: Continue opens the newest career (Quarrywood Town)
+2026-11-20T15:17:43.9964242Z frame=76645 PASS cycle 1: no error notice
+2026-11-20T15:17:44.0065824Z frame=76646 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:44.0555423Z frame=76653 click 'New career'
+2026-11-20T15:17:44.1146128Z frame=76659 click 'Select Northgate United'
+2026-11-20T15:17:44.1452842Z frame=76665 click 'Start career'
+2026-11-20T15:17:44.2469984Z frame=76675 PASS new career for 'Northgate United' shows its Career Home (Northgate United | Season 1, day 0 | Position 14 | Rounds 0/38 / Last action: Career started / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Belmont Rovers (home), day 7, in 7 days.)
+2026-11-20T15:17:44.2520898Z frame=76676 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:44.2880218Z frame=76683 click 'Load career'
+2026-11-20T15:17:44.3854217Z frame=76698 INFO cycle 2 PICKER [Manual slot 3: Incompatible with this build - cannot load | Thorncliff United | Season 1, day 14, round 2/38, position 19 (disabled)] [Manual slot 2: Damaged or unreadable - cannot load (disabled)] [Manual slot 1: Ready | Thorncliff United | Season 1, day 21, round 3/38, position 15] [Autosave: Ready | Northgate United | Season 1, day 0, round 0/38, position 14] 
+2026-11-20T15:17:44.3910006Z frame=76699 click 'Back'
+2026-11-20T15:17:44.4314550Z frame=76705 click 'Continue career'
+2026-11-20T15:17:44.5066948Z frame=76715 PASS cycle 2: Continue opens the newest career (Northgate United)
+2026-11-20T15:17:44.5093058Z frame=76715 PASS cycle 2: no error notice
+2026-11-20T15:17:44.5145171Z frame=76716 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:44.5463198Z frame=76723 click 'New career'
+2026-11-20T15:17:44.5779364Z frame=76729 click 'Select Kesgrave Rovers'
+2026-11-20T15:17:44.6034166Z frame=76735 click 'Start career'
+2026-11-20T15:17:44.6963737Z frame=76745 PASS new career for 'Kesgrave Rovers' shows its Career Home (Kesgrave Rovers | Season 1, day 0 | Position 11 | Rounds 0/38 / Last action: Career started / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Oakenfield FC (away), day 7, in 7 days.)
+2026-11-20T15:17:44.7029511Z frame=76746 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:44.7370482Z frame=76753 click 'Load career'
+2026-11-20T15:17:44.7963336Z frame=76768 INFO cycle 3 PICKER [Manual slot 3: Incompatible with this build - cannot load | Thorncliff United | Season 1, day 14, round 2/38, position 19 (disabled)] [Manual slot 2: Damaged or unreadable - cannot load (disabled)] [Manual slot 1: Ready | Thorncliff United | Season 1, day 21, round 3/38, position 15] [Autosave: Ready | Kesgrave Rovers | Season 1, day 0, round 0/38, position 11] 
+2026-11-20T15:17:44.8009514Z frame=76769 click 'Back'
+2026-11-20T15:17:44.8269576Z frame=76775 click 'Continue career'
+2026-11-20T15:17:44.9045545Z frame=76781 PASS cycle 3: Continue opens the newest career (Kesgrave Rovers)
+2026-11-20T15:17:44.9081979Z frame=76781 PASS cycle 3: no error notice
+2026-11-20T15:17:44.9208830Z frame=76782 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:44.9552356Z frame=76788 DONE mode=resume pass=21 fail=0 keys=0
+2026-11-20T15:17:50.8760758Z frame=30 boot mode=cycle window=2034152 screen=1366x768 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe A\careers
+2026-11-20T15:17:50.9051033Z frame=32 click 'Continue career'
+2026-11-20T15:17:51.1452045Z frame=106 PASS relaunch: Continue opens Kesgrave Rovers (Kesgrave Rovers | Season 1, day 0 | Position 11 | Rounds 0/38 / Last action: Career resumed / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Oakenfield FC (away), day 7, in 7 days.)
+2026-11-20T15:17:51.1467328Z frame=106 PASS relaunch: no error notice
+2026-11-20T15:17:51.1507595Z frame=107 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:51.1724344Z frame=113 DONE mode=cycle pass=2 fail=0 keys=0
+2026-11-20T15:17:57.8959197Z frame=30 boot mode=cycle window=2819708 screen=1366x768 careers=%USERPROFILE%/AppData/LocalLow/DefaultCompany/System XI Probe A\careers
+2026-11-20T15:17:57.9308005Z frame=32 click 'Continue career'
+2026-11-20T15:17:58.2907301Z frame=122 PASS relaunch: Continue opens Kesgrave Rovers (Kesgrave Rovers | Season 1, day 0 | Position 11 | Rounds 0/38 / Last action: Career resumed / Injured players: 0. Board target: position 10 or better. Objective off track. / Next: Oakenfield FC (away), day 7, in 7 days.)
+2026-11-20T15:17:58.2938153Z frame=122 PASS relaunch: no error notice
+2026-11-20T15:17:58.2980796Z frame=123 click 'Return to Main Menu (without saving)'
+2026-11-20T15:17:58.3223341Z frame=129 DONE mode=cycle pass=2 fail=0 keys=0
