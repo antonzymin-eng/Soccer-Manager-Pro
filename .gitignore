@@ -63,10 +63,11 @@ Thumbs.db
 /.test-results/
 /artifacts/
 
-# The two archived #441 probes are evidence projects, not generated IDE projects.
+# Archived #441 probes are evidence projects.
 !/docs/tracking/evidence/header441-reachability-20261020/classification/Probe.csproj
 !/docs/tracking/evidence/header441-reachability-20261020/sanity/Probe.csproj
 !/docs/tracking/evidence/header441-delivery-pilot-20261022/Probe.csproj
+!/docs/tracking/evidence/header441-current-main-20261120/ArrivalReplay.csproj
 
 # Adversarial-review loop ledger (session-local bookkeeping written by
 # .claude/skills/adversarial-review/scripts/findings.py; regenerated per loop).

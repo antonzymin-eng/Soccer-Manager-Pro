@@ -1,0 +1,4 @@
+receiver=15,forcedStart=-1,tacticalDistance=1.6295024,physicsDistance=1.4709334,start=113406,prepared=-1,headerEvents=0,headerFrame=-1,failed=113427,failure=PositionedPoorly,predictionAtFailure=-1
+receiver=15,forcedStart=113398,tacticalDistance=1.6295024,physicsDistance=1.4709334,start=113398,prepared=113410,headerEvents=1,headerFrame=113410,failed=-1,failure=,predictionAtFailure=-1
+receiver=15,forcedStart=113399,tacticalDistance=1.6295024,physicsDistance=1.4709334,start=113399,prepared=-1,headerEvents=0,headerFrame=-1,failed=113409,failure=MistimedEarly,predictionAtFailure=113409
+receiver=15,forcedStart=113400,tacticalDistance=1.6295024,physicsDistance=1.4709334,start=113400,prepared=-1,headerEvents=0,headerFrame=-1,failed=113409,failure=MistimedEarly,predictionAtFailure=113410
