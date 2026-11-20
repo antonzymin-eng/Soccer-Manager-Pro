@@ -1,6 +1,6 @@
 // File:     src/client-app/tests/CareerScreensTests.cs
 // Created:  2026-10-18
-// Modified: 2026-11-19
+// Modified: 2026-11-20
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7, UI / Client Framework #38 §3.1
 //           (FR-UI-006) and Appendix C (season dispatcher, F3), Code Standards #20
@@ -183,6 +183,87 @@ namespace TacticalDirector.ClientApp.Tests
         {
             Assert.Throws<ArgumentException>(() => CareerFixturePage.Current(default));
             Assert.Throws<ArgumentException>(() => CareerFixturePage.At(default, 0));
+        }
+
+        /// <summary>Standings pages cover every table row exactly once, in order, and stop at both ends.</summary>
+        [Test]
+        public void CareerStandingsPages_CoverTheTableInOrderAndStopAtBothEnds()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            holder.Set(CareerTestSupport.StartQuick(temp.Slots));
+            CareerHomeViewModel home = new CareerHomeSource(holder).Project();
+            int total = home.Table.Count;
+            Assert.Greater(total, CareerStandingsPage.ROWS_PER_PAGE, "The table must span several pages.");
+
+            CareerStandingsPage page = CareerStandingsPage.At(in home, 0);
+            Assert.IsFalse(page.HasPrevious);
+            Assert.AreEqual(page.First, page.PreviousFirst);
+            int covered = 0;
+            while (true)
+            {
+                Assert.AreEqual(covered, page.First);
+                Assert.AreEqual(total, page.Total);
+                Assert.AreEqual(Math.Min(CareerStandingsPage.ROWS_PER_PAGE, total - covered), page.Count);
+                covered += page.Count;
+                if (!page.HasNext)
+                {
+                    break;
+                }
+
+                CareerStandingsPage next = CareerStandingsPage.At(in home, page.NextFirst);
+                Assert.AreEqual(page.First, next.PreviousFirst);
+                Assert.IsTrue(next.HasPrevious);
+                page = next;
+            }
+
+            Assert.AreEqual(total, covered, "The pages must reach the last table row.");
+            Assert.AreEqual(page.First, page.NextFirst);
+            Assert.AreEqual(page.First, CareerStandingsPage.At(in home, int.MaxValue).First);
+            Assert.AreEqual(0, CareerStandingsPage.At(in home, -5).First);
+            Assert.AreEqual(CareerStandingsPage.ROWS_PER_PAGE,
+                CareerStandingsPage.At(in home, CareerStandingsPage.ROWS_PER_PAGE + 3).First);
+        }
+
+        /// <summary>The default standings page holds the managed club's row, before and after a round.</summary>
+        [Test]
+        public void CareerStandingsPage_CurrentHoldsTheManagedClub()
+        {
+            using var temp = new TempSlots();
+            var holder = new CareerSessionHolder();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            holder.Set(session);
+            var source = new CareerHomeSource(holder);
+            AssertCurrentPageHoldsManagedClub(source.Project());
+
+            CareerTestSupport.ProgressUntil(session, CareerProgressAction.PlayMatchday);
+            session.Progress();
+            AssertCurrentPageHoldsManagedClub(source.Project());
+        }
+
+        private static void AssertCurrentPageHoldsManagedClub(CareerHomeViewModel home)
+        {
+            int managed = -1;
+            for (int i = 0; i < home.Table.Count; i++)
+            {
+                if (home.Table[i].ClubId == home.ManagedClubId)
+                {
+                    managed = i;
+                }
+            }
+
+            Assert.GreaterOrEqual(managed, 0, "The managed club must be in the table.");
+            CareerStandingsPage current = CareerStandingsPage.Current(in home);
+            Assert.That(managed, Is.InRange(current.First, current.First + current.Count - 1));
+            Assert.AreEqual(managed - managed % CareerStandingsPage.ROWS_PER_PAGE, current.First);
+        }
+
+        /// <summary>Verifies that a standings page cannot be requested before a career is published.</summary>
+        [Test]
+        public void CareerStandingsPage_RequiresAnActiveCareer()
+        {
+            Assert.Throws<ArgumentException>(() => CareerStandingsPage.Current(default));
+            Assert.Throws<ArgumentException>(() => CareerStandingsPage.At(default, 0));
         }
 
         [Test]
@@ -528,4 +609,5 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.4     | 2026-11-19 | —      | Verify calendar paging across the season.                     |
 // | 1.5     | 2026-11-19 | —      | Verify fixture paging coverage, bounds and the current page.  |
 // | 1.6     | 2026-11-19 | —      | Lock round scores through resume, rollover and fixture retry. |
+// | 1.7     | 2026-11-20 | —      | Verify standings paging coverage, bounds and the managed-club page. |
 #endregion

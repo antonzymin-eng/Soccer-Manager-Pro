@@ -6,7 +6,8 @@
 (latest-round scores and goal difference on Career Home), merged without a Unity run; and
 (2) the remaining [P7b career startup checklist](../../../../src/match-client-unity/README.md#p7b-career-binding)
 items 6, 7 and 8 left open by the [`cd3c7b99` run](../host-cd3c7b99-20261119/README.md), tracked in
-[open issues](../../open-issues.md#career-startup-unity-acceptance).\
+[open issues](../../open-issues.md#career-startup-unity-acceptance). The run found a keyboard-reach gap in the
+standings; the same folder records the paging fix the owner chose and its re-run.\
 **Host:** the owner's Windows 11 machine, Unity 6000.4.9f1 (f7258d6eebbe), Mono. This is the certified host.
 Its only display is 1920×1080.\
 **Integrity:** `SHA256SUMS` covers every other file in this directory and is verified by
@@ -21,9 +22,12 @@ Its only display is 1920×1080.\
 | `harness-rounds.log` | Player launches and exits, save-directory hashes, and the slot damage applied between processes. |
 | `keys-100.log`, `keys-200.log`, `keys-200-long-expanded.log` | Item 7: every key press with the focused control, ring and viewport state; layout audits. |
 | `pm1-career-on.log`, `pm1-career-off.log`, `pm1-texts-career-*.txt` | Item 8: the demo journey and every visible text on each screen. |
+| `editmode-paged-results.xml.xz`, `editmode-paged-summary.txt` | The same suites with the standings paging change: 350 passed, 0 failed, 3 skipped. |
+| `keys-paged-100.log`, `keys-paged-200.log`, `keys-paged-200-long-expanded.log` | The keyboard runs repeated on the paged standings. |
+| `item7-paged-*.png` | Standings page 2 with focus on *Lower positions*, 1366×768. |
 | `player-log-summary.txt` | Exception counts in the player logs, and one engine diagnostic from the discarded first attempt. |
 | `item6-*.png`, `item7-*.png`, `item8-*.png` | Screenshots (1366×768 unless named 1920). |
-| `career-accept-probe.cs.txt`, `build-probe-player.cs.txt`, `run-accept.ps1.txt`, `long-copy-patch.py.txt` | Scratch driver, build script, launcher and the long-name substitution. None were committed. |
+| `career-accept-probe.cs.txt`, `career-accept-probe-paged.cs.txt`, `build-probe-player.cs.txt`, `run-accept.ps1.txt`, `long-copy-patch.py.txt` | Scratch driver, build script, launcher and the long-name substitution. None were committed. |
 
 ## Compile and EditMode (#554)
 
@@ -92,11 +96,42 @@ at any stop of a full Tab cycle, out of 21 (header plus 20 clubs):
 With the mouse wheel (scrolled to the bottom), all 21 rows show at 100%. At 200%, 17 of 21 show at
 1366×768 and all 21 at 1920×1080. In the long-name build the table is taller than the window, so 8 and
 12 rows show at the bottom and the rest further up. This is the same class of gap the #551 run found for
-the fixture list, which was fixed by paging. The fix is for the owner to choose.
+the fixture list, which was fixed by paging. The owner chose the same fix here (below).
 
 **Not tested:** 2560×1440. The host's only display is 1920×1080, and the windowed player could not be
 made larger, so the high-resolution layout remains open. Because the screens use a constant-pixel-size
 canvas, 2560×1440 gives every column more room than the two sizes tested.
+
+## Fix: paged standings, re-run
+
+The owner chose the #551 fix. `CareerStandingsPage` shows `ROWS_PER_PAGE` (8) table rows under a heading
+such as *Positions 9 to 16 of 20*. The column headers stay on every page. *Higher positions*,
+*Your position* and *Lower positions* controls follow the rows, and *Your position* returns to the page
+holding the managed club, which is also the default. The controls sit **after** the rows because they are
+the last Tab stops on Career Home, and `Reveal` scrolls only far enough to show the focused control. A
+disabled end control moves focus to *Your position*, the rule the fixture and calendar paging share.
+
+The candidate (`src` tree `a976f67b`) compiled with 0 `error CS`. EditMode passed 350 of 353 tests with
+0 failures, including four new tests: page coverage and bounds, the managed-club page, and the heading
+and labels. Players E, B and C were rebuilt from it. On every page, the probe ran a full Tab cycle and
+counted the page heading and each row (column headers plus clubs) only when fully inside the viewport.
+
+| Pages fully readable by keyboard (heading + all rows at some Tab stop) | 1366×768 | 1920×1080 |
+| --- | --- | --- |
+| 100% | 3 of 3 | 3 of 3 |
+| 200% | **3 of 3** (before: 0 of 21 rows) | **3 of 3** (before: 0 of 21 rows) |
+| 200%, long names + expanded copy | **1 of 3**: pages 1 and 2 show 7 of 9 rows and miss the heading | 3 of 3 |
+
+First and last pages: the disabled end control hands focus to *Your position* at 200% (player B). In
+players E and C the managed club was on page 1, so *Higher positions* was already disabled and skipped by
+Tab. The probe logged that as a failure to reach it, which is a probe expectation, not a product fault.
+Alignment, clipping and the score-block checks are unchanged from the first run. The player logs show
+0 exceptions.
+
+**Residual:** with the harness's 62-character club names and 40% expanded copy at 1366×768 and 200%,
+most rows wrap to two or three lines. An eight-row page plus its three controls is then taller than the
+window, so the heading and the top rows of a full page never fit beside a focused control. Shipped names
+pass. The #551 fixture list has the same page size and was never tested with long names.
 
 ## Item 8 — PM-1 journey with Career on and off
 
@@ -139,3 +174,4 @@ Scene settings, the probe and the build script are recorded in `source-identity.
 | Version | Date | Notes |
 | --- | --- | --- |
 | 1.0 | 2026-11-20 | Created: #554 compile and EditMode; P7b checklist items 6, 7 and 8 on the pinned host. |
+| 1.1 | 2026-11-20 | Standings paging fix chosen by the owner: compile, EditMode and keyboard re-run at 100%, 200% and 200% long names. |

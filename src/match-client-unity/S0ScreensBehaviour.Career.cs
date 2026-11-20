@@ -1,7 +1,7 @@
 // File:     src/match-client-unity/S0ScreensBehaviour.Career.cs
 // Created:  2026-11-03
-// Modified: 2026-11-19
-// Modified (prior): 2026-11-18
+// Modified: 2026-11-20
+// Modified (prior): 2026-11-19
 // Modified (prior): 2026-11-05 (AR-3 M1: reuse coordinator's admitted career formatter.)
 // Author:   —
 // Spec:     Interactive Unity client §5-P7; shared S0 focus/layout; Code Standards #20 §12 rule 1
@@ -46,6 +46,12 @@ namespace TacticalDirector.MatchClientUnity
         private Text _careerScheduleText;
         private bool _isCareerScheduleOpen, _isCareerCalendarSelected;
         private int _careerScheduleSeason = -1;
+        private RectTransform _careerStandingsRows;
+        private Text _careerStandingsHeading;
+        private Button _careerHigherPage, _careerOwnPage, _careerLowerPage;
+        private int? _careerStandingsFirst;
+        private int _careerStandingsSeason = -1;
+        private CareerStandingsPage _careerStandingsPage;
         private uint? _careerCalendarDay;
         private CareerCalendarWeek _careerWeek;
         private int? _careerFixtureFirst;
@@ -112,15 +118,26 @@ namespace TacticalDirector.MatchClientUnity
             CareerControl(h, C("quit"), career.QuitToMainMenu, _careerHomeScroll);
             _careerStandings = _ui.Column("League standings", h, 0);
             _ui.Label(_careerStandings, C("table"), S0UiFactory.TextStyle.Subheading);
+            _careerStandingsHeading = _ui.Label(_careerStandings, "");
+            _careerStandingsRows = _ui.Column("Standings rows", _careerStandings, 0);
             _careerTableCells = new string[_careerText.TableHeaders.Count];
             Text[] headers = CreateCareerTableRow(S0UiFactory.TextStyle.Strong);
             for (int i = 0; i < headers.Length; i++)
                 S0UiFactory.Set(headers[i], _careerText.TableHeaders[i]);
+            // The paging controls follow the rows: they are the last Tab stops on Career Home, and Reveal scrolls
+            // only far enough to show the focused control, so controls below the page bring the page into view.
+            RectTransform paging = _ui.Column("Standings navigation", _careerStandings, 0);
+            _careerHigherPage = CareerControl(paging, C("table.page.previous"),
+                () => _careerStandingsFirst = _careerStandingsPage.PreviousFirst, _careerHomeScroll);
+            _careerOwnPage = CareerControl(paging, C("table.page.current"),
+                () => _careerStandingsFirst = null, _careerHomeScroll);
+            _careerLowerPage = CareerControl(paging, C("table.page.next"),
+                () => _careerStandingsFirst = _careerStandingsPage.NextFirst, _careerHomeScroll);
         }
 
         private Text[] CreateCareerTableRow(S0UiFactory.TextStyle style)
         {
-            RectTransform row = _ui.Row("Standings row", _careerStandings, TextAnchor.UpperLeft);
+            RectTransform row = _ui.Row("Standings row", _careerStandingsRows, TextAnchor.UpperLeft);
             var cells = new Text[_careerTableCells.Length];
             for (int i = 0; i < cells.Length; i++)
             {
@@ -142,15 +159,33 @@ namespace TacticalDirector.MatchClientUnity
             S0UiFactory.Set(_careerRoundResults, scores);
             _careerStandings.gameObject.SetActive(home.HasCareer);
             if (!home.HasCareer)
+            {
+                _careerStandingsFirst = null;
+                _careerStandingsSeason = -1;
                 return;
+            }
+
+            if (home.SeasonNumber != _careerStandingsSeason)
+            {
+                _careerStandingsSeason = home.SeasonNumber;
+                _careerStandingsFirst = null;
+            }
+
+            _careerStandingsPage = _careerStandingsFirst.HasValue
+                ? CareerStandingsPage.At(in home, _careerStandingsFirst.Value)
+                : CareerStandingsPage.Current(in home);
+            S0UiFactory.Set(_careerStandingsHeading, _careerText.StandingsHeading(in home, in _careerStandingsPage));
+            RefreshSchedulePaging(_career.IsInitialized && !_career.IsBusy, _careerStandingsPage.HasPrevious,
+                _careerStandingsPage.HasNext, _careerHigherPage, _careerOwnPage, _careerLowerPage);
 
             while (_careerTableRows.Count < home.Table.Count)
                 _careerTableRows.Add(CreateCareerTableRow(S0UiFactory.TextStyle.Body));
 
+            int pageEnd = _careerStandingsPage.First + _careerStandingsPage.Count;
             for (int i = 0; i < _careerTableRows.Count; i++)
             {
                 Text[] cells = _careerTableRows[i];
-                bool visible = i < home.Table.Count;
+                bool visible = i >= _careerStandingsPage.First && i < pageEnd;
                 cells[0].transform.parent.gameObject.SetActive(visible);
                 if (!visible)
                     continue;
@@ -335,4 +370,5 @@ namespace TacticalDirector.MatchClientUnity
 // | 1.7 | 2026-11-19 | — | Keep keyboard focus in the calendar at the first and last week. |
 // | 1.8 | 2026-11-19 | — | Page the fixture list (Earlier / Upcoming / Later fixtures) so every row is reachable by keyboard at 200% text scale; share the boundary focus rule with week paging. |
 // | 1.9 | 2026-11-19 | — | Render round scores and aligned league standings from the cached snapshot. |
+// | 1.10 | 2026-11-20 | — | Page the standings (eight rows under a position heading) with Higher / Your / Lower position controls after the rows, sharing the fixture paging focus rule, so every row is reachable by keyboard at 200% text scale. |
 #endregion

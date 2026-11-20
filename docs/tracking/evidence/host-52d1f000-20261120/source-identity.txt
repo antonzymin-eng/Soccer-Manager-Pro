@@ -26,3 +26,9 @@ Assets/Scripts: directory junction -> <worktree>/src (created after checkout; de
 #   C      on      2 (200%)    long-copy-patch.py.txt applied to src  item 7 at 200% with long names + expanded copy
 #   D      off     1 (100%)    shipped                                item 8 Career off
 # Player C's src patch (club-name suffix + 40% pseudo-expansion of ui.career.* patterns) was reverted after its build.
+
+# Standings paging candidate (this PR's second commit): the PR branch plus the paging change, in a second sparse
+# worktree (<scratch>/standings-paging) with the same uncommitted probe changes listed above.
+#   tree src: a976f67b0078194ce061a6313e8433ec76bc08f8 (the src tree of the commit that adds the fix)
+#   EditMode (ClientApp.Tests + UiFramework.Tests) and players E, B and C were rebuilt from it; player C again with
+#   long-copy-patch.py applied for its build only.
