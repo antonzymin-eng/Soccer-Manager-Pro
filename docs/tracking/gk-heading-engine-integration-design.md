@@ -672,7 +672,7 @@ range and a worked example, and the code applies it. Locks: `GkHeadingIntentSour
 attack directions) and `MatchEngineGkHeadingTests` composed regressions through the real tactical drive
 and #10's Commit sample, home and away; the moving-away and nearer-passer cases fail on the pre-fix
 code. No new constant, cross-tick state, schema version, RNG stream, domain tag or draw site. The
-GK/Heading flag is on by default, so trajectories change wherever a header commit changes.
+GK/Heading flag is on by default; on the six frozen seeds ball and agent trajectories and scores are bit-identical pre/post, and only the serialized Heading attempt state (so the snapshot digest) changes ([#441 §6.8](header-reachability-441-counters.md#68-post-fix-rerun--err-010-005-approach-condition-november-20-2026)).
 
 ## 10. Adversarial review log
 

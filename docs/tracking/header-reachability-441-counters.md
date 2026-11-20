@@ -779,7 +779,7 @@ the 113400 stride) and Heading's terminal early rule are untouched by this fix. 
 `otherPlayerCommit` flag for that passage drops from 1 to 0 because agent 9 no longer commits on
 their own pass at 113394.
 
-**Physical trajectories (interim).** A probe hashing ball and agent position and velocity after every tick (Heading attempt state excluded) gives identical hashes pre/post on seeds `0x0F1E2D3C4B5A6978`, `0xD1A6D05E`, `0x1` and `0xABCDEF12` (scores 2–3, 1–4, 8–1, 3–5). The other two seeds are still running.
+**Physical trajectories.** A probe hashing ball and agent position and velocity after every tick (Heading attempt state excluded) gives identical hashes pre/post on all six seeds, with the same final scores (2–3, 1–4, 8–1, 3–5, 4–8, 4–5). No prepared contact existed before or after, and an unprepared attempt changes no ball or agent state, so on this corpus the fix changes only Heading's serialized attempt state and therefore the snapshot digests. A match in which a removed passer commit would otherwise have reached contact could differ; none occurred here.
 
 **Reading.** `ERR-010-005` is a correctness fix to the trigger's selection, not a reachability
 fix. #441's first zero remains prepared Head contacts, and the remaining levers are those §6.7

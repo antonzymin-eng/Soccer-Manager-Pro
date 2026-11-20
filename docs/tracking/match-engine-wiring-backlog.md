@@ -13,7 +13,7 @@
 > **UPDATED November 20, 2026 (#441 trigger selection fix, ERR-010-005), v1.54:** The Stage-0 header
 > trigger no longer commits a player the ball is moving away from. On the six frozen seeds, commits
 > fall 1,765 → 142 and passer self-commits 1,600 → 3; prepared and executed Head contacts stay at 0, so
-> W3 remains wired but dormant. Ball and agent trajectories are bit-identical pre/post on the first four seeds checked so far (scores 2–3, 1–4, 8–1, 3–5); the other two are still running. No new constant, so KD-W1 is not engaged.
+> W3 remains wired but dormant. Ball and agent trajectories are bit-identical pre/post on all six seeds (same scores: 2–3, 1–4, 8–1, 3–5, 4–8, 4–5): an attempt that never prepares a contact has no physical effect, so on this corpus the fix changes only the serialized Heading attempt state. No new constant, so KD-W1 is not engaged.
 > [#441 counters §6.8](header-reachability-441-counters.md#68-post-fix-rerun--err-010-005-approach-condition-november-20-2026).
 
 > **UPDATED (prior) November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
