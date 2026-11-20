@@ -10,7 +10,18 @@
 
 ---
 
-> **UPDATED November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
+> **UPDATED November 20, 2026 (ERR-010-005 review: KD-7 latch), v1.55:** The trigger's episode latch now
+> clears only when the ball is possessed, lands or leaves that agent's range, so a ball turning back
+> cannot re-commit the same agent (PR #559 review P2). Census and trajectories unchanged; the v1.54
+> physical-identity wording below is narrowed to position, velocity and score.
+
+> **UPDATED (prior) November 20, 2026 (#441 trigger selection fix, ERR-010-005), v1.54:** The Stage-0 header
+> trigger no longer commits a player the ball is moving away from. On the six frozen seeds, commits
+> fall 1,765 → 142 and passer self-commits 1,600 → 3; prepared and executed Head contacts stay at 0, so
+> W3 remains wired but dormant. Ball and agent position and velocity after every tick, and the scores (2–3, 1–4, 8–1, 3–5, 4–8, 4–5), are bit-identical pre/post on all six seeds; the snapshot digests differ, and the probe does not establish which serialized fields (Heading attempt state, the KD-7 latch) account for that. No new constant, so KD-W1 is not engaged.
+> [#441 counters §6.8](header-reachability-441-counters.md#68-post-fix-rerun--err-010-005-approach-condition-november-20-2026).
+
+> **UPDATED (prior) November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
 > W8 C and its paired measurement as complete. The October #441 note is a single quote.
 
 > **UPDATED (prior) November 20, 2026 (#441 current-main diagnosis), v1.52:** The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
@@ -94,7 +105,7 @@
 > frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
 > horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
 > Not measured: missed genuine aerial arrivals and launch origin.
-> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.16) §6.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.18) §6.
 >
 > **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
@@ -890,6 +901,8 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.55 | 2026-11-20 | — | ERR-010-005 review P2: KD-7 latch cleared only on possession, landing or leaving range; physical-identity wording narrowed. Census unchanged. |
+| 1.54 | 2026-11-20 | — | ERR-010-005 (#441): header trigger skips an agent the ball is moving away from; commits 1,765 → 142, executed still 0. W3 status unchanged. |
 | 1.53 | 2026-11-20 | — | Record W8 C and its paired measurement as complete in sequence row 8. Join the October #441 note into one quote. |
 | 1.52 | 2026-11-20 | — | Point W3 and the landing sequence at the post-C #441 result in §6.7, with the October result retained as historical evidence. #441 remains a W9 prerequisite. |
 | 1.51 | 2026-11-19 | — | Status sync: #434 (PR #543), W13.1/W13.1c (PR #547) and #440 A′ (PRs #544, #549) recorded as merged; W13 heading updated. Documentation only. |
