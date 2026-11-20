@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.245 — ERR-010-005 review: KD-7 latch.** `src/match-engine/MatchEngine.cs` v2.25 → **v2.26**: `TryCommitHeaderIntents` clears `_headerCommittedThisEpisode[i]` only when the ball is not airborne-loose or agent *i* is outside `HeaderTriggerRangeM`; it no longer clears every non-nearest agent. `src/match-engine/tests/MatchEngineGkHeadingTests.cs` v1.10 → **v1.11**: three home/away KD-7 latch locks. Same serialized `bool[]`; no schema, RNG or constant change.
+> **Last Updated:** November 20, 2026 — **v2.246 — ERR-010-005 Codex review: neutrality window.** `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`: `HeaderReachabilityObserver_DoesNotChangeSnapshotDigests` no longer uses a fixed 18,000-frame window. It runs at least `NeutralityMinFrames` (18,000), stops `NeutralityTailFrames` (600) after the first #10 evaluation, and never exceeds `NeutralityMaxFrames` (108,000); the plain engine replays the same frame count, and the test logs the window. Its non-vacuity assertions are unchanged. On Linux .NET the window stays 18,000 frames (first evaluation at frame 3,775). Test-only; no production, schema, RNG or constant change.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.245 — ERR-010-005 review: KD-7 latch.** `src/match-engine/MatchEngine.cs` v2.25 → **v2.26**: `TryCommitHeaderIntents` clears `_headerCommittedThisEpisode[i]` only when the ball is not airborne-loose or agent *i* is outside `HeaderTriggerRangeM`; it no longer clears every non-nearest agent. `src/match-engine/tests/MatchEngineGkHeadingTests.cs` v1.10 → **v1.11**: three home/away KD-7 latch locks. Same serialized `bool[]`; no schema, RNG or constant change.
 
 > **Last Updated (prior):** November 20, 2026 — **v2.244 — ERR-010-005 header-trigger approach condition.** `src/match-engine/GkHeadingIntentSource.cs` v1.6 → **v1.7**: `NearestHeaderCandidate(in Vector3 ballPosition, in Vector3 ballVelocity, bool airborneLoose, …)` gains the ball velocity and skips an agent when `v_xy · (agent − ball)_xy < 0`. `src/match-engine/MatchEngine.cs` v2.24 → **v2.25**: `TryCommitHeaderIntents` passes `_ball.Velocity`. Tests: `GkHeadingIntentSourceTests.cs` v1.5 → v1.6 (existing cases pass a zero velocity; new approach-condition locks in both attack directions) and `MatchEngineGkHeadingTests.cs` v1.9 → v1.10 (composed home/away regressions through `TestOnly_DriveGkHeadingTactical` and #10's Commit sample). No new constant, state, schema or RNG change.
 
@@ -2965,6 +2967,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.246 | 2026-11-20 | — | ERR-010-005 Codex review: the #441 neutrality test's window extends until #10 evaluates (min 18,000, max 108,000 frames). |
 | 2.245 | 2026-11-20 | — | ERR-010-005 review: KD-7 header latch cleared only on possession, landing or leaving the agent's range. |
 | 2.244 | 2026-11-20 | — | ERR-010-005: `NearestHeaderCandidate` takes the ball velocity and skips an agent the ball is moving away from; `TryCommitHeaderIntents` passes `_ball.Velocity`. |
 | 2.244 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
