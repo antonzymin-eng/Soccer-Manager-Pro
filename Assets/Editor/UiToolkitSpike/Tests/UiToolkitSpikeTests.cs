@@ -1,6 +1,6 @@
 // File:     Assets/Editor/UiToolkitSpike/Tests/UiToolkitSpikeTests.cs
 // Created:  2026-11-20
-// Modified: 2026-11-20 (Editor-panel Tab traversal)
+// Modified: 2026-11-20 (include the runtime style assets in the detached check)
 // Author:   —
 // Spec:     UI Toolkit presentation design §4, T0a (PR #560)
 // Purpose:  Establish what Unity EditMode can check on the spike's UXML and USS.
@@ -18,12 +18,14 @@ namespace TacticalDirector.UiToolkitSpike.Tests
     /// <summary>Checks the spike's authored structure, keyboard focus, and style/layout in EditMode.</summary>
     public sealed class UiToolkitSpikeTests
     {
-        private const string UXML = "Assets/Editor/UiToolkitSpike/Spike.uxml";
+        private const string SPIKE_ASSETS = "Assets/Editor/UiToolkitSpike/";
 
         /// <summary>Clones the runtime markup without a panel and inspects its authored focus stops.</summary>
         [Test]
         public void DetachedCloneDeclaresFocusableControlsInOrder()
         {
+            Assert.That(AssetDatabase.LoadAssetAtPath<StyleSheet>(SPIKE_ASSETS + "Spike.uss"), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(SPIKE_ASSETS + "Spike.tss"), Is.Not.Null);
             VisualElement[] ordered = GetKeyboardStops(CloneSpike());
             VisualElement content = ordered[0].parent;
             int lastIndex = -1;
@@ -158,8 +160,9 @@ namespace TacticalDirector.UiToolkitSpike.Tests
 
         private static TemplateContainer CloneSpike()
         {
-            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UXML);
-            Assert.That(asset, Is.Not.Null, UXML);
+            string path = SPIKE_ASSETS + "Spike.uxml";
+            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
+            Assert.That(asset, Is.Not.Null, path);
             return asset.Instantiate();
         }
 
@@ -170,3 +173,4 @@ namespace TacticalDirector.UiToolkitSpike.Tests
 // | Version | Date       | Author | Change |
 // | 0.1     | 2026-11-20 | —      | UXML structure and Editor-panel style/layout checks. |
 // | 0.2     | 2026-11-20 | —      | Dispatch Tab and Shift+Tab in a live Editor panel and assert the focused controls. |
+// | 0.3     | 2026-11-20 | —      | Check that Unity loads the USS and runtime TSS used by the probe. |

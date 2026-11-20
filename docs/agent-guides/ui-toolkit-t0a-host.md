@@ -4,7 +4,15 @@ Created November 20, 2026 for the editor-only feasibility spike. Use the pinned 
 
 ## Import and compile first
 
-Open the spike checkout in the pinned Editor and wait for asset import and script compilation. Check the Console for compiler and UXML, USS, or TSS import errors before entering Play Mode. Record any errors with the commit and Editor version. If the Editor normalizes an importer's `.meta` serialization, review that diff as an import artifact before collecting evidence.
+From the spike checkout on the pinned host, with its `Assets/Scripts` junction in place and the Editor closed for that checkout, run the preflight with Python 3. Use the actual path to the pinned Editor installation.
+
+```powershell
+py -3 tools/unity-ci/run-ui-toolkit-t0a.py --editor "C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Unity.exe"
+```
+
+Unity imports and compiles the spike before running its three EditMode tests. The runner creates a fresh directory under `artifacts/ui-toolkit-t0a/` with `editor.log`, `editmode.xml` if Unity writes it, and `receipt.json` containing the commit, Editor version, working-tree status, and result. A nonzero exit points to an Editor, compile, or test failure. Review `editor.log` for UXML, USS, and TSS import diagnostics and review any importer `.meta` changes before collecting Play Mode evidence.
+
+For a run without the batch script, open the spike checkout in the pinned Editor, inspect the Console after import and compilation, then use the Test Runner procedure below.
 
 ## Stock input comparison
 
@@ -21,7 +29,7 @@ Open the spike checkout in the pinned Editor and wait for asset import and scrip
 
 ## EditMode and decision record
 
-In **Window → General → Test Runner → EditMode**, run `TacticalDirector.UiToolkitSpike.Tests`. Record each result for detached UXML structure, synthetic Tab and Shift+Tab dispatch in a live Editor panel, and computed styles and reflow. Physical keys, the runtime EventSystem, pointer routing, and screen composition are Play Mode observations.
+Use the preflight's `editmode.xml`, or run `TacticalDirector.UiToolkitSpike.Tests` in **Window → General → Test Runner → EditMode**. Record each result for UXML, USS, and TSS loading and detached tree structure, synthetic Tab and Shift+Tab dispatch in a live Editor panel, and computed styles and reflow. If batch execution cannot lay out the utility window, retain its receipt and run the same fixture in the interactive Editor. Physical keys, the runtime EventSystem, pointer routing, and screen composition are Play Mode observations.
 
 | Receipt item | Record from the pinned host |
 |---|---|
