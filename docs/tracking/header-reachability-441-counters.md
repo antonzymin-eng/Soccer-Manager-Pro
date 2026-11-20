@@ -5,7 +5,9 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.16 — §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
+> **Status:** v0.17 — §6.8 measures the `ERR-010-005` trigger fix: commits fall from 1,765 to 142 and
+> passer self-commits from 1,600 to 3, with still 0 prepared and 0 executed headers.
+> §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
 > Current main has one missed arrival with a tactical-stride geometric witness. A commit
 > on that stride fails early. An experimental off-stride start executes the header.
 > §6.4 preserves the corrected October census, §6.6 preserves the independent proximity
@@ -746,6 +748,43 @@ loose flight each frame. It demonstrates that both witnesses can reach execution
 the existing contact pipeline. Production would need a take-off selection rule to select
 a different frame; a fixed delay across live play has no support from this staged result alone.
 
+### 6.8 Post-fix rerun — `ERR-010-005` approach condition, November 20, 2026
+
+**Change measured:** the §4.2 header trigger now skips an agent the ball is moving away from,
+`v_xy · (agent − ball)_xy ≥ 0` ([`gk-heading-engine-integration-design.md` §4.2](gk-heading-engine-integration-design.md#42-header-trigger)).
+Pre-fix is §6.7 at `ceb0384a`. Post-fix is the same six seeds and the same instrument on the branch
+carrying `ERR-010-005` (Linux x64, .NET SDK 8.0.134, Debug Unity shim).
+[Receipts](evidence/header441-err010005-20261120/README.md).
+
+| Counter | Pre-fix (§6.7) | Post-fix |
+|---|---:|---:|
+| Commits / jump starts | 1,765 / 1,765 | 142 / 142 |
+| Pass-attributed commits / by the recorded passer | 1,702 / 1,600 | 88 / 3 |
+| Commits with the ball below 1 m | 1,692 | 93 |
+| Ever predicted / prepared / executed | 15 / 0 / 0 | 14 / 0 / 0 |
+| `PositionedPoorly` / `MistimedEarly` | 1,754 / 10 | 132 / 10 |
+| `PositionedPoorly` forecasts closest before the attempt window | 1,729 | 109 |
+| Overwritten attempts | 1 | 0 |
+| Strict geometric arrivals / covered by an actual start | 1 / 0 | 1 / 0 |
+
+The fix removed 1,623 commits (92%), almost all of them the passer's commit on their own pass. It did
+not produce a prepared or executed header. Ever-predicted moved only 15 → 14 and `MistimedEarly`
+stayed at 10, so almost none of the attempts that came close before the fix were the passer's.
+Three passer commits remain; each passed the approach condition (for example a ball travelling back
+toward the passer). They were not investigated individually.
+
+The one strict arrival is the §6.7 passage (seed `0x1`, agent 15, contact frame 113410) with
+identical ball state. It is still missed. Its producer miss (agent 15 is 1.6295 m from the ball on
+the 113400 stride) and Heading's terminal early rule are untouched by this fix. The
+`otherPlayerCommit` flag for that passage drops from 1 to 0 because agent 9 no longer commits on
+their own pass at 113394.
+
+**Physical trajectories (interim).** A probe hashing ball and agent position and velocity after every tick (Heading attempt state excluded) gives identical hashes pre/post on seeds `0x0F1E2D3C4B5A6978`, `0xD1A6D05E`, `0x1` and `0xABCDEF12` (scores 2–3, 1–4, 8–1, 3–5). The other two seeds are still running.
+
+**Reading.** `ERR-010-005` is a correctness fix to the trigger's selection, not a reachability
+fix. #441's first zero remains prepared Head contacts, and the remaining levers are those §6.7
+named: the 10 Hz producer timing and the terminal early verdict. #441 remains open and gates W9.
+
 ## Version history
 
 | Version | Date | Change |
@@ -766,3 +805,4 @@ a different frame; a fixed delay across live play has no support from this stage
 | v0.14 | October 22, 2026 | Records the accepted corrected six-seed independent height-band sanity result and preserved raw/self-test identities. All six 324000-call runs observed 323999 callbacks, matched the Run 3 digest pins, and reconciled 35417 band frames, 355 near frames/pairs and 39 passages. Interprets sparse broad proximity narrowly; #441/W9 remain open, W8 C landing gate and D-05 unchanged. |
 | v0.15 | November 20, 2026 | Reruns #526's diagnostics on six seeds after W8 C, #434 and #440 A′. Records one current missed arrival, its stride-aligned early failure and its composed off-stride contact, plus the historical replay. |
 | v0.16 | November 20, 2026 | Quantifies the recorded passer/committer overlap and explains the 113399 early verdict against the existing window. Adds the scripted digest check and exact-tree Linux pre-commit receipt. |
+| v0.17 | November 20, 2026 | Adds §6.8, the six-seed rerun after `ERR-010-005` (trigger skips an agent the ball is moving away from): commits 1,765 → 142, passer self-commits 1,600 → 3, prepared/executed unchanged at 0; the §6.7 arrival is still missed. |

@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.243 — Career on at startup.** `src/match-client-unity/README.md` (P7b career binding): the tracked scene now sets `_enableCareer: 1`, step 1 checks that Career is on, and the section links the `cd3c7b99` and `52d1f000` pinned-host runs; the "remains opt-in" sentence is removed. No `.cs` file, asmdef, schema, RNG stream or draw order changed. Full account: `docs/tracking/CHANGELOG.md`.
+> **Last Updated:** November 20, 2026 — **v2.244 — ERR-010-005 header-trigger approach condition.** `src/match-engine/GkHeadingIntentSource.cs` v1.6 → **v1.7**: `NearestHeaderCandidate(in Vector3 ballPosition, in Vector3 ballVelocity, bool airborneLoose, …)` gains the ball velocity and skips an agent when `v_xy · (agent − ball)_xy < 0`. `src/match-engine/MatchEngine.cs` v2.24 → **v2.25**: `TryCommitHeaderIntents` passes `_ball.Velocity`. Tests: `GkHeadingIntentSourceTests.cs` v1.5 → v1.6 (existing cases pass a zero velocity; new approach-condition locks in both attack directions) and `MatchEngineGkHeadingTests.cs` v1.9 → v1.10 (composed home/away regressions through `TestOnly_DriveGkHeadingTactical` and #10's Commit sample). No new constant, state, schema or RNG change.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.243 — Career on at startup.** `src/match-client-unity/README.md` (P7b career binding): the tracked scene now sets `_enableCareer: 1`, step 1 checks that Career is on, and the section links the `cd3c7b99` and `52d1f000` pinned-host runs; the "remains opt-in" sentence is removed. No `.cs` file, asmdef, schema, RNG stream or draw order changed. Full account: `docs/tracking/CHANGELOG.md`.
 
 > **Last Updated (prior):** November 19, 2026 — **v2.242 — Career Home round scores and standings.** Project results by completed-round index and world day. Keep the projection in the coordinator’s busy snapshot and publish it alongside the standings. Regression tests cover season rollover, interrupted fixture resolution and retry, resume, worker publication and localized copy.
 
@@ -2959,6 +2961,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.244 | 2026-11-20 | — | ERR-010-005: `NearestHeaderCandidate` takes the ball velocity and skips an agent the ball is moving away from; `TryCommitHeaderIntents` passes `_ball.Velocity`. |
 | 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |
 | 2.242 | 2026-11-19 | — | Show completed-round scores and aligned standings with goal difference. |
 | 2.241 | 2026-11-19 | — | Page the Career Home fixture list (`CareerFixturePage`) for keyboard reach at 200% text scale. |
