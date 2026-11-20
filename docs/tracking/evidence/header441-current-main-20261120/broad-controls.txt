@@ -1,0 +1,11 @@
+CADENCE_CONTROL,PASS,startTick=0,callbacks=1/2,deltas=1/1,ticks=1/2,ended=False/False
+CADENCE_CONTROL,PASS,startTick=323997,callbacks=323998/323999,deltas=1/1/0/0,ticks=323998/323999/324000/324001,ended=False/False/True/True
+CADENCE_FAILURE,seed=0x0000000000000441,reason=per-attempt cadence,attemptedRunTicks=1,completedRunTicks=1,expectedDelta=1,actualDelta=0,expectedTick=1,currentTick=1,callbacks=0,firstSample=-1,lastSample=-1,ended=False,wrongCallbackTick=False
+CADENCE_REJECTION,PASS,skipped live callback
+CADENCE_FAILURE,seed=0x0000000000000441,reason=per-attempt cadence,attemptedRunTicks=1,completedRunTicks=1,expectedDelta=1,actualDelta=2,expectedTick=1,currentTick=1,callbacks=2,firstSample=1,lastSample=1,ended=False,wrongCallbackTick=False
+CADENCE_REJECTION,PASS,duplicate live callback
+CADENCE_FAILURE,seed=0x0000000000000441,reason=per-attempt cadence,attemptedRunTicks=1,completedRunTicks=1,expectedDelta=0,actualDelta=1,expectedTick=324000,currentTick=324000,callbacks=1,firstSample=324000,lastSample=324000,ended=True,wrongCallbackTick=False
+CADENCE_REJECTION,PASS,callback at full-time
+CADENCE_FAILURE,seed=0x0000000000000441,reason=per-attempt cadence,attemptedRunTicks=1,completedRunTicks=1,expectedDelta=1,actualDelta=1,expectedTick=1,currentTick=1,callbacks=1,firstSample=2,lastSample=2,ended=False,wrongCallbackTick=True
+CADENCE_REJECTION,PASS,wrong callback tick
+SELF_TEST,PASS,syntheticCases=6,realRunTickCallback=1,realCadenceControls=2,cadenceRejectionControls=4
