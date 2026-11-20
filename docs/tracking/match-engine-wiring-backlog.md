@@ -10,7 +10,10 @@
 
 ---
 
-> **UPDATED November 20, 2026 (#441 current-main diagnosis), v1.52:** The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
+> **UPDATED November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
+> W8 C and its paired measurement as complete. The October #441 note is a single quote.
+
+> **UPDATED (prior) November 20, 2026 (#441 current-main diagnosis), v1.52:** The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
 > found one missed arrival, a stride-aligned early failure and a composed experimental off-stride
 > header. #441 remains open and gates W9.
 
@@ -70,7 +73,6 @@
 > pending. No gameplay, schema, RNG, tuning or #440 change is made by this preflight.
 
 > **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
-
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
 > contract on the observed trajectories. A one- or two-physics-frame delayed take-off remains
@@ -793,7 +795,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
 | 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9. The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) records the missed arrival and the remaining timing constraint. |
-| 8 | **W8 B → C**, then **W9**, **W10** | B landed in PR #511; C law/measurement remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
+| 8 | **W8 B → C** ✅ **LANDED**, then **W9**, **W10** | B landed in PR #511. W8 C landed November 6 in PR #542, with the law change and paired B→C measurement complete. See the [roadmap §5.1](path-to-playable-roadmap.md) for the remaining W9/W10 gates and the [W8 C results](w8-c-implementation-results.md) for the measurement. |
 | 9 | **W13** defender-marking wiring — **W13.0 MERGED (PR #545); W13.1 / W13.1c LANDED ON BRANCH, UNMERGED; switch default OFF** | Frozen-lane identity + §10 measurement, Unity compile, stand-off calibration and the flip (OD-2) are pending; it is behind `MarkMovementEnabled`, so it does not enter the B→C window until flipped. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
 > **W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated
@@ -888,6 +890,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.53 | 2026-11-20 | — | Record W8 C and its paired measurement as complete in sequence row 8. Join the October #441 note into one quote. |
 | 1.52 | 2026-11-20 | — | Point W3 and the landing sequence at the post-C #441 result in §6.7, with the October result retained as historical evidence. #441 remains a W9 prerequisite. |
 | 1.51 | 2026-11-19 | — | Status sync: #434 (PR #543), W13.1/W13.1c (PR #547) and #440 A′ (PRs #544, #549) recorded as merged; W13 heading updated. Documentation only. |
 | 1.50 | 2026-11-18 | — | #440 A′: D1 six-seed characterization (0/29 same-frame regains; regain mostly deferred, reported not gated) and pinned-host Unity pass recorded. |

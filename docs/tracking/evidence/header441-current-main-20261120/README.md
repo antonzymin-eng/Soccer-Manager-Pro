@@ -12,8 +12,10 @@ The repository's `bash tools/bootstrap-dev.sh` ran the full pre-commit compositi
 staged tree `36573b40c3bf5daeeea5615a38e3bb1f5e3bc6ee`, which matches
 `0285f325cae3c01593f749405d01e901bf002e0d^{tree}`. It completed with 4,778 passed,
 206 skipped and zero failed across 37 project summaries. MatchEngine accounted for 1,035
-passed and one skipped. The bootstrap cold run uses the same test selection outside the
-60-second commit-hook budget. [Complete run log](precommit-bootstrap.log.xz).
+passed and one skipped. The bootstrap cold run uses the pre-commit test selection outside
+the 60-second commit-hook budget. The hook writes the tested tree ID to a separate state
+file, which is archived alongside the console output. [Complete run log](precommit-bootstrap.log.xz),
+[hook tree record](precommit-index-tree.txt).
 
 ## Reproduce the strict census and archived trace
 
