@@ -165,6 +165,13 @@ their scan code and the extended-key bit, and the player ignored them. A real ke
 probe now does too. That run was discarded, and player C was rebuilt (product *System XI Probe C6*) and
 re-run.
 
+**Stricter row rule, final run.** A follow-up review pointed out that the probe counted a row as fully on
+screen when its first and last cells were. A wrapped club name can extend below both, so every count in
+this folder before this paragraph used that weaker rule. The probe now requires all ten cells of a row
+to be inside the viewport. Players E, B and C were rebuilt from the same `src` tree (products *E7*, *B7*
+and *C7*, so each started with an empty save directory) and run again at 18:46–18:54 UTC. The table and
+the committed `keys-review-*.log` files are from that run.
+
 | Check | 100% | 200% | 200% long + expanded |
 | --- | --- | --- | --- |
 | Focus in view after every Enter on *Higher* / *Your* / *Lower positions* (both sizes) | PASS | PASS | PASS |
@@ -172,14 +179,16 @@ re-run.
 | Pages fully readable by keyboard, 1920×1080 | 3 of 3 | 3 of 3 | 3 of 3 |
 | Heading and every row at a Tab stop alone, without arrows | every page | every page | every page |
 | Arrow keys reach the bottom of a page taller than the window | — (fits) | — (fits) | 1 Down per full page, 1 Up back to the top |
-| Probe result | 72 pass, 0 fail | 78 pass, 0 fail | 71 pass, 1 fail |
+| Probe result | 78 pass, 0 fail | 78 pass, 0 fail | 71 pass, 1 fail |
 
 The one failure is the existing finding that the seven expanded short headers wrap to two lines at
 1366×768. The Career Home Tab cycle now has nine stops: the region between *Return to Main Menu* and the
 paging controls is the new one. Shift+Tab is still the exact reverse. The player logs show 0 exceptions.
 The *Standings page* focus ring surrounds the whole page (`item7-review-200long-1366-standings-region-page1.png`).
 When the page is taller than the window, the probe logs the region as `inView-tall-top`: its top edge is on
-screen and it fills the window.
+screen and it fills the window. In this run the managed club was off page 1 for players E and B, so both
+also exercised the first-page rule: *Higher positions* disabled, focus moved to *Your position*. Player C's
+club was on page 1, where *Higher positions* starts disabled and Tab skips it.
 
 ## Item 8 — PM-1 journey with Career on and off
 
@@ -225,3 +234,4 @@ Scene settings, the probe and the build script are recorded in `source-identity.
 | 1.1 | 2026-11-20 | Standings paging fix chosen by the owner: compile, EditMode and keyboard re-run at 100%, 200% and 200% long names. |
 | 1.2 | 2026-11-20 | Folder renamed from `host-52d1f000-20261120` (taken by PR #556's run, merged first); links point at the archived issue. |
 | 1.3 | 2026-11-20 | PR #557 review fixes: focus revealed after a page change; standings page region with arrow-key scrolling; EditMode and keyboard re-run; long-name residual closed. |
+| 1.4 | 2026-11-20 | Follow-up review: the probe counts a row only when all ten cells are on screen; E, B and C re-run with that rule, all pages still readable. |

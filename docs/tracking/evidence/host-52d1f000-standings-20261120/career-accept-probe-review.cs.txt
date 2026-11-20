@@ -292,6 +292,14 @@ public sealed class CareerAcceptProbe : MonoBehaviour
         return inside;
     }
 
+    // A row is fully visible only when every cell is: a wrapped club name can extend below the number cells.
+    private static bool RowInView(Text[] row)
+    {
+        foreach (Text cell in row)
+            if (!InView(cell.rectTransform, out _)) return false;
+        return true;
+    }
+
     private static string Visibility(GameObject focused)
     {
         if (focused == null) return "";
@@ -961,7 +969,7 @@ public sealed class CareerAcceptProbe : MonoBehaviour
                 headingSeen |= h;
                 if (!arrow) tabOnlyHeading |= h;
                 for (int r = 0; r < rows.Count; r++)
-                    if (InView(rows[r][0].rectTransform, out _) && InView(rows[r][rows[r].Length - 1].rectTransform, out _))
+                    if (RowInView(rows[r]))
                     {
                         seen.Add(r);
                         if (!arrow) seenTab.Add(r);
@@ -1094,7 +1102,7 @@ public sealed class CareerAcceptProbe : MonoBehaviour
         {
             foreach (int line in FullyVisibleLines(results, out scoreLines)) scoreSeen.Add(line);
             for (int r = 0; r < rows.Count; r++)
-                if (InView(rows[r][0].rectTransform, out _) && InView(rows[r][rows[r].Length - 1].rectTransform, out _)) rowSeen.Add(r);
+                if (RowInView(rows[r])) rowSeen.Add(r);
             yield return Key(VK_TAB, false, false);
             if (Focused() == start) break;
         }
@@ -1108,7 +1116,7 @@ public sealed class CareerAcceptProbe : MonoBehaviour
             Canvas.ForceUpdateCanvases();
             yield return Frames(3);
             int atBottom = 0;
-            for (int r = 0; r < rows.Count; r++) if (InView(rows[r][0].rectTransform, out _) && InView(rows[r][rows[r].Length - 1].rectTransform, out _)) atBottom++;
+            for (int r = 0; r < rows.Count; r++) if (RowInView(rows[r])) atBottom++;
             Info(tag + ": standings rows fully on screen when scrolled to the bottom: " + atBottom + " of " + rows.Count);
             yield return Shot("keys-" + tag + "-scrolled-bottom");
             if (results != null)
