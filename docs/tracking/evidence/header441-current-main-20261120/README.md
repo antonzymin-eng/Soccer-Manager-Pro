@@ -6,6 +6,15 @@ Linux x64, .NET SDK 8.0.426, runtime 8.0.32, Debug Unity shim. See
 for the interpretation. The focused NUnit receipt covers the #526 observer and the existing
 MatchEngine GK/Heading path. The census and probes are local diagnostic runs.
 
+## Linux pre-commit receipt
+
+The repository's `bash tools/bootstrap-dev.sh` ran the full pre-commit composition on the
+staged tree `36573b40c3bf5daeeea5615a38e3bb1f5e3bc6ee`, which matches
+`0285f325cae3c01593f749405d01e901bf002e0d^{tree}`. It completed with 4,778 passed,
+206 skipped and zero failed across 37 project summaries. MatchEngine accounted for 1,035
+passed and one skipped. The bootstrap cold run uses the same test selection outside the
+60-second commit-hook budget. [Complete run log](precommit-bootstrap.log.xz).
+
 ## Reproduce the strict census and archived trace
 
 Generate the shim projects at the measured commit. Store outputs under the ignored `Temp/`
@@ -62,9 +71,11 @@ cp "$archive/sanity/Program.cs" Temp/header441-sanity/Program.cs
 patch Temp/header441-sanity/Program.cs < "$receipt/current-main-sanity.patch"
 sed 's|../../../../../|../../|g' "$archive/sanity/Probe.csproj" > Temp/header441-sanity/Probe.csproj
 dotnet run --project Temp/header441-sanity/Probe.csproj -p:NuGetAudit=false -- --self-test
-dotnet run --project Temp/header441-sanity/Probe.csproj --no-build -- --corpus Temp/main-sanity.txt
+dotnet run --project Temp/header441-sanity/Probe.csproj --no-build -- --corpus Temp/main-sanity.txt &&
+  python3 "$receipt/verify-census-digests.py" Temp/main-baseline.trx Temp/main-sanity.txt
 ```
 
-Compare the six `seedEnd` digests from the strict TRX standard output with the six in
-`main-sanity.txt`, ignoring hex case. The broad probe also checks the full-time callback
-boundary and reconciles all counts against its per-frame and per-passage denominators.
+The verifier requires all six frozen seeds at tick 324000 in both reports and fails on
+any digest mismatch. It also accepts the archived `strict-corpus.trx.xz` and `broad-corpus.txt`
+directly. The broad probe checks the full-time callback boundary and reconciles its counts
+against the frame and passage totals.

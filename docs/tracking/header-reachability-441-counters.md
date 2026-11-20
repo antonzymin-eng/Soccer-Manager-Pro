@@ -5,7 +5,7 @@
 > counter can and cannot distinguish. It is the definitions record that
 > `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs` cites. Issue #441 must be explained
 > before W9 (roadmap step 9).
-> **Status:** v0.15 — §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
+> **Status:** v0.16 — §6.7 reruns the six frozen seeds after W8 C, #434 and #440 A′.
 > Current main has one missed arrival with a tactical-stride geometric witness. A commit
 > on that stride fails early. An experimental off-stride start executes the header.
 > §6.4 preserves the corrected October census, §6.6 preserves the independent proximity
@@ -673,9 +673,13 @@ passed. [Commands and raw receipts](evidence/header441-current-main-20261120/REA
 The first zero in the shipped attempt chain remains prepared Head contacts. The counter
 recorded 1,692 of 1,765 commits below 1 m, and 1,729 of 1,754 `PositionedPoorly` forecasts
 put closest XY approach before the attempt window. Latest-observed commit provenance was
-Pass 1,702, Deflection 6 and Bounce 57. These labels describe the last observed ball event
-and do not establish which pass profile or movement decision caused the miss. The lone
-timing-valid moving-head forecast was seed `0xD1A6D05E`, agent 7, commit 192360. It had no
+Pass 1,702, Deflection 6 and Bounce 57. Of the pass-attributed commits, 1,600 (94.0%)
+were by the recorded passer. Their median time since the pass event was nine physics frames.
+This is the count of `commitSource` rows with source `Pass` and equal committing-agent and
+source-agent IDs. It confirms frequent same-passer selection in this corpus. These labels
+describe the last observed ball event and do not establish which pass profile or movement
+decision caused the miss. The lone timing-valid moving-head forecast was seed
+`0xD1A6D05E`, agent 7, commit 192360. It had no
 corresponding observed strict arrival.
 
 The broad check observed 1,943,994 callbacks across 1,944,000 completed ticks. Of 36,902
@@ -705,6 +709,13 @@ later shipped commit from overwriting the injected intent.
 | 113400 (tactical stride) | 113411 | `MistimedEarly` at 113409, on a prediction for 113410 |
 | 113399 | 113410 | `MistimedEarly` at 113409, on the current frame |
 | 113398 | 113410 | Prepared and executed at 113410, with one `HeaderExecutedEvent` |
+
+Heading §3.2 compares the predicted contact frame with the jump's earliest legal frame.
+For take-off at 113399, the apex is 113419 and the nine-frame early tolerance opens the
+window at 113410. A prediction for the current frame, 113409, is therefore early by one frame.
+Heading makes that verdict terminal, so this arm never reaches the geometric witness on
+113410. This follows the current rule and isolates its consequence for a flight that is still
+in contact geometry on a legal frame.
 
 This passage has both a producer timing miss and a realization boundary. Selecting the
 outfielder on the existing stride still lets Heading's terminal early rule discard the
@@ -754,3 +765,4 @@ a different frame; a fixed delay across live play has no support from this stage
 | v0.13 | October 22, 2026 | H1: correct §3.8 cadence to 324000 attempted/completed calls and 323999 callbacks at frames 1–323999, preserving the tick-324000 digest comparison. Adds exact per-attempt validation, real first-tick/full-time controls, rejected cadence defects, flushed diagnostics and modest progress. Records the invalid October 21 first attempt in §6.6; corrected sanity results pending. Historical October 20 freeze, Run 3 strict census and delayed-takeoff candidate remain unchanged. |
 | v0.14 | October 22, 2026 | Records the accepted corrected six-seed independent height-band sanity result and preserved raw/self-test identities. All six 324000-call runs observed 323999 callbacks, matched the Run 3 digest pins, and reconciled 35417 band frames, 355 near frames/pairs and 39 passages. Interprets sparse broad proximity narrowly; #441/W9 remain open, W8 C landing gate and D-05 unchanged. |
 | v0.15 | November 20, 2026 | Reruns #526's diagnostics on six seeds after W8 C, #434 and #440 A′. Records one current missed arrival, its stride-aligned early failure and its composed off-stride contact, plus the historical replay. |
+| v0.16 | November 20, 2026 | Quantifies the recorded passer/committer overlap and explains the 113399 early verdict against the existing window. Adds the scripted digest check and exact-tree Linux pre-commit receipt. |

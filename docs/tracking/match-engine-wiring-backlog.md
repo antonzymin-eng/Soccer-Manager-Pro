@@ -10,7 +10,11 @@
 
 ---
 
-> **UPDATED November 19, 2026 (status sync: #434, #440 and W13 merged), v1.51:** PR #543 (#434 kickoff formation/Duty) merged November 16 (`75485fca`). PR #547 (W13.1 and W13.1c; mark movement switched OFF by default) merged November 16 (`d290d844`). PR #544 (#440 Stage A) and PR #549 (A′, `ERR-014-011`) merged November 19 UTC (`ea631129`, `a78a9a7a`). Documentation only: no engine, spec, `[GT]`, schema or RNG change. Still open: the W13 default flip (OD-2; W13-F5, F6, F7 and F9 block it), W13's §10 measurement and W13-F10; #434's player-control blocker, whose diagnosis has no recorded result; #440's B′ decisions D2, D4 and D6.
+> **UPDATED November 20, 2026 (#441 current-main diagnosis), v1.52:** The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
+> found one missed arrival, a stride-aligned early failure and a composed experimental off-stride
+> header. #441 remains open and gates W9.
+
+> **UPDATED (prior) November 19, 2026 (status sync: #434, #440 and W13 merged), v1.51:** PR #543 (#434 kickoff formation/Duty) merged November 16 (`75485fca`). PR #547 (W13.1 and W13.1c; mark movement switched OFF by default) merged November 16 (`d290d844`). PR #544 (#440 Stage A) and PR #549 (A′, `ERR-014-011`) merged November 19 UTC (`ea631129`, `a78a9a7a`). Documentation only: no engine, spec, `[GT]`, schema or RNG change. Still open: the W13 default flip (OD-2; W13-F5, F6, F7 and F9 block it), W13's §10 measurement and W13-F10; #434's player-control blocker, whose diagnosis has no recorded result; #440's B′ decisions D2, D4 and D6.
 
 > **UPDATED (prior) November 18, 2026 (#440 A′ characterized and Unity-validated), v1.50:** Six-seed before/after characterization (D1, descriptive, `docs/tracking/evidence/ball-loose-a-prime-char-20261118/`): same-frame carrier regain 24/24 before (`7ccc847f`) → 0/29 after (`e3029d1a`); every knocked ball moving at frame end (median 1.90 m/s). First-regain bins after: f+1..3 7, f+4..12 9, f+13..24 2, f+25..60 1, no regain in the window 10, censored 0; cumulative f+24 18/29. The fence mostly defers the carrier's regain rather than turning the ball over (tackler acquisitions 9 → 3); reported, not gated. Pinned-host Unity 6000.4.9f1 at `e3029d1a` (`docs/tracking/evidence/host-a-prime-e3029d1a-20261118/`): compile 0 `error CS`; MatchEngine 1,075 passed / 0 failed / 17 skipped / 1 inconclusive (the standing tackle-share case), DefensiveAI 153 / 0 / 28; all 14 `MatchEngineBallLooseReleaseTests` and 19 `TackleOutcomeResolverTests` pass. W2 stays wired and active.
 
@@ -67,14 +71,12 @@
 
 > **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
 
-> **UPDATED (prior) October 20, 2026 (local #441 candidate), v1.40:** The corrected six-seed
-
 > arrival census records one geometric passage among 36,961,525 overlapping hypothetical
 > starts. Neither witness start is selectable under the existing 10 Hz/first-eligible-start
 > contract on the observed trajectories. A one- or two-physics-frame delayed take-off remains
 > a possible #10 timing-contract change, without composed contact proof. The initial local
-> zero remains withdrawn. #441 and W9 stay open. Develop #441 independently of W8 C, but
-> land only after C measurement; #434/#440 retain D-05. Definitions, limits and preserved
+> zero remains withdrawn. The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) supersedes this pre-C
+> status for current sequencing. October definitions, limits and preserved
 > evidence: [#441 counters §6.4–§6.5](header-reachability-441-counters.md#64-run-3--october-20-2026-corrected-local-arrival-census)
 > and [evidence package](evidence/header441-reachability-20261020/README.md).
 
@@ -90,7 +92,7 @@
 > frame in 1,721). Over the observed jump the ball never comes within 1 m horizontally in 1,528, and at its closest
 > horizontal approach it is above the head band in 1,740. These are closest-pass measures, not apex positions.
 > Not measured: missed genuine aerial arrivals and launch origin.
-> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.15) §6.
+> #441 stays open and still precedes W9; KD-W1 holds. Record: `header-reachability-441-counters.md` v0.4 (since advanced to v0.16) §6.
 >
 > **UPDATED (prior) October 10, 2026 (v1.35):** #441 counters landed, observation only: an internal, null-by-default
 > `HeadingMechanics` observer and the env-gated `header-reachability` measurement-lane instrument, with a
@@ -790,7 +792,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 4 | ~~**W4** keeper perception~~ ✅ **WIRED Sep 13, 2026** (PR #403) | Live all-body LOS now gates DT `SAVE` without contaminating the W1 raw-`SaveArmed` rush veto; real body deflections restart reaction timing in the same Resolve call through a dedicated non-shot seam. No new serialized state or event ABI. W12 subsequently landed as sequence row 5. |
 | 5 | ~~**W12** gate-firing instrument~~ ✅ **LANDED Sep 14, 2026** (PR #410) | Pre-#398 runtime census + separate unread-serialized-field sweep are recorded; the pass feed is dark before W5 by measurement, not inference. |
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
-| 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9; develop independently of W8 C now, land after its measurement. |
+| 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9. The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) records the missed arrival and the remaining timing constraint. |
 | 8 | **W8 B → C**, then **W9**, **W10** | B landed in PR #511; C law/measurement remains. Preserve A→B/B→C isolation and consumer-specific spec/host gates in roadmap §5.1. |
 | 9 | **W13** defender-marking wiring — **W13.0 MERGED (PR #545); W13.1 / W13.1c LANDED ON BRANCH, UNMERGED; switch default OFF** | Frozen-lane identity + §10 measurement, Unity compile, stand-off calibration and the flip (OD-2) are pending; it is behind `MarkMovementEnabled`, so it does not enter the B→C window until flipped. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
@@ -886,6 +888,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.52 | 2026-11-20 | — | Point W3 and the landing sequence at the post-C #441 result in §6.7, with the October result retained as historical evidence. #441 remains a W9 prerequisite. |
 | 1.51 | 2026-11-19 | — | Status sync: #434 (PR #543), W13.1/W13.1c (PR #547) and #440 A′ (PRs #544, #549) recorded as merged; W13 heading updated. Documentation only. |
 | 1.50 | 2026-11-18 | — | #440 A′: D1 six-seed characterization (0/29 same-frame regains; regain mostly deferred, reported not gated) and pinned-host Unity pass recorded. |
 | 1.49 | 2026-11-18 | — | #440 A′ implemented (ERR-014-011): geometry knock + same-frame carrier fence; correctness tests; characterization and Unity pending. |
