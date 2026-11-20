@@ -16,17 +16,25 @@ from pathlib import Path
 PROJECT = Path(__file__).resolve().parents[2]
 ASSEMBLY = "TacticalDirector.UiToolkitSpike.Tests"
 FIXTURE = f"{ASSEMBLY}.UiToolkitSpikeTests."
-EXPECTED_TESTS = (
-    "DetachedCloneDeclaresFocusableControlsInOrder",
+WINDOW_TESTS = (
     "TabMovesFocusForwardAndBackwardInAnEditorPanel",
     "UssDoublesTextSizeAndReflowsInAnEditorPanel",
 )
+EXPECTED_TESTS = ("DetachedCloneDeclaresFocusableControlsInOrder", *WINDOW_TESTS)
+# This is the reason supplied by RequireRootLayout in the spike's Editor tests.
+BATCH_LAYOUT_UNAVAILABLE = "T0a batch Editor window layout unavailable."
+UNITY_TEST_FAILURE_EXIT = 2
+INTERACTIVE_REQUIRED_EXIT = 3
 EDITOR_BANNER = re.compile(r"(?:Version is '|Initialize engine version: )([^\s]+ \([0-9a-f]+\))")
 COMPILER_ERROR = re.compile(r"\berror CS\d+\b|scripts have compiler errors", re.IGNORECASE)
 
 
 def git(*args):
     return subprocess.check_output(["git", "-C", str(PROJECT), *args], text=True).strip("\n")
+
+
+def has_script_mount():
+    return (PROJECT / "Assets" / "Scripts").resolve() == PROJECT / "src"
 
 
 def inspect_results(path, receipt):
@@ -40,14 +48,27 @@ def inspect_results(path, receipt):
         receipt["failures"].append("Expected Unity's NUnit test-run XML.")
         return
 
-    tests = {case.get("fullname"): case.get("result") for case in run.iter("test-case")}
+    tests = {case.get("fullname"): case for case in run.iter("test-case")}
     receipt["test_result"] = run.get("result")
-    receipt["tests"] = {name: tests.get(FIXTURE + name, "Missing") for name in EXPECTED_TESTS}
-    if run.get("result") != "Passed":
-        receipt["failures"].append(f"Unity EditMode run result: {run.get('result', 'Missing')}.")
-    for name, result in receipt["tests"].items():
-        if result != "Passed":
+    receipt["tests"] = {}
+    for name in EXPECTED_TESTS:
+        case = tests.pop(FIXTURE + name, None)
+        result = case.get("result", "Missing") if case is not None else "Missing"
+        receipt["tests"][name] = result
+        if (result == "Inconclusive" and name in WINDOW_TESTS and
+                BATCH_LAYOUT_UNAVAILABLE in case.findtext("reason/message", default="")):
+            receipt["interactive_required"].append(name)
+        elif result != "Passed":
             receipt["failures"].append(f"{name}: {result}.")
+
+    for name, case in tests.items():
+        if case.get("result") != "Passed":
+            receipt["failures"].append(f"{name}: {case.get('result', 'Missing')}.")
+
+    run_result = run.get("result", "Missing")
+    is_inconclusive = run_result.split(":", 1)[0] == "Inconclusive"
+    if run_result != "Passed" and not (is_inconclusive and receipt["interactive_required"]):
+        receipt["failures"].append(f"Unity EditMode run result: {run_result}.")
 
 
 def inspect_log(path, pinned_version, receipt):
@@ -67,13 +88,13 @@ def inspect_log(path, pinned_version, receipt):
         receipt["failures"].append("Unity logged C# compilation errors. See editor.log.")
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--editor", required=True, type=Path, help="Path to the pinned Unity Editor executable")
-    editor = parser.parse_args().editor.resolve()
+    editor = parser.parse_args(argv).editor.resolve()
     if not editor.is_file():
         parser.error(f"Unity Editor executable does not exist: {editor}")
-    if (PROJECT / "Assets" / "Scripts").resolve() != PROJECT / "src":
+    if not has_script_mount():
         parser.error("Create the Assets/Scripts junction or symlink into src as shown in Assets/README.md.")
 
     version_file = PROJECT / "ProjectSettings" / "ProjectVersion.txt"
@@ -82,6 +103,7 @@ def main():
         parser.error(f"Could not read the pinned Unity version from {version_file}.")
     pinned_version = match[1]
     commit = git("rev-parse", "HEAD")
+    git_status_before = git("status", "--short")
     started = datetime.now(timezone.utc)
     artifact_root = PROJECT / "artifacts" / "ui-toolkit-t0a"
     artifact_root.mkdir(parents=True, exist_ok=True)
@@ -96,19 +118,29 @@ def main():
         "host_platform": platform.platform(),
         "started_utc": started.isoformat(timespec="seconds"),
         "project_unity_version": pinned_version,
-        "git_status_before": git("status", "--short"),
+        "git_status_before": git_status_before,
+        "dirty": bool(git_status_before),
         "command": command,
         "failures": [],
+        "interactive_required": [],
     }
+    if receipt["dirty"]:
+        print(f"Warning: checkout has uncommitted changes. Commit {commit[:8]} is the base of the tested tree.",
+              file=sys.stderr, flush=True)
     print(f"T0a batch receipt directory {output}", flush=True)
     try:
-        receipt["unity_exit_code"] = subprocess.run(command, cwd=PROJECT, check=False).returncode
-        if receipt["unity_exit_code"] != 0:
-            receipt["failures"].append(f"Unity exited with code {receipt['unity_exit_code']}.")
+        unity_exit = subprocess.run(command, cwd=PROJECT, check=False).returncode
+        receipt["unity_exit_code"] = unity_exit
         inspect_log(log, pinned_version, receipt)
         inspect_results(results, receipt)
+        # The Unity Test Framework's command line counts inconclusive tests as failed for its exit code.
+        only_window_deferrals = receipt["interactive_required"] and not receipt["failures"]
+        if unity_exit != 0 and not (unity_exit == UNITY_TEST_FAILURE_EXIT and only_window_deferrals):
+            receipt["failures"].append(f"Unity exited with code {unity_exit}.")
     except OSError as error:
         receipt["failures"].append(f"Could not launch Unity: {error}")
+    except KeyboardInterrupt:
+        receipt["failures"].append("The Unity run was interrupted.")
     finally:
         try:
             receipt["git_status_after"] = git("status", "--short")
@@ -123,6 +155,11 @@ def main():
         print(message, file=sys.stderr)
     if receipt["failures"]:
         return 1
+    if receipt["interactive_required"]:
+        print("Run interactively in the Unity EditMode Test Runner:")
+        for name in receipt["interactive_required"]:
+            print(f"- {name}")
+        return INTERACTIVE_REQUIRED_EXIT
     print("Unity ran all three T0a EditMode checks successfully. See editor.log for import diagnostics.")
     return 0
 

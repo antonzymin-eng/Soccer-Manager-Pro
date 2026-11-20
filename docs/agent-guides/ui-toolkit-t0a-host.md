@@ -7,10 +7,14 @@ Created November 20, 2026 for the editor-only feasibility spike. Use the pinned 
 From the spike checkout on the pinned host, with its `Assets/Scripts` junction in place and the Editor closed for that checkout, run the preflight with Python 3. Use the actual path to the pinned Editor installation.
 
 ```powershell
-py -3 tools/unity-ci/run-ui-toolkit-t0a.py --editor "C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Unity.exe"
+py -3 tools/ui-toolkit-t0a/preflight.py --editor "C:\Program Files\Unity\Hub\Editor\6000.4.9f1\Editor\Unity.exe"
 ```
 
-Unity imports and compiles the spike before running its three EditMode tests. The runner creates a fresh directory under `artifacts/ui-toolkit-t0a/` with `editor.log`, `editmode.xml` if Unity writes it, and `receipt.json` containing the commit, Editor version, working-tree status, and result. A nonzero exit points to an Editor, compile, or test failure. Review `editor.log` for UXML, USS, and TSS import diagnostics and review any importer `.meta` changes before collecting Play Mode evidence.
+Unity imports and compiles the spike before running its three EditMode tests. The runner creates a fresh directory under `artifacts/ui-toolkit-t0a/` with `editor.log`, `editmode.xml` if Unity writes it, and `receipt.json`. If the checkout has uncommitted changes at launch, the runner warns and records `dirty: true`. In that case the commit identifies the base of the tested tree, and `git_status_before` records the changed paths. Review `editor.log` for UXML, USS, and TSS import diagnostics and review any importer `.meta` changes before collecting Play Mode evidence.
+
+- **Exit 0** means all three EditMode tests passed.
+- **Exit 1** means the Editor, compile, or test checks reported a failure. Inspect `failures` and the original Unity exit code in `receipt.json`.
+- **Exit 3** means the available checks passed and batch mode never laid out the utility window used by the tests listed in `interactive_required`. Preserve the batch receipt and rerun those tests in the interactive Editor.
 
 For a run without the batch script, open the spike checkout in the pinned Editor, inspect the Console after import and compilation, then use the Test Runner procedure below.
 
@@ -29,7 +33,7 @@ For a run without the batch script, open the spike checkout in the pinned Editor
 
 ## EditMode and decision record
 
-Use the preflight's `editmode.xml`, or run `TacticalDirector.UiToolkitSpike.Tests` in **Window → General → Test Runner → EditMode**. Record each result for UXML, USS, and TSS loading and detached tree structure, synthetic Tab and Shift+Tab dispatch in a live Editor panel, and computed styles and reflow. If batch execution cannot lay out the utility window, retain its receipt and run the same fixture in the interactive Editor. Physical keys, the runtime EventSystem, pointer routing, and screen composition are Play Mode observations.
+Use the preflight's `editmode.xml` and rerun any `interactive_required` tests in **Window → General → Test Runner → EditMode → TacticalDirector.UiToolkitSpike.Tests**. Record each result for UXML, USS, and TSS loading and detached tree structure, synthetic Tab and Shift+Tab dispatch in a live Editor panel, and computed styles and reflow. Physical keys, the runtime EventSystem, pointer routing, and screen composition are Play Mode observations.
 
 | Receipt item | Record from the pinned host |
 |---|---|
@@ -41,3 +45,5 @@ Use the preflight's `editmode.xml`, or run `TacticalDirector.UiToolkitSpike.Test
 | EditMode | Test Runner results for clone structure, synthetic Tab traversal, and Editor panel reflow |
 
 Keep the throwaway probe on the spike branch. Record the host receipts and the **Go** or **No-go** in the UI Toolkit design supplement, with the observed keyboard behavior and the cost of any ownership changes. Factor in the work needed to reproduce the isolated keyboard behavior alongside live S0 updates. T0a's two-session timebox applies to the PM-2 career lane as recorded in §4.1 of the design reviewed in PR #560. [T0a and PM-2 fallback rules](https://github.com/antonzymin-eng/Soccer-Manager-Pro/blob/43d13e42edc6ac5aeba8a85769aee24b94c47398/docs/tracking/ui-toolkit-presentation-design.md#41-pm-2-dependency-and-fallbacks)
+
+To reproduce the Python runner checks on any machine, use `python -m unittest discover -s tools/ui-toolkit-t0a -v`. This runs against simulated Editor output.

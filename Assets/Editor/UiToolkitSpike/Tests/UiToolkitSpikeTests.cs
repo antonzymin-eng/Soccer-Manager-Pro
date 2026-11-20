@@ -1,6 +1,6 @@
 // File:     Assets/Editor/UiToolkitSpike/Tests/UiToolkitSpikeTests.cs
 // Created:  2026-11-20
-// Modified: 2026-11-20 (include the runtime style assets in the detached check)
+// Modified: 2026-11-20 (distinguish a missing batch Editor layout from a failed UI assertion)
 // Author:   —
 // Spec:     UI Toolkit presentation design §4, T0a (PR #560)
 // Purpose:  Establish what Unity EditMode can check on the spike's UXML and USS.
@@ -19,6 +19,7 @@ namespace TacticalDirector.UiToolkitSpike.Tests
     public sealed class UiToolkitSpikeTests
     {
         private const string SPIKE_ASSETS = "Assets/Editor/UiToolkitSpike/";
+        private const string BATCH_LAYOUT_UNAVAILABLE = "T0a batch Editor window layout unavailable.";
 
         /// <summary>Clones the runtime markup without a panel and inspects its authored focus stops.</summary>
         [Test]
@@ -52,9 +53,10 @@ namespace TacticalDirector.UiToolkitSpike.Tests
                 VisualElement first = ordered[0];
                 double deadline = EditorApplication.timeSinceStartup + 5;
                 while (EditorApplication.timeSinceStartup < deadline &&
-                    (first.panel == null || !(first.layout.height > 0f)))
+                    (!HasRootLayout(root) || !(first.layout.height > 0f)))
                     yield return null;
 
+                RequireRootLayout(root);
                 Assert.That(first.panel, Is.Not.Null, "The spike must be attached to a live Editor panel.");
                 Assert.That(first.layout.height, Is.GreaterThan(0f), "The spike must have completed its first layout.");
                 first.Focus();
@@ -90,12 +92,15 @@ namespace TacticalDirector.UiToolkitSpike.Tests
             {
                 TemplateContainer root = ShowSpike(window);
                 var rail = root.Q<VisualElement>("spike-rail");
+                Assert.That(rail, Is.Not.Null);
                 var sample = rail.Q<Label>("long-copy");
+                Assert.That(sample, Is.Not.Null);
                 double deadline = EditorApplication.timeSinceStartup + 5;
                 while (EditorApplication.timeSinceStartup < deadline &&
-                    (sample.resolvedStyle.fontSize != 16f || !(sample.layout.height > 0f)))
+                    (!HasRootLayout(root) || sample.resolvedStyle.fontSize != 16f || !(sample.layout.height > 0f)))
                     yield return null;
 
+                RequireRootLayout(root);
                 Assert.That(sample.resolvedStyle.fontSize, Is.EqualTo(16f));
                 Assert.That(sample.layout.height, Is.GreaterThan(0f));
                 float originalWidth = sample.layout.width;
@@ -115,6 +120,19 @@ namespace TacticalDirector.UiToolkitSpike.Tests
             {
                 window.Close();
             }
+        }
+
+        // ShowSpike gives this root a size independent of the USS and any child's layout.
+        private static bool HasRootLayout(VisualElement root) =>
+            root.panel != null && root.layout.width > 0f && root.layout.height > 0f;
+
+        private static void RequireRootLayout(VisualElement root)
+        {
+            if (HasRootLayout(root))
+                return;
+            if (Application.isBatchMode)
+                Assert.Inconclusive(BATCH_LAYOUT_UNAVAILABLE);
+            Assert.Fail("The spike's Editor window did not complete its first layout.");
         }
 
         private static void SendTab(VisualElement focused, EventModifiers modifiers)
@@ -174,3 +192,4 @@ namespace TacticalDirector.UiToolkitSpike.Tests
 // | 0.1     | 2026-11-20 | —      | UXML structure and Editor-panel style/layout checks. |
 // | 0.2     | 2026-11-20 | —      | Dispatch Tab and Shift+Tab in a live Editor panel and assert the focused controls. |
 // | 0.3     | 2026-11-20 | —      | Check that Unity loads the USS and runtime TSS used by the probe. |
+// | 0.4     | 2026-11-20 | —      | Defer Editor window checks when batch mode never lays out the sized root. |
