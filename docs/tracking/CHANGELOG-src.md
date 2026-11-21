@@ -14,7 +14,9 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 21, 2026 — **v2.245 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.25:
+> **Last Updated:** November 21, 2026 — **v2.246 — ERR-002-001 review amendment (PR #562).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.18 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.1 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`.
+
+> **Last Updated (prior):** November 21, 2026 — **v2.245 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.25:
 - `SelectMarkTargetVelocity` replaces `SelectMarkTargetSpeed`;
 - `MarkContactFloorM` (instance and pure static) floors the stand-off;
 - the v30 trailing tracking block is written and read;
@@ -2980,6 +2982,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.246 | 2026-11-21 | — | ERR-002-001 review amendment (PR #562): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`). |
 | 2.245 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
 | 2.244 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
 | 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |

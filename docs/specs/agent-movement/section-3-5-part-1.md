@@ -3,13 +3,23 @@
 **Purpose:** Defines all classes, structs, and enums used by the Agent Movement System. This is the authoritative reference for data contracts between the movement system and external systems (Collision System, Perception, Animation, Tactical AI). Every public-facing data structure referenced in Sections 3.1-3.4 is defined here with full field documentation and usage notes.
 
 **Created:** February 10, 2026, 3:45 PM PST  
-**Updated:** November 21, 2026 (v1.5 — ERR-002-001: §3.5.3.1 tracking command)  
-**Version:** 1.5  
+**Updated:** November 21, 2026 (v1.6 — ERR-002-001 review amendment: a tracking agent leaves DECELERATING at the tracked speed)  
+**Version:** 1.6  
 **Status:** Draft — ERR-007 resolved (AM-002-001 applied)  
 **Dependencies:** Section 3.1 (State Machine), Section 3.2 (Locomotion & PerformanceContext), Section 3.3 (Directional Movement), Section 3.4 (Turning & Momentum)
 
 ---
 ---
+
+## CHANGELOG v1.5 -> v1.6 (November 21, 2026)
+
+**ERR-002-001 review amendment (PR #562):** §3.5.3.1 step 7's DECELERATING bullet said the §3.1 machine re-enters
+JOGGING only once `commandSpeed > speed + CommandSpeedHysteresis`. The bullet's own brake floor holds speed at the
+tracked speed, so that exit was unreachable for an agent on a steady point: it stayed DECELERATING indefinitely and
+took JOGGING-rate fatigue at any speed, including sprint speed. A tracking agent in DECELERATING whose command no
+longer demands braking (`commandSpeed ≥ speed − CommandSpeedHysteresis`) now re-enters the running band of its
+speed. This is a tracking-only exception to §3.1.4's DECELERATING exits; non-tracking agents are unchanged. No new
+constant.
 
 ## CHANGELOG v1.4 -> v1.5 (November 21, 2026)
 
@@ -940,8 +950,15 @@ point, which is moving at this velocity" with a band alone.
      reached, not the acceleration available to reach it); above it, brake at `MinDecelerationFloor` down to
      `commandSpeed`.
    - **DECELERATING:** the §3.2.5 braking step, floored at `min(speed, commandSpeed)` — a tracking agent brakes to the
-     tracked speed, not to rest, and never accelerates while DECELERATING (the §3.1 machine re-enters JOGGING once
-     `commandSpeed > speed + CommandSpeedHysteresis`).
+     tracked speed, not to rest, and never accelerates while DECELERATING. The floor holds speed at the tracked speed,
+     so the §3.1 machine cannot rely on `commandSpeed > speed + CommandSpeedHysteresis` to end braking. For a
+     tracking command it also leaves DECELERATING once the command no longer demands braking,
+     `commandSpeed ≥ speed − CommandSpeedHysteresis` (v1.6, `ERR-002-001` review amendment). Below `JogExit` that
+     is the existing WALKING exit. Otherwise it enters SPRINTING if `speed > SprintEnter` and
+     `SprintReservoir ≥ SprintReservoirReentry`, else JOGGING if `AerobicPool ≥ AerobicJogFloor` (the same gates as
+     the re-acceleration exit). Worked example: an agent braked onto a point moving at 6.5 m/s
+     (`commandSpeed` = 6.5 m/s, speed = 6.5 m/s, 6.5 ≥ 6.5 − 0.5) with a full reservoir re-enters SPRINTING
+     (6.5 > 5.8 m/s) and drains the sprint reservoir. Before v1.6 it stayed DECELERATING with JOGGING-rate fatigue.
    - IDLE / WALKING / STUMBLING / GROUNDED: unchanged (they already move toward `min(topSpeed, commandSpeed)` or
      ignore it).
 
