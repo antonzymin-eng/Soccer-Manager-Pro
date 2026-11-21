@@ -61,7 +61,7 @@ namespace TacticalDirector.MatchEngine
             bool header = !File.Exists(output);
             using var w = new StreamWriter(output, append: true);
             if (header)
-                w.WriteLine("seed,case,arm,ticks,goals0,goals1,shots0,shots1,passes0,passes1,poss0,poss1,tackleWon,tackleLoose,tackleFoul,tackleMissed,yellows,sentOff,markAgentStrides,groundedAgentTicks,guardLockEntries,nonFinite,wallSeconds,digest");
+                w.WriteLine("seed,case,arm,ticks,goals0,goals1,shots0,shots1,passes0,passes1,poss0,poss1,tackleWon,tackleLoose,tackleFoul,tackleMissed,yellows,sentOff,markAgentStrides,groundedAgentTicks,guardLockEntries,nonFinite,wallSeconds,digest,groundedEntries,groundedCollision,groundedSlide,groundedOther,groundedMarker,groundedDefending,groundedAttacking,groundedLoose");
 
             foreach (ulong seed in seeds)
                 foreach (int c in cases)
@@ -96,6 +96,10 @@ namespace TacticalDirector.MatchEngine
             int[] shots = new int[2], passes = new int[2], poss = new int[2];
             bool[] shotBusy = new bool[n], passBusy = new bool[n], wasLocked = new bool[n];
             long markAgentStrides = 0, groundedAgentTicks = 0, lockEntries = 0, nonFinite = 0;
+            // Knockdown anatomy: each transition INTO GROUNDED, by reason, by whether the agent held a mark target at the last
+            // stride, and by his team's possession state at that tick (defending / attacking / ball loose).
+            long gEntries = 0, gCollision = 0, gSlide = 0, gOther = 0, gMarker = 0, gDef = 0, gAtt = 0, gLoose = 0;
+            bool[] wasGrounded = new bool[n], hadMark = new bool[n];
             var sw = Stopwatch.StartNew();
             for (int tick = 0; tick < ticks; tick++)
             {
@@ -113,13 +117,30 @@ namespace TacticalDirector.MatchEngine
                     passBusy[a] = !pIdle;
 
                     AgentState s = e.TestOnly_AgentSnapshot(a);
-                    if (s.CurrentState == AgentMovementState.GROUNDED) groundedAgentTicks++;
+                    bool grounded = s.CurrentState == AgentMovementState.GROUNDED;
+                    if (grounded) groundedAgentTicks++;
+                    if (grounded && !wasGrounded[a])
+                    {
+                        gEntries++;
+                        if (s.GroundedReason == GroundedReason.COLLISION) gCollision++;
+                        else if (s.GroundedReason == GroundedReason.SLIDING_TACKLE) gSlide++;
+                        else gOther++;
+                        if (hadMark[a]) gMarker++;
+                        if (holder < 0) gLoose++;
+                        else if (e.AgentTeamId(holder) == e.AgentTeamId(a)) gAtt++;
+                        else gDef++;
+                    }
+                    wasGrounded[a] = grounded;
                     bool locked = s.OscillationGuard.GetState().IsLocked;
                     if (locked && !wasLocked[a]) lockEntries++;
                     wasLocked[a] = locked;
                     if (!float.IsFinite(s.Position.x) || !float.IsFinite(s.Position.y) || !float.IsFinite(s.Velocity.x) || !float.IsFinite(s.Velocity.y))
                         nonFinite++;
-                    if (stride && e.TestOnly_MarkTarget(a).HasTarget) markAgentStrides++;
+                    if (stride)
+                    {
+                        hadMark[a] = e.TestOnly_MarkTarget(a).HasTarget;
+                        if (hadMark[a]) markAgentStrides++;
+                    }
                 }
             }
             sw.Stop();
@@ -140,7 +161,11 @@ namespace TacticalDirector.MatchEngine
                 yellows.ToString(CultureInfo.InvariantCulture), sentOff.ToString(CultureInfo.InvariantCulture),
                 markAgentStrides.ToString(CultureInfo.InvariantCulture), groundedAgentTicks.ToString(CultureInfo.InvariantCulture),
                 lockEntries.ToString(CultureInfo.InvariantCulture), nonFinite.ToString(CultureInfo.InvariantCulture),
-                sw.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture), digest);
+                sw.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture), digest,
+                gEntries.ToString(CultureInfo.InvariantCulture), gCollision.ToString(CultureInfo.InvariantCulture),
+                gSlide.ToString(CultureInfo.InvariantCulture), gOther.ToString(CultureInfo.InvariantCulture),
+                gMarker.ToString(CultureInfo.InvariantCulture), gDef.ToString(CultureInfo.InvariantCulture),
+                gAtt.ToString(CultureInfo.InvariantCulture), gLoose.ToString(CultureInfo.InvariantCulture));
         }
 
         private static ulong[] ParseSeeds(string s)
@@ -166,4 +191,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-11-21 | —      | W13 default-flip measurement instrument (env-gated, descriptive; off vs on per seed / #434 case). |
+// | 1.1     | 2026-11-21 | —      | Knockdown anatomy columns: GROUNDED entries by reason, marker / defending / attacking / loose. |
 #endregion
