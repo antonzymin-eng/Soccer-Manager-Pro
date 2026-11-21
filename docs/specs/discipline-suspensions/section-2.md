@@ -1,7 +1,8 @@
 # Discipline & Suspensions #44 — Section 2: Requirements, Data Structures, Failure Modes
 
 **Created:** July 24, 2026
-**Last Updated:** October 19, 2026 (v0.20 — ERR-031-005: FR-DC-013's migrate branch is satisfied by stable ids)
+**Last Updated:** November 20, 2026 (v0.21 — FR-DC-019 names the live #30 quick-sim draw owner.)
+**Last Updated (prior):** October 19, 2026 (v0.20 — ERR-031-005: FR-DC-013's migrate branch is satisfied by stable ids)
 **Last Updated (prior):** August 16, 2026, round 5 (v0.19 — annotation only, M1 of a round-5 reviewed-findings
 pass. v0.18's "one of four/six sites" and "`AvailabilityComposition.cs` (two sites)" undercount: the
 round-4 diff corrected THREE sites in that file, not two, and missed a NINTH entirely —
@@ -148,7 +149,7 @@ re-scoped off "the engine-resolved fixture" to every resolved squad on both reso
 fail-loud withdrawn in favour of #30 §2.3 F9, with the suspension-as-stricter-reinstatement-tier
 decision recorded)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.20
+**Version:** 0.21
 **Status:** APPROVED
 
 ---
@@ -175,7 +176,7 @@ decision recorded)
 | FR-DC-016 | The serialized block MUST contain no RNG-state field of any kind (#44 has none — the read-only class). | MUST | §1.5 |
 | FR-DC-017 | At `RollToNextSeason`: `Yellows` MUST reset to 0; **unserved `BanMatchesRemaining` MUST carry**; genesis is the empty state; a load MUST reconstruct and never reset a ban. An entry that reaches `(Yellows = 0, BanMatchesRemaining = 0)` — at the boundary sweep **or mid-season** (a served ban with no residual yellows) — MUST be **dropped immediately** (canonical minimal representation: an all-zero entry and an absent entry must never both be encodable states, or two equivalent runs serialize different bytes). | MUST | KD-8 |
 | FR-DC-018 | A season with no threshold-crossing cards MUST be byte-identical to pre-#44 **except #44's own sub-blob** (sub-threshold yellows accrue there; the filter passes through). | MUST | KD-7 |
-| FR-DC-019 | #44 MUST register **no** RNG stream, domain tag, or `SubsystemOrdinals` entry (the #37/#49 read-only class — a positive property, no #16 row needed); quick-sim card synthesis, if ever built, is a **#30-owned** extension on #30's `0x22` stream, never a #44 stream. | MUST | §1.5 |
+| FR-DC-019 | #44 MUST register **no** RNG stream, domain tag, or `SubsystemOrdinals` entry (the #37/#49 read-only class — a positive property, no #16 row needed); quick-sim card synthesis is a **#30-owned** keyed extension on #30's `0x22` domain, never a #44 stream. | MUST | §1.5 |
 | FR-DC-020 | Every tally/threshold/ban field MUST be integer; #44 MUST introduce **no** float. | MUST | §1.5 |
 | FR-DC-021 | Same fixture events ⇒ same tallies, bans, and filtered squads — two-run deterministic; the fold's result MUST be independent of when the tap records are consumed within a tick (canonical order only). | MUST | §1.5 |
 | FR-DC-022 | #44 MUST build no #38/#43/#46 interface (FR-LW-031); availability/suspension views for #38 are read-only value copies. | MUST | KD-4 |
@@ -407,4 +408,5 @@ chosen.
 | 0.18 | 2026-08-16, even later still | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (Medium, residual wording only — one of four/six sites, per #30 `section-3.md` v2.10).** The beyond-cap corner bullet said the fallback "self-heals ... the pass degrades to an ascending-rank greedy with no minimality claim and self-heals as each commit lowers the count" — true only of the SEARCH resuming once `m` falls back inside the bound; false of the GUARANTEE, since a candidate this branch commits is never revisited, so the composition can remain above the minimum for that fixture even after the count recovers. Reworded to state both halves. No FR row, guarantee text, or code changed here — this section states no rule of its own, only #44's mirror of #30's. Same wording fixed in the same pass at #30 `section-3.md` §3.4 (the Cap bullet and residual (ii)), `AvailabilityComposition.cs` (two sites) and `SeasonSaveConstants.cs`; §7.2's mirror corrected in the same commit (`section-7.md` v0.11). |
 | 0.19 | 2026-08-16, round 5 | — | **Annotation only (M1, round-5 reviewed-findings pass).** The row above's "one of four/six sites" and "`AvailabilityComposition.cs` (two sites)" undercount the round-4 sweep: that diff corrected THREE sites in `AvailabilityComposition.cs` (~152, ~421, and the inline comment inside `ChooseSuspendedCandidate`'s Cap branch at ~528), not two, and missed a NINTH site entirely — `AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment still carried the pre-fix "self-heals" sentence in a file that same commit edited. Real corrected-site total: **nine** — #30 `section-3.md` §3.4's Cap bullet and residual (ii); `AvailabilityComposition.cs` ×3; `SeasonSaveConstants.cs`; this section; `section-7.md`; the test comment. Fixed at the test file (its v1.4) and annotated in place, not rewritten, at every other record of the undercount (`section-3.md` v2.11, `SeasonSaveConstants.cs` v1.11, `AvailabilityComposition.cs` v1.9, `section-7.md` v0.12, `spec-error-log.md`'s `ERR-030-046` annotation). No FR row, guarantee, or code changed here. |
 | 0.20 | 2026-10-19 | — | **ERR-031-005** (annotation): FR-DC-013's re-key migration is satisfied by construction — #31 transfers keep the player's id, so the tally follows him; the retirement drop remains, delivered at #28's season boundary. |
+| 0.21 | 2026-11-20 | — | FR-DC-019 names the live #30 quick-sim draw owner. |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/season-save/tests/RoundResolutionModelTests.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-11-20 (#44 T3 review: explicit card probabilities and straight-red outcome.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4.1 (FR-SN-013a), FR-SN-027, §5.4 (T-SN-CAL-003c);
 //           League Bootstrap design supplement KD-7; Code Standards #20
@@ -8,7 +8,11 @@
 //           per-input key sensitivity, the exp-shaped lambda with its safety clamps, the inverse-CDF
 //           quantile's endpoints and cap, home-advantage asymmetry, and the fail-loud non-finite gate.
 
+using System;
+
 using NUnit.Framework;
+
+using TacticalDirector.Discipline;
 
 namespace TacticalDirector.SeasonSave.Tests
 {
@@ -19,6 +23,42 @@ namespace TacticalDirector.SeasonSave.Tests
         private const uint Day = 42u;
 
         private static Fixture Fx(int round, int home, int away) => new Fixture(round, home, away);
+
+        [TestCase(-0.01f, 0f)]
+        [TestCase(0f, -0.01f)]
+        [TestCase(0.75f, 0.5f)]
+        [TestCase(float.NaN, 0f)]
+        [TestCase(0f, float.NaN)]
+        [TestCase(float.PositiveInfinity, 0f)]
+        [TestCase(0f, float.PositiveInfinity)]
+        public void RequireCardProbabilities_InvalidInputs_Throw(float yellow, float red)
+        {
+            Assert.Throws<InvalidOperationException>(() => RoundResolutionModel.RequireCardProbabilities(yellow, red));
+        }
+
+        [TestCase(0f, 0f)]
+        [TestCase(1f, 0f)]
+        [TestCase(0f, 1f)]
+        [TestCase(0.25f, 0.75f)]
+        public void RequireCardProbabilities_ValidBoundaries_AreAccepted(float yellow, float red)
+        {
+            Assert.DoesNotThrow(() => RoundResolutionModel.RequireCardProbabilities(yellow, red));
+        }
+
+        [Test]
+        public void SynthesizeCards_StraightRedsApplyTheFullBanToBothSides()
+        {
+            Fixture fixture = Fx(0, 5, 11);
+            CardLedgerFold fold = RoundResolutionModel.SynthesizeCards(
+                in fixture, Seed, 0, new[] { 100 }, new[] { 200 }, yellow: 0f, red: 1f);
+            var state = new DisciplineState();
+
+            Assert.That(fold.Commit(new DisciplineRules(state)), Is.EqualTo(2));
+            Assert.That(state.EntryAt(0), Is.EqualTo(new DisciplineEntry(
+                100, DisciplineConstants.LeagueCompetitionKey, 0, DisciplineConstants.StraightRedBanMatches)));
+            Assert.That(state.EntryAt(1), Is.EqualTo(new DisciplineEntry(
+                200, DisciplineConstants.LeagueCompetitionKey, 0, DisciplineConstants.StraightRedBanMatches)));
+        }
 
         // ── Determinism (FR-SN-013a) ────────────────────────────────────────────────────────
 
@@ -275,4 +315,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // |         |            |        | per-input key sensitivity, lambda shape/clamps, inverse-CDF         |
 // |         |            |        | endpoints/cap/mean, strength + home-advantage direction, non-finite |
 // |         |            |        | gate, and the #16 domain-tag mirror lock.                           |
+// | 1.1 | 2026-11-20 | — | #44 T3 review: check probability boundaries and exercise straight reds with explicit rates. |
 #endregion
