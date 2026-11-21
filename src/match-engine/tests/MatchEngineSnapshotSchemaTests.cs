@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/MatchEngineSnapshotSchemaTests.cs
-// Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
+// Modified: 2026-11-21 (W13-F5/F6/F7: v30 pin + tracking-field digest probe)
+// Modified (prior): 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
 // Modified: 2026-10-15 (W8 B schema v26)
 // Created:  2026-06-16
@@ -26,6 +27,7 @@ using UnityEngine;
 using TacticalDirector.AgentMovement;
 using TacticalDirector.BallPhysics;
 using TacticalDirector.DecisionTree;
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.PassMechanics;
 
 namespace TacticalDirector.MatchEngine
@@ -77,8 +79,9 @@ namespace TacticalDirector.MatchEngine
             // v25 pending substitution queue, next sequence, and Law 3 window counters;
             // v26 accepted #5 goalkeeper-distribution wait latch;
             // v27 own-release handling restriction, queued offence/contact and indirect taker;
-            // v28 exact per-keeper 64-bit hand-control start frame.
-            Assert.AreEqual(29u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            // v28 exact per-keeper 64-bit hand-control start frame;
+            // v29 kickoff formation/Duty state; v30 (W13-F5/F6/F7) the tracking half of each held MovementCommand.
+            Assert.AreEqual(30u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -302,6 +305,32 @@ namespace TacticalDirector.MatchEngine
             CollectionAssert.AreNotEqual(
                 baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
                 "A non-default W3 ClaimIntent left the digest unchanged — the v23 claim block is not in the snapshot preimage.");
+        }
+
+        /// <summary>
+        /// v30 (W13-F5/F6/F7): mutate ONLY the tracking half of one held command (TargetVelocity / IssueTimeS, with IsTracking
+        /// false so the integrator ignores them and no kinematics can differ) on a non-stride tick; the digest must move, which
+        /// proves the v30 block reaches the snapshot preimage.
+        /// </summary>
+        [Test]
+        public void MovementCommandTrackingFields_FeedSnapshotDigest()
+        {
+            var baseline = new MatchEngine(MatchSeed);
+            var perturbed = new MatchEngine(MatchSeed);
+            baseline.RunTick(); baseline.RunTick();
+            perturbed.RunTick(); perturbed.RunTick();
+            MovementCommand c = perturbed.TestOnly_Command(5);
+            MovementCommand m = MovementCommand.ReconstructFromSnapshot(
+                c.TargetPosition, c.DesiredState, c.DecelerationMode, c.FacingMode, c.FacingTarget, c.OverrideSafetyConstraints,
+                false, new Vector2(1.5f, -0.5f), 12.25f);
+            perturbed.TestOnly_SetCommand(5, in m);
+            baseline.RunTick();
+            perturbed.RunTick();
+            Assert.AreNotEqual(0UL, baseline.CurrentTick % (ulong)DeterministicSimConstants.AI_PHASE_STRIDE, "precondition: a non-stride tick (no AI re-dispatch)");
+            Assert.AreEqual(baseline.TestOnly_AgentSnapshot(5).Position, perturbed.TestOnly_AgentSnapshot(5).Position, "kinematics identical");
+            CollectionAssert.AreNotEqual(
+                baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
+                "Non-default tracking fields left the digest unchanged — the v30 block is not in the snapshot preimage.");
         }
 
         [Test]
@@ -943,4 +972,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.25 | 2026-10-16 | — | Own-release re-handling: physical touch / law contact gate and canonical v27 restart history; focused regression coverage. |
 // | 1.26 | 2026-11-06 | — | ERR-011-021: exact 60 Hz hand-control deadline, schema v28, law/feet split and regression coverage. |
 // | 1.27 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
+// | 1.28 | 2026-11-21 | — | W13-F5/F6/F7: schema pin 29 → 30; MovementCommandTrackingFields_FeedSnapshotDigest. |
 #endregion

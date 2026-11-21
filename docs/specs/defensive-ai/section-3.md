@@ -1,7 +1,7 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 18, 2026 (v0.15 — A′ / `ERR-014-011`: new §3.6.5.8 BallLoose release — geometry knock and same-frame carrier fence; §3.6.5.2 and §3.6.5.5 point to it. Prior: v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
+**Last Updated:** November 21, 2026 (v0.16 — W13-F8 / F9: §3.13.1 contact floor on the stand-off (`ERR-014-012`); §3.13 Step 8a reconciles tackle requests with the final assignments (`ERR-014-010` amendment 2); §3.13.1 Pace now cites the #8 tracking MOVE (`ERR-008-029`). Prior: v0.15 — A′ / `ERR-014-011`: new §3.6.5.8 BallLoose release — geometry knock and same-frame carrier fence; §3.6.5.2 and §3.6.5.5 point to it. Prior: v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
 **Version:** 0.15
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
@@ -1242,10 +1242,14 @@ byte-for-byte the pre-W13.1 ones. *Worked example.* Away CMs 17 at (45, 28) and
 18 is demoted to ZONAL at its slot (45, 40). *Valid range:* agent and opponent
 positions x ∈ [0, 105], y ∈ [0, 68]; cost ∈ [0, 16,000 m²]. Two CBs on one
 striker are already reduced to one by Invariant 1 (`MIN_BACKLINE_AGENTS`).
-*Known limitation (extends the W13.0 review L3 note).* Tackle intents are evaluated at §3.13 Step 6, before the trap
-(Step 7) and the invariants (Step 8), so an agent demoted by Invariant 4 (or 3) in a stride may still issue a
-tackle intent in that same stride when mark movement is active. It is recorded, not fixed: the demoted agent
-still holds his stand-off position that tick, and behaviour is deliberately unchanged here.
+*Tackle requests after demotion (W13-F9, `ERR-014-010` amendment 2, November 21, 2026; was a known limitation).*
+Tackle intents are evaluated at §3.13 Step 6, before the trap (Step 7) and the invariants (Step 8). An agent they
+demote or retarget used to keep his Step-6 request: measured, agent 17 published COMMIT against opponent 100 at
+ticks 3, 7 and 11 while his final assignment was ZONAL, for both team ids. §3.13 **Step 8a** now drops every request
+whose agent's final assignment no longer targets the request's opponent, so a challenge is published only for a mark
+that is itself published (FR-DA-023 / §4.3). This applies whether or not mark movement is active. The trap and
+Invariants 1–3 demote marks with the switch off too, so the default (switch-off) behaviour changes. Surviving
+requests keep their Step-6 order and content (last-man mode included). No RNG or schema change.
 
 *Invariant 3 and retained marks (`ERR-014-009`).* `targetPosition` is the
 opponent's **live** position on every published tick (§2.2.2), retained
@@ -1667,6 +1671,13 @@ if NOT enforced:
     EmitAllZonal(team, assignments, ref directive)   // F4 hard fallback (FR-DA-032)
     return
 
+// Step 8a: Reconcile tackle requests with the FINAL assignments (W13-F9, ERR-014-010 amendment 2)
+k = 0
+for each request r in tackleRequests[0 .. tackleCount):           // Step-6 order (EntityId-ascending)
+    if assignmentOf(r.agentEntityId).targetEntityId == r.targetEntityId:
+        tackleRequests[k++] = r                                   // kept verbatim (mode, angle, depth)
+tackleCount = k                                                   // demoted / retargeted agents publish none
+
 // Step 9: Publish
 directive.team = team
 PublishMarkDirective(ref directive)
@@ -1722,11 +1733,24 @@ anchored to the opponent, not to the formation slot.
 `TacticTranslation.MarkStandoffM`). Range invariant: `0 < MARK_STANDOFF_TIGHT_M <
 MARK_STANDOFF_M < min(TACKLE_ELIGIBLE_RADIUS_M, MARKING_RADIUS_M [CROSS: #23])` = 3.0 m, so a
 marker standing on the point is inside the tackle-eligibility radius and counts as marking
-his man for #23 (§3.6.2). **Known limitation (W13.1c final pass, open issue W13-F8, blocks the default flip):** the tight value is at or below the
-body-contact separation of two players (~0.8 m between agent centres), so a `TightMarking` marker does not stand 1.0 m
-goal-side of his man: measured (non-certifying Linux) he stops in contact 0.82–1.11 m from a *stationary* man and 0.82–0.84 m, level
-with him, from a 2.6 m/s runner (not goal-side on 54 of 60 strides away, 1 of 60 home). Whether the constant, a contact-aware
-stand-off floor or the goal-side criterion should change is a calibration / owner decision (KD-W1); nothing here is tuned.
+his man for #23 (§3.6.2).
+
+**Contact floor (`ERR-014-012`, November 21, 2026; W13-F8).** The stand-off the composition root passes to the
+composer is `s_eff = max(s, r_marker + r_man + d_tol)` (m). `r` is each player's Agent Movement #2 §3.5.4.3 hitbox
+radius `[CROSS: #2]`, `0.3525 + 0.0075 · (Strength − 1)` m, range 0.3525–0.495 m. `d_tol` is the #2 §3.5.3.1 tracking
+settle tolerance `MinStoppingDistanceM` `[CROSS: #2]`, 0.1 m. A marker that has settled anywhere within his
+tolerance of the point is therefore clear of his man's body. The composition root computes it because #14 owns
+neither value. The composer's signature is unchanged and no new constant is introduced. *Worked examples:*
+Strength 10 + 10 ⇒ 0.42 + 0.42 + 0.1 = 0.94 m, so the tight 1.0 m governs. Strength 20 + 20 ⇒ 1.09 m, so the floor
+governs. Strength 1 + 20 ⇒ 0.9475 m. The floor never exceeds the 2.0 m ordinary stand-off. *Valid range:* `s_eff` ∈
+[0.805, 2.0] m for the default constants. *Measured (non-certifying Linux, W13 marking rig, both teams, Strength 10).*
+Against a stationary man the tight marker settles 0.95 m from him, goal-side on 15 / 15 strides; pre-fix he was at
+0.82–1.11 m, goal-side 12 / 15 home and 4 / 15 away. Against a 2.6 m/s upfield runner he stays at 1.05–1.17 m,
+goal-side every stride; pre-fix he was not goal-side on 54 / 60 strides away. *Residual (recorded):* against a man
+who accelerates from rest toward goal, the tight marker's minimum gap is 0.82 m. That is 0.02 m inside the two
+radii, caused by #2's walking acceleration (#2 §3.5.3.1 residual). The resulting contact is not a knockdown, but
+its collision response differs between the home and away runs.
+
 Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
 that has never moved a defender; it is the calibration pass's input, not its output).
 
@@ -1752,12 +1776,11 @@ PRESS rule for marking agents (#8 §3.1.8.2, `ERR-008-027`) removes the nearest-
 would otherwise do that. Substitutes inherit the agent index and its mark (§2.2.2). Marking applies
 during restarts as in open play (no set-piece phase exists; set-piece marking is §7.5, Stage 2+).
 
-**Pace (W13.1c, `ERR-008-028`).** The mark point moves at the man's speed, so the composition root also writes the
-marked man's **current** speed `v` (m/s) as `TacticalContext.MarkTargetSpeed`: the magnitude of the **world-frame** agent velocity
-(`_agents[id].Velocity`) read from the same stride's world state — not of the #14 snapshot velocity — and 0 for `COVER_GK_ZONE`, which has no
-man. A magnitude is identical under the away team's 180° rotation, so no mirror applies. #8 §3.5.6 paces a mark-point MOVE at the larger of
-its distance tier and the tier of `v` (thresholds `JogEnter` / `SprintEnter` `[CROSS #2]`), **while the marker is slower than his man**.
-#14 itself stays pure: the composer's signature and output are unchanged.
+**Pace (`ERR-008-029`; supersedes W13.1c `ERR-008-028`).** The mark point moves with the man, so the composition root
+also writes the marked man's **world-frame velocity** (`_agents[id].Velocity` at the same stride; zero for
+`COVER_GK_ZONE`, which has no man) as `TacticalContext.MarkTargetVelocity`. Because the point is itself world-mapped,
+the velocity is not mirrored. #8 §3.5.6 dispatches the mark-point MOVE as an Agent Movement #2 §3.5.3.1 tracking command
+with that feed-forward. #14 itself stays pure: the composer's signature and output are unchanged.
 
 **Activation.** The composition root's switch (`MatchEngineConstants.MarkMovementEnabled`, `[GT]`,
 default `false`) gates both this composition and Invariant 4 (`markMovementActive`, §2.3). With it
@@ -1784,3 +1807,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.13 | November 12, 2026 | AI agent (W13.1c review) | `ERR-008-028` amendment: §3.13.1 "Pace" wording corrected — `v` is the magnitude of the world-frame agent velocity (`_agents[id].Velocity`), frame-invariant, not of the #14 snapshot velocity; the #8 speed tier applies only while the marker is slower than his man. Documentation only. |
 | 0.14 | November 12, 2026 | AI agent (W13.1c final pass) | §3.13.1 stand-off paragraph gains the W13-F8 known limitation (the 1.0 m tight stand-off is at / below body contact; measured separations). No value or formula change. |
 | 0.15 | November 18, 2026 | AI agent (A′, owner decision D1) | `ERR-014-011`: new §3.6.5.8 "BallLoose release" — the knock velocity from closing speed and carrier momentum (three un-calibrated `[GT]`, one `[FIXED]` direction guard), the frame-local carrier fence on first touch, pickup and keeper hand contact, its lifetime and non-serialization, worked examples and correctness-only acceptance. §3.6.5.2's `BALL_LOOSE` row and §3.6.5.5 point to it; the constant index gains four rows. Spec and code in the same commit. |
+| 0.16 | November 21, 2026 | AI agent (W13 blockers) | `ERR-014-010` amendment 2 (W13-F9): §3.13 Step 8a drops a tackle request whose agent's final assignment no longer targets that opponent; the §3.10.2 known limitation becomes the resolved paragraph; not switch-gated (default behaviour changes). `ERR-014-012` (W13-F8): §3.13.1 contact floor `s_eff = max(s, r_marker + r_man + d_tol)` computed by the composition root (`[CROSS #2]` radii and settle tolerance; no new constant); the W13-F8 known limitation replaced by measured values and the goalward-runner residual. §3.13.1 "Pace" re-pointed to `MarkTargetVelocity` and the #8 §3.5.6 tracking MOVE (`ERR-008-029`). Spec + code, same commit. |

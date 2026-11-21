@@ -1,6 +1,7 @@
 // File:     src/defensive-ai/DefensiveAITick.cs
 // Created:  2026-05-29
-// Modified: 2026-07-20
+// Modified: 2026-11-21 (W13-F9 / ERR-014-010 amendment 2: Step 8a reconciles tackle requests with the final assignments)
+// Modified (prior): 2026-07-20
 // Author:   —
 // Spec:     Defensive AI #14 §3.13, §4.1, §4.2, Code Standards #20
 // Purpose:  10 Hz Defensive AI orchestrator for one team. Implements the 9-step pipeline
@@ -274,10 +275,39 @@ namespace TacticalDirector.DefensiveAI
                 return;
             }
 
+            // Step 8a (W13-F9 / ERR-014-010 amendment 2): reconcile the Step-6 tackle requests with the FINAL
+            // assignments. Step 6 runs before the trap (Step 7) and the invariants (Step 8), so an agent they
+            // demote (or retarget) would otherwise publish a challenge against a man he no longer marks.
+            ReconcileTackleRequests();
+
             // Step 9: Publish + persist per-entity state for the next tick (AR-2 H-1).
             WriteBackEntityState();
             _lastDirective.TeamId = defensiveTeamId;
             _lastProcessedTick    = currentTick;
+        }
+
+        /// <summary>
+        /// Step 8a (W13-F9, #14 §3.13 / FR-DA-023): drops every tackle request whose agent's FINAL assignment (after the
+        /// offside trap and the anti-chaos invariants) no longer targets the request's opponent — a demotion to ZONAL, or a
+        /// retarget. Surviving requests keep their Step-6 order (EntityId-ascending) and content, so a request is published
+        /// only for a mark that is itself published. The last-man agent's mode was chosen at Step 6 from the same
+        /// assignment it still holds, so it is kept unchanged. In place, zero allocation, no RNG.
+        /// </summary>
+        private void ReconcileTackleRequests()
+        {
+            int kept = 0;
+            for (int r = 0; r < _tackleCount; r++)
+            {
+                TackleIntentRequest req = _tackleBuffer[r];
+                int agentId = req.AgentEntityId;
+                if (agentId < 0 || agentId >= _entityIdCapacity)
+                    continue;
+                int p = _entityToPoolIdx[agentId];
+                if (p < 0 || _assignments[p].TargetEntityId != req.TargetEntityId)
+                    continue;
+                _tackleBuffer[kept++] = req;
+            }
+            _tackleCount = kept;
         }
 
         /// <summary>
@@ -444,4 +474,7 @@ namespace TacticalDirector.DefensiveAI
 // | 1.4     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): RestoreState(in DefensiveTickState) — the read        |
 // |         |            |        |   counterpart to CaptureState; copies the per-entity mark hysteresis + last assignment into |
 // |         |            |        |   the live arrays and assigns the per-team offside-line state. No behaviour change.         |
+// | 1.5     | 2026-11-21 | —      | W13-F9 / ERR-014-010 amendment 2: Step 8a ReconcileTackleRequests drops a tackle request whose |
+// |         |            |        |   agent's final assignment (after the trap and the invariants) no longer targets that opponent. |
+// |         |            |        |   Default behaviour changes (the defect is not switch-gated); no schema or RNG change.          |
 #endregion

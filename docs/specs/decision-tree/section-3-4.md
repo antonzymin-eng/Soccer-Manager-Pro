@@ -14,7 +14,7 @@ cross-references to Pass Mechanics §2.4.1, Shot Mechanics §2.4.1, and Agent Mo
 §3.5.4. This file completes Section 3 of the Decision Tree specification.
 
 **Created:** March 05, 2026, 12:00 PM PST  
-**Version:** 1.5  
+**Version:** 1.6  
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist)  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -62,6 +62,7 @@ cross-references to Pass Mechanics §2.4.1, Shot Mechanics §2.4.1, and Agent Mo
 | 1.3 | November 12, 2026 | `ERR-008-028` (W13.1c; spec + code, same commit). §3.5.6 gains the mark-point pace tier: a MOVE to the host-composed mark point (`TacticalContext.HasMarkTarget`) paces at the larger of the distance tier and the marked man's speed tier (`TacticalContext.MarkTargetSpeed`; thresholds `JogEnter` / `SprintEnter` `[CROSS #2]`, no new constant), with units, ranges and a worked example; `HasMarkTarget` false is the prior text exactly. Also corrects the stale PRESS-target comment in the §3.5.6-§3.5.8 dispatch pseudocode (the "nearest opponent" priority does not apply to a marking agent, `ERR-008-027`). Code: `ActionDispatcher.SelectMoveTier`. |
 | 1.4 | November 12, 2026 | `ERR-008-028` amendment (W13.1c review; spec + code, same commit). §3.5.6's mark-point pace tier applies the man's speed tier **only while the marker is slower than his man** (`agentSpeed < MarkTargetSpeed`); the v1.3 unconditional form made a JOG command (ceiling `SprintEnter`, no arrival braking) overshoot and orbit a 2.6-3.5 m/s man (peaks 8-10 m measured). Formula, worked example, measured envelope (peak gaps 1.36-4.39 m; asserted bound `MOVE_JOG_THRESHOLD` 6.0 m + goal-side) and the recorded limitations (no `JogEnter` hysteresis; goalward-runner collision; residual lag) added. Code: `ActionDispatcher.SelectMoveTier` (+ `MoveTier` enum). Header Version corrected 1.1 → 1.4 (the table had reached 1.3 without it). |
 | 1.5 | November 12, 2026 | `ERR-008-028` final pass (documentation only). §3.5.6 measured envelope re-stated on the corrected rig (peaks 2.73 / 2.78, 2.73 / 2.78, 3.09 / 3.13 m); the lag is "uncorrected and phase-dependent"; limitations rewritten (gate flapping at any jog-band speed with OscillationGuard locks, stationary-man orbit, 1.0 m tight stand-off at body contact, goalward-runner collision) and each recorded as blocking the default flip (OD-2); candidate real fix (Agent Movement #2 arrival braking / target-speed command, or a gate position term) recorded as an owner decision. Stale PRESS-target comment unchanged. |
+| 1.6 | November 21, 2026 | `ERR-008-029` (W13-F5/F6/F7; spec + code, same commit). §3.5.6: a mark-point MOVE is dispatched as one Agent Movement #2 §3.5.3.1 tracking command (`Track(point, MarkTargetVelocity, MatchTimeSeconds)`); the W13.1c pace tier and its "only while slower" gate are withdrawn; non-marking MOVEs keep the distance tier unchanged. The four W13 known limitations listed there are resolved (measured values recorded); the TightMarking-vs-goalward-runner 0.02 m overlap is recorded as a residual. |
 
 ---
 

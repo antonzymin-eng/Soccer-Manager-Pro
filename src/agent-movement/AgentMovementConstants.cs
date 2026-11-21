@@ -1,6 +1,7 @@
 // File:     src/agent-movement/AgentMovementConstants.cs
 // Created:  2026-05-22
-// Modified: 2026-06-09 (AR-12 fix pass)
+// Modified: 2026-11-21 (W13-F5/F6/F7: [FIXED] TRACK_EXTRAPOLATION_MAX_S for the §3.5.3.1 tracking command)
+// Modified (prior): 2026-06-09 (AR-12 fix pass)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1–§3.4, §4.1.3, §4.3.1, Code Standards #20
 // Purpose:  All constants for the agent movement system. No literals in formula code.
@@ -172,6 +173,16 @@ namespace TacticalDirector.AgentMovement
 
         /// <summary>[FIXED] Kinematic equation divisor for v²-based deceleration: a = v²/(2d). Agent Movement #2 §3.2.5.</summary>
         public const float KINEMATIC_HALF = 2.0f;
+
+        /// <summary>
+        /// [FIXED] Longest interval (s) over which a tracking command's point is extrapolated by its target velocity: two
+        /// 10 Hz tactical heartbeats (0.2 s; the AI cadence is fixed project-wide). A producer refreshes the command every
+        /// heartbeat, so a held command is consumed at ages up to and INCLUDING one heartbeat (0.1 s, six 60 Hz frames, which
+        /// float clock rounding can put a few ulps above 0.1); the limit therefore sits a whole heartbeat beyond that. A
+        /// command older than this was not refreshed: its point is frozen at the 0.2 s extrapolation and the feed-forward
+        /// drops to zero. Agent Movement #2 §3.5.3.1.
+        /// </summary>
+        public const float TRACK_EXTRAPOLATION_MAX_S = 0.2f;
 
         #endregion
 
@@ -542,4 +553,6 @@ namespace TacticalDirector.AgentMovement
 // | 1.9     | 2026-06-09 | —      | AR-12 fix: H-3 LocomotionConstants.MinDecelerationFloor [GT] added — consumed by              |
 // |         |            |        | AgentLocomotion.ApplyDeceleration to terminate the hyperbolic (Zeno) braking profile in       |
 // |         |            |        | bounded time. Value matches WALK_DECELERATION (2.5 m/s²).                                     |
+// | 1.10    | 2026-11-21 | —      | W13-F5/F6/F7: [FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S (0.2 s, two 10 Hz heartbeats) |
+// |         |            |        | for the §3.5.3.1 tracking command. No existing value changed.                                 |
 #endregion
