@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopDisciplineTests.cs
 // Created:  2026-08-13
+// Modified: 2026-11-20 (#44 T3: quick-sim attribution, ban timing and save continuation.)
 // Modified: 2026-10-20 (AR round 3 L9 — comment-only: the banned-slot note names the 3/8/7/5 template — v1.22)
 // Modified (prior): 2026-10-09 ([Timeout(7200000)] on the real-engine fold test for Unity's 180 s default — v1.20)
 // Modified (prior): 2026-10-09 (ERR-030-053 boundary day — v1.19)
@@ -81,6 +82,9 @@
 //           pre-check's position relative to BOTH the fixture loop and RunCareerDaySteps, and the
 //           boundary sweep. #44's own rules are unit tested in discipline/tests; nothing here re-tests
 //           them.
+
+using System;
+using System.Linq;
 
 using NUnit.Framework;
 
@@ -593,6 +597,66 @@ namespace TacticalDirector.SeasonSave.Tests
                 + "costs nothing on the path that resolves nearly every fixture of a career.");
         }
 
+        [Test]
+        public void QuickSimCards_FollowTheFieldedElevensAndSurviveSaveRestore()
+        {
+            League league = LeagueBootstrap.Generate(WorldSeed, BigLeagueClubCount);
+            var discipline = new DisciplineState();
+            SeasonLoop wired = LoopOver(league, RoundResolutionMode.QuickSimAll, out PlayerCareerStates career, discipline);
+            SeasonLoop unwired = LoopOver(league, RoundResolutionMode.QuickSimAll, out _);
+
+            wired.AdvanceToNextFixtureDay();
+            unwired.AdvanceToNextFixtureDay();
+            MatchResult[] opening = wired.AdvanceAndPlayNextRound(league);
+            Assert.That(opening, Is.EqualTo(unwired.AdvanceAndPlayNextRound(league)),
+                "With identical starting squads, synthetic cards leave the opening scorelines unchanged.");
+
+            int[] homeStarters = opening.SelectMany(result =>
+                SquadRating.StartingElevenPlayerIds(league.ResolveByClubId(result.HomeClubId))).ToArray();
+            int[] awayStarters = opening.SelectMany(result =>
+                SquadRating.StartingElevenPlayerIds(league.ResolveByClubId(result.AwayClubId))).ToArray();
+            DisciplineEntry[] entries = Enumerable.Range(0, discipline.Count).Select(discipline.EntryAt).ToArray();
+            int[] bookedPlayers = entries.Select(entry => entry.PlayerId).ToArray();
+            Assert.That(bookedPlayers.Intersect(homeStarters), Is.Not.Empty);
+            Assert.That(bookedPlayers.Intersect(awayStarters), Is.Not.Empty);
+            Assert.That(bookedPlayers.Except(homeStarters.Concat(awayStarters)), Is.Empty);
+            Assert.That(entries.Any(entry => entry.Yellows == 1), Is.True);
+
+            DisciplineEntry[] dismissals = entries.Where(entry => entry.BanMatchesRemaining > 0).ToArray();
+            Assert.That(dismissals, Is.Not.Empty, "This seed must exercise at least one straight red.");
+            foreach (DisciplineEntry dismissal in dismissals)
+            {
+                Assert.That(dismissal.BanMatchesRemaining, Is.EqualTo(DisciplineConstants.StraightRedBanMatches),
+                    "A straight red must carry its full ban into the next fixture.");
+                Assert.That(dismissal.Yellows, Is.Zero);
+            }
+
+            string path = System.IO.Path.Combine(_tempDir, "quick-sim-discipline.save");
+            SeasonSaveManager.Save(wired, null, path);
+            SeasonSaveContents save = SeasonSaveManager.Load(path, league);
+            Assert.That(save.Season.FieldsEqual(wired.State), Is.True);
+            PlayerCareerStates restoredCareer = PlayerCareerStates.FromBlocks(
+                save.TrainingClubs, save.MedicalClubs, save.AppearanceClubs, injuryOccurrenceEnabled: false);
+            var restored = new SeasonLoop(save.World, save.Season, RoundResolutionMode.QuickSimAll,
+                restoredCareer, league, disciplineOrNull: save.Discipline, financesOrNull: save.Finances);
+
+            wired.AdvanceToNextFixtureDay();
+            restored.AdvanceToNextFixtureDay();
+            MatchResult[] next = wired.AdvanceAndPlayNextRound(league);
+            Assert.That(restored.AdvanceAndPlayNextRound(league), Is.EqualTo(next));
+            Assert.That(DisciplineSaveCodec.Encode(restored.Discipline), Is.EqualTo(DisciplineSaveCodec.Encode(discipline)));
+
+            ClubAppearanceStates[] appearance = career.AppearanceBlocks();
+            foreach (DisciplineEntry dismissal in dismissals)
+            {
+                ClubAppearanceStates club = appearance.Single(block => Array.IndexOf(block.PlayerIds, dismissal.PlayerId) >= 0);
+                AppearanceState player = club.States[Array.IndexOf(club.PlayerIds, dismissal.PlayerId)];
+                Assert.That(AppearanceWindow.AppearanceDaysOn(in player, next[0].WorldDay), Is.EqualTo(1),
+                    "A suspended starter must miss the second round.");
+                Assert.That(Ban(discipline, dismissal.PlayerId), Is.EqualTo(dismissal.BanMatchesRemaining - 1));
+            }
+        }
+
         // ── serving, on both paths, for both clubs ────────────────────────────────────────
 
         [Test]
@@ -1090,15 +1154,6 @@ namespace TacticalDirector.SeasonSave.Tests
             MatchResult observed = PlayOneEngineRound(league, managedClubId, tally);
             MatchResult unobserved = PlayOneEngineRound(league, managedClubId, null);
 
-            // Positive control. At the engine's measured discipline rate a 90-minute fixture books
-            // several players, so an empty tally means the fold never ran, never saw the tap, or was
-            // seeded with an occupancy nothing matched.
-            Assert.That(tally.Count, Is.GreaterThan(0),
-                "A full engine fixture folded ZERO cards. Either ObserveTick is not pumped inside the "
-                + "tick loop, or Commit never runs, or the fold's occupancy seed does not match the "
-                + "recipient ids the engine emits. Without this assertion the neutrality check below is "
-                + "satisfied by a fold that does nothing at all.");
-
             // Observer neutrality (FR-DC-003): reading the tap must not move the match by one goal.
             Assert.That(observed.HomeGoals, Is.EqualTo(unobserved.HomeGoals),
                 "The observed fixture scored differently from the unobserved one — the fold is not "
@@ -1106,25 +1161,25 @@ namespace TacticalDirector.SeasonSave.Tests
             Assert.That(observed.AwayGoals, Is.EqualTo(unobserved.AwayGoals),
                 "The observed fixture scored differently from the unobserved one.");
 
-            // Every folded row belongs to a player of one of the two clubs that played the round's ONE
-            // engine fixture — the attribution half. A fold that passed recipient agent ids straight
-            // through as player ids would produce rows for ids in neither club.
-            //
-            // L-4 (reviewed findings pass): membership is checked against the two clubs' ACTUAL roster
-            // id arrays, not derived by playerId / CLUB_SQUAD_SIZE — that packing is production-deleted
-            // (ERR-044-014) and this assertion is scheduled to break the day the PlayerId space widens
-            // off it (the ERR-044-003 stage-1 entry's own named remainder).
+            // T3 also books players in the round's other fixtures. Only rows from the engine's two
+            // rosters count for the positive control. Every other row must match the quick-only run.
             Squad homeRoster = league.ResolveByClubId(observed.HomeClubId);
             Squad awayRoster = league.ResolveByClubId(observed.AwayClubId);
-            for (int i = 0; i < tally.Count; i++)
-            {
-                int playerId = tally.EntryAt(i).PlayerId;
-                Assert.That(
-                    Contains(homeRoster, playerId) || Contains(awayRoster, playerId), Is.True,
-                    $"Folded a card onto player {playerId}, who is on neither roster of the two clubs "
-                    + $"({observed.HomeClubId} v {observed.AwayClubId}) that played the only engine "
-                    + "fixture of this round.");
-            }
+            bool PlayedInEngineFixture(DisciplineEntry entry) =>
+                Contains(homeRoster, entry.PlayerId) || Contains(awayRoster, entry.PlayerId);
+            DisciplineEntry[] mixedRows = Enumerable.Range(0, tally.Count).Select(tally.EntryAt).ToArray();
+            Assert.That(mixedRows.Any(PlayedInEngineFixture), Is.True,
+                "The engine fixture must contribute cards to prove the tap was consumed.");
+
+            var quickTally = new DisciplineState();
+            SeasonLoop quick = LoopOver(league, RoundResolutionMode.QuickSimAll, out _, quickTally);
+            quick.AdvanceToNextFixtureDay();
+            quick.AdvanceAndPlayNextRound(league);
+            DisciplineEntry[] quickRows = Enumerable.Range(0, quickTally.Count).Select(quickTally.EntryAt)
+                .Where(entry => !PlayedInEngineFixture(entry)).ToArray();
+            Assert.That(quickRows, Is.Not.Empty);
+            Assert.That(mixedRows.Where(entry => !PlayedInEngineFixture(entry)).ToArray(), Is.EqualTo(quickRows),
+                "Cards outside the engine fixture must match the same fixtures played in QuickSimAll.");
         }
 
         // ── mid-match restore fidelity (the C1/C2 AR's H2) ───────────────────────────────
@@ -1716,4 +1771,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.20 | 2026-10-09 | — | [Timeout(7200000)] on ARealEngineFixtureFoldsItsCards…: 1,106 s in Unity on the pinned host, over Unity's 180 s default timeout. |
 // | 1.21 | 2026-10-19 | — | ERR-031-004: the back-fill tier-order lock bans the last three DEFENDERS (a surplus line) instead of the last three roster slots, which became three of the 23-player template's four forwards and made the suspended tier legitimately reachable. |
 // | 1.22 | 2026-10-20 | — | AR round 3 L9 (comment-only): the back-fill tier-order lock's note says slots 20-22 are three of FIVE forwards in the 3/8/7/5 template (it said four, the interim 3/8/8/4 shape). |
+// | 1.23 | 2026-11-20 | — | #44 T3: locks both XIs, score neutrality, ban timing, and save continuation. |
 #endregion

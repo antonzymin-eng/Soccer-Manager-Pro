@@ -1,5 +1,6 @@
 // File:     src/season-save/tests/SeasonLoopTests.cs
 // Created:  2026-07-26
+// Modified: 2026-11-20 (#44 T3: fixture permutation covers the discipline tally.)
 // Modified: 2026-11-18 (Managed matchday cancellation and replay.)
 // Modified: 2026-10-20 (AR round 5 S-L3 — the constructor KD-4 test asserts ParamName "season" — v1.8)
 //           2026-10-18 (#31 T1 — call sites carry the transfers block)
@@ -436,7 +437,9 @@ namespace TacticalDirector.SeasonSave.Tests
         {
             League league = FourClubLeague();
 
-            SeasonLoop straight = NewLoop(league, out _);
+            var straightTally = new DisciplineState();
+            var straight = new SeasonLoop(new WorldStore(ManagerId, WorldSeed), league.CreateSeason(0),
+                RoundResolutionMode.QuickSimAll, disciplineOrNull: straightTally);
             straight.AdvanceToNextFixtureDay();
             straight.AdvanceAndPlayNextRound(league);
 
@@ -444,11 +447,15 @@ namespace TacticalDirector.SeasonSave.Tests
             // opposite sequence. Keyed draws ⇒ the table must be identical.
             SeasonState permuted = PermuteFirstRound(league.CreateSeason(0));
             var world = new WorldStore(ManagerId, WorldSeed);
-            var permutedLoop = new SeasonLoop(world, permuted, RoundResolutionMode.QuickSimAll);
+            var permutedTally = new DisciplineState();
+            var permutedLoop = new SeasonLoop(world, permuted, RoundResolutionMode.QuickSimAll,
+                disciplineOrNull: permutedTally);
             permutedLoop.AdvanceToNextFixtureDay();
             permutedLoop.AdvanceAndPlayNextRound(league);
 
             AssertTablesEqual(straight, permutedLoop);
+            Assert.That(straightTally.Count, Is.GreaterThan(0));
+            Assert.That(DisciplineSaveCodec.Encode(permutedTally), Is.EqualTo(DisciplineSaveCodec.Encode(straightTally)));
         }
 
         // ── T-SN-CAL-005 / 006 + F4: fail-loud gates ──────────────────────────────────────
@@ -814,4 +821,5 @@ namespace TacticalDirector.SeasonSave.Tests
 // | 1.7 | 2026-10-18 | — | #31 T1 (ERR-030-054): long-form Save call site passes transfersOrNull: null. |
 // | 1.8 | 2026-10-20 | — | AR round 5 S-L3: Constructor_WorldPastThePendingFixtureDay_FailsLoud also asserts ex.ParamName == "season" (the shared RequireCursorInvariant reports the caller's offending argument). |
 // | 1.9 | 2026-11-18 | — | Verify a real in-match cancellation and serialized replay identity from the pre-round save. |
+// | 1.10 | 2026-11-20 | — | #44 T3: require order-independent quick-sim scores and discipline. |
 #endregion

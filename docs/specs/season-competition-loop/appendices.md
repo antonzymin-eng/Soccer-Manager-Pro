@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Appendices
 
 **Created:** July 22, 2026
-**Last Updated:** October 20, 2026 (v1.10 — ERR-030-058 (AR round 3, wording): the third cross-blob rule said "Four guards implement it today" while listing five (the #31 `RequireDestinationCarriesNoTransfers` guard was appended by ERR-030-054 without the count); now "Five", re-verified against `SeasonSaveManager`'s five `RequireDestinationCarriesNo*` methods. Prior update follows)
+**Last Updated:** November 20, 2026 (v1.11 — #44 T3 adds the quick-sim card discriminators and probability defaults.)
+**Last Updated (prior):** October 20, 2026 (v1.10 — ERR-030-058 (AR round 3, wording): the third cross-blob rule said "Four guards implement it today" while listing five (the #31 `RequireDestinationCarriesNoTransfers` guard was appended by ERR-030-054 without the count); now "Five", re-verified against `SeasonSaveManager`'s five `RequireDestinationCarriesNo*` methods. Prior update follows)
 **Last Updated (prior):** October 20, 2026 (v1.9 — ERR-030-055: Appendix B.1's transfers-coherence paragraph claimed "none of the three can write or admit what another refuses" — false, because the roster authority differs by site; narrowed to what the code guarantees. Prior update follows)
 **Last Updated (prior):** October 18, 2026 (v1.8 — ERR-030-054 (#31 T1): Appendix A's frame-version row 7 → 8 and Appendix B's frame gains the mandatory #31 `XFER` transfers sub-blob between the finance block and the optional match block; new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; B.1's third cross-blob rule gains #31 as its fifth family, keyed on wiring because a wired #31 state always encodes its club record; a fourth cross-blob rule (transfers coherence) is stated; `SeasonLoop.Restore` gains `transfersOrNull`. Prior update follows)
 **Last Updated (prior):** September 10, 2026 (v1.7 — ERR-030-050 supersedes ERR-030-049's producer-wired narrowing; every persisted family is expressible on Restore as soon as its frame can be populated, and non-empty finance state must exactly match SeasonState.ClubIds. Prior update follows)
@@ -19,7 +20,7 @@
 **Last Updated (prior):** August 7, 2026 (v0.5 — the #29/#41 balance pass D2 (ERR-041-010(b)): Appendix B's outer-frame description gains the three mandatory career sub-blobs — the #29 training and #41 medical blocks (frame v2→3, landed at their T1 and previously unrecorded here) and the new #30 appearance block (frame v3→4), between the season block and the optional match block)
 **Last Updated (prior):** July 27, 2026 (v0.4 — back-props ERR-030-017 (#47 conditional authored sub-blob) + ERR-030-019 (#50 `SaveOriginStamp` in the outer frame) landed atomically with the ten-spec approval wave; Appendix B's outer-frame description amended)
 **Last Updated (prior):** July 25, 2026 (v0.3 — ERR-030-010 Appendix C venue correction, found at #30 T0)
-**Version:** 1.10
+**Version:** 1.11
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -49,6 +50,10 @@ precedent — the spec's contract is the shapes/directions, the `[GT]` numbers a
 | `DEFAULT_OBJECTIVE_POSITION` | `[GT]` | (per-club) | the board's "finish at or above" target |
 | `DOMAIN_TAG_SEASON_LOOP` | `[CROSS]` | `0x22` | mirror of `DeterministicSimConstants.DOMAIN_TAG_SEASON_LOOP` (#16 §3.4; allocated at approval) |
 | `SUBSYSTEM_ORDINAL_SEASON_LOOP` | `[CROSS]` | 84 | mirror of `SubsystemOrdinals.SeasonLoop` (#16; allocated at approval) |
+| `QUICK_SIM_HOME_CARD_KEY` | `[FIXED]` | `0x27AE3C510D65F829` | home starter card discriminator within the #30 fixture key |
+| `QUICK_SIM_AWAY_CARD_KEY` | `[FIXED]` | `0xD6B49580A31F27EC` | away starter card discriminator within the #30 fixture key |
+| `QuickSimYellowProbability` | `[GT]` | 0.045 | yellow probability per quick-sim starter, config section `season-save` |
+| `QuickSimStraightRedProbability` | `[GT]` | 0.008 | straight-red probability per quick-sim starter, same config section |
 
 `WIN/DRAW/LOSS_POINTS` are the association-football 3/1/0 convention (§8.2); a `[GT]` catalogue value,
 not a physical constant, so a rules variant (e.g. 2/1/0) is a config change.
@@ -423,4 +428,5 @@ is a **total order** — no two rows ever compare equal (FR-SN-007).
 | 1.8 | 2026-10-18 | — | **ERR-030-054** (#31 T1): Appendix A's `SEASON_SAVE_FORMAT_VERSION` row 7 → 8 for the mandatory #31 `XFER` transfers sub-blob, plus new `TRANSFERS_SAVE_MAGIC` / `TRANSFERS_SAVE_FORMAT_VERSION` rows; Appendix B's frame gains the block between finance and the optional match block ("six mandatory career sub-blobs" → seven); B.1's third cross-blob rule gains the fifth guard, keyed on the block's club count (a wiring fact); new transfers-coherence rule (one owner, three boundaries); `SeasonLoop.Restore` gains `transfersOrNull`. No migration (D-10 / #50). |
 | 1.9 | 2026-10-20 | — | **ERR-030-055** (wording correction, spec + test same pass): B.1's transfers-coherence paragraph ended "so none of the three can write or admit what another refuses" — false: composition checks roster membership against the loop's resolved roster provider, `Save`/`Load` against the file's `PROG` projection only (none for a careerless save), so a state composed over a provider that is not the progression store can be admitted at one site and refused at another. Narrowed to what the code guarantees: managed-club rule always, roster membership against the `PROG` projection when the file carries one and against the composition's provider at composition. Orphan-contract negatives added at `Load` and at composition (`SeasonSaveTransfersTests`). |
 | 1.10 | 2026-10-20 | — | **ERR-030-058** (AR round 3, wording correction, spec-text only — the code was already right): the third cross-blob rule's "Four guards implement it today" corrected to "Five"; the sentence lists `RequireDestinationCarriesNoRoster`, `…NoCareer`, `…NoDiscipline`, `…NoFinances` and `…NoTransfers` (five `private static` methods in `SeasonSaveManager.cs`). The header `**Version:**` line, stale at 1.8 since the v1.9 row, is brought to 1.10. |
+| 1.11 | 2026-11-20 | — | #44 T3 adds the quick-sim card discriminators and probability defaults. |
 #endregion

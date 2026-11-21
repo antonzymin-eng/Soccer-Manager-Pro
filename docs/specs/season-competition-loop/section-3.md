@@ -1,7 +1,8 @@
 # Season & Competition Loop Specification #30 — Section 3: Algorithms
 
 **Created:** July 22, 2026
-**Last Updated:** November 18, 2026 (v2.27 — Describe shutdown checkpoints and discard of a cancelled round.)
+**Last Updated:** November 20, 2026 (v2.28 — #44 T3 defines quick-sim cards, their commit point, and scoreline compatibility.)
+**Last Updated (prior):** November 18, 2026 (v2.27 — Describe shutdown checkpoints and discard of a cancelled round.)
 **Last Updated (prior):** October 20, 2026 (v2.26 — ERR-030-057: §3.5 (d″) pseudocode guards a null #28 boundary and derives #31's window from the next calendar's opening fixture day; the (c′) note records that the window's close does not follow roll timing)
 **Last Updated (prior):** October 20, 2026 (v2.25 — ERR-030-056: §3.5 gains step (d″), #31's staged boundary, and names `SubmitTransferBid` as ERR-030-005's mid-season roster commit)
 **Last Updated (prior):** October 19, 2026 (v2.24 — ERR-028-025: step (d) LIVE — the staged #28 season boundary)
@@ -236,7 +237,7 @@ suspensions have joined, citing ERR-044-002/ERR-044-003 and the code sites; only
 **Last Updated (prior):** July 25, 2026 (v0.9 — ERR-030-010 §3.7 venue correction, found at #30 T0; prior v0.8 back-prop ERR-030-009 #44 availability-filter null seam in §3.4; prior v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 25, 2026 (v0.8 — back-props ERR-030-008 board tick-order seam + ERR-030-009 JobSecurity derived band; prior v0.7 ERR-030-007 academy, v0.6 ERR-030-006 staff, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
 **Last Updated (prior):** July 27, 2026 (v1.0 — **ERR-030-015**: §3.5's boundary roll gains step (c′), the calendar rebuild it omitted, without which a rolled season is permanently unplayable; found at #30 T3. Also consolidates the TWO stale `Version` fields this header carried — the drift class `spec-error-log.md` v1.43 records. Prior v0.9 ERR-030-010 §3.7 venue correction; v0.8 back-props ERR-030-008/009; v0.7 ERR-030-007, v0.6 ERR-030-006, v0.5 ERR-030-004, v0.4 ERR-030-003, v0.3 ERR-030-002, v0.2 PASS-1)
-**Version:** 2.27
+**Version:** 2.28
 **Status:** APPROVED
 **Source:** `docs/tracking/season-competition-loop-design.md` v0.2
 
@@ -801,6 +802,7 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
                                                 # that would otherwise throw on it runs AFTER
                                                 # `f.Played := true` (see below), where a throw is
                                                 # UNRECOVERABLE. Refusing here leaves the round untouched
+        if mode can quick-sim: RequireCardProbabilities()
     RunCareerDaySteps(worldDay)                 # the fixture day's OWN slots, pre-round — idempotent,
                                                 # so the next advance's re-run is a cursor no-op — and
                                                 # AFTER every guard above, so a refused call cannot
@@ -810,16 +812,15 @@ AdvanceAndPlayNextRound(squads: ISquadProvider):
             result, homeXi, awayXi, homeRosterIds, awayRosterIds, fold := PlayThroughEngine(f, squads)
                                                 # managed fixture — full engine
         else:
-            result, homeXi, awayXi, homeRosterIds, awayRosterIds := ResolveRound(f, squads)
+            result, homeXi, awayXi, homeRosterIds, awayRosterIds, fold := ResolveRound(f, squads)
                                                 # §3.4.1 — deterministic (FR-SN-013a). ERR-030-047:
                                                 # the quick-sim branch derives its XIs AND its
                                                 # UNFILTERED roster ids at its own resolve → filter
                                                 # site, mirroring PlayThroughEngine below — ban
                                                 # serving below runs on BOTH paths, so both paths
                                                 # must output the roster serving reads
-            fold := null                        # quick-sim synthesizes no cards (#44 §1.1/§7.2) —
-                                                # ban SERVING below still runs; only card GENERATION
-                                                # is engine-only at minimal
+                                                # fold holds #44 T3 cards when discipline is wired
+                                                # and at least one starter received a card
         # The fielded XIs — and, since ERR-044-014, the UNFILTERED roster ids beside them — come OUT
         # of the resolution itself (ERR-041-010(b), balance-pass AR pass 2: a second selection walk
         # here was an unenforced agreement with the configuration, and a second provider read here
@@ -968,6 +969,29 @@ rewrite, and a later spec may upgrade quick-sim to a fuller AI-vs-AI simulation.
 because the managed fixture consumes the match RNG (its own streams) and non-managed fixtures consume
 the season sub-stream by *key* (not by cursor position), the two are order-independent — the same
 final table results regardless of the order fixtures within a round are resolved (a §5 lock).
+
+#### Quick-sim cards (#44 T3)
+
+When discipline is wired, #30 synthesizes cards for both selected XIs on the quick-sim path. For
+each starter, use `UnitFloat(Mix(fixtureKey XOR sideCardKey) XOR uint(PlayerId))`, with the two
+side discriminators in Appendix A. This supplies one uniform draw in `[0, 1)` over the existing
+`0x22` fixture key. The draw is independent of selection order and of the goal draws. The model
+buffers player-id/card-kind entries in home-XI then away-XI order. #44 applies them in the league
+competition through the existing discipline rules after both clubs serve outstanding bans.
+
+Let `pR` and `pY` be the dimensionless straight-red and yellow probabilities per starter. Each
+lies in `[0, 1]` and their sum is at most 1. A draw below `pR` gives a straight red. A draw in
+`[pR, pR + pY)` gives one yellow. For example, with the defaults, a draw of 0.020 gives one
+yellow. Across 22 starters the defaults give expected counts of 0.99 yellows and 0.176 straight
+reds per fixture. They approximate the W8 B six-seed counts of six yellows and one straight red.
+The PM-2 model uses starters only and at most one card per player, so it covers straight reds
+and yellow accumulation.
+
+**Scoreline compatibility.** For the same fixture key and ratings the goal model gives the same
+scoreline. An already-played fixture retains its applied result on load. A newly earned suspension
+can change the selected XI in a subsequent fixture and therefore change its score. Play starting
+from the same saved state and using the same T3 settings reproduces both results and discipline.
+The existing discipline save block carries the changes.
 
 ## 3.5 Season-boundary roll (FR-SN-029 / KD-6)
 
@@ -1221,4 +1245,5 @@ formula inputs and tuning remain T3b2; this back-prop grants no amount-productio
 | 2.25 | 2026-10-20 | — | **ERR-030-056** (#31 T2): §3.5 pseudocode gains step (d″) — #31's `PrepareSeasonBoundary` staged after (d)/(d′), installed after (e); the new paragraph names `SeasonLoop.SubmitTransferBid` as ERR-030-005's mid-season roster commit (exact-value #40 staging, `SeasonTransferRoster` re-home, publish on Accepted) and records the `TransferFee` refusal once #31 is wired. |
 | 2.26 | 2026-10-20 | — | **ERR-030-057** (#31 T2 AR round 2): §3.5 (d″) pseudocode read `boundary.RetiredPlayerIds` unconditionally although `boundary` is null without #28 — now `boundary ? … : []` for the retirees, the arrivals and the FR-DC-013 drop, matching `SeasonLoop.RollToNextSeason`; (d″) derives the window as `SummerWindowFor(clock, Calendar.DayOfRound(0))` against the already-rolled calendar (ERR-031-011, was `SummerWindowFrom(clock)`); the (d″) paragraph and the (c′) correction note record that the window's close no longer follows roll timing — only its open day (the season-begin day) and #28's regen construction day do. |
 | 2.27 | 2026-11-18 | — | Describe shutdown checkpoints and discard of a cancelled round. |
+| 2.28 | 2026-11-20 | — | #44 T3 defines quick-sim cards, their commit point, and scoreline compatibility. |
 #endregion
