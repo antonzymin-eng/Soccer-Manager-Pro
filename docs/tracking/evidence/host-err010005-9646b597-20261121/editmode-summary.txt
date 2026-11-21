@@ -1,0 +1,76 @@
+# EditMode run — pinned host, commit 9646b597 (PR #559 head), NUnit 3.5 XML summary
+
+command: Unity.exe -batchmode -nographics -runTests -projectPath <worktree> -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests;TacticalDirector.PositioningAI.Tests;TacticalDirector.MatchClientCore.Tests;TacticalDirector.MatchViewer.Tests -testResults <xml> -logFile <log>
+pre-run build: the assemblies from compile.txt (same Library, no source change)
+start: 2026-11-21 05:01:26Z  end: 2026-11-21 05:33:45Z  duration: 1938.9 s  nunit engine: 3.5.0.0
+run: result=Skipped:Ignored total=1538 passed=1507 failed=0 inconclusive=1 skipped=30
+process exit code: 2 (Unity returns 2 when any case is not Passed; here the one Inconclusive case)
+
+assemblies:
+  TacticalDirector.MatchClientCore.Tests.dll: Passed total=192 passed=192 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchEngine.Tests.dll: Skipped total=1112 passed=1094 failed=0 inconclusive=1 skipped=17
+  TacticalDirector.MatchViewer.Tests.dll: Passed total=78 passed=78 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PositioningAI.Tests.dll: Skipped total=156 passed=143 failed=0 inconclusive=0 skipped=13
+
+fixtures touched by PR #559 and the snapshot fixtures:
+  TacticalDirector.MatchEngine.GkHeadingIntentSourceTests: Passed passed=25/25 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests: Skipped passed=14/15 failed=0 skipped=1 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineGkHeadingScenarioTests: Passed passed=1/1 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineGkHeadingTests: Passed passed=38/38 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotDigestReferenceTests: Passed passed=1/1 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotRestoreTests: Passed passed=19/19 failed=0 skipped=0 inconclusive=0
+  TacticalDirector.MatchEngine.MatchEngineSnapshotSchemaTests: Passed passed=28/28 failed=0 skipped=0 inconclusive=0
+
+non-passed, non-skipped cases:
+  Inconclusive  TacticalDirector.MatchEngine.MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice  (0.0 s)
+    too few connecting challenges to judge the share (won=9 loose=15 foul=2 missed=75 dispossessions=24) | Expected: greater than 30 | But was:  26
+
+skipped cases:
+  TacticalDirector.MatchEngine.CloseChanceDiagnosticTests.CloseChanceDiagnostic_ReportsFinalThirdToBoxFunnel
+  TacticalDirector.MatchEngine.FoulRateDiagnosticTests.FoulRateDiagnostic_ReportsRateVersusThreshold
+  TacticalDirector.MatchEngine.GkContactRateDiagnosticTests.GkContactRateDiagnostic_ReportsEpisodeAnatomy
+  TacticalDirector.MatchEngine.GkRushDiagnosticTests.GkRushDiagnostic_ReportsRushAnatomy
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsHandlingQualityCeiling
+  TacticalDirector.MatchEngine.GkSaveDiagnosticTests.GkSaveDiagnostic_ReportsSaveFunnel
+  TacticalDirector.MatchEngine.GoalConversionDiagnosticTests.GoalConversionDiagnostic_ReportsContactFateAndCreationFunnel
+  TacticalDirector.MatchEngine.HeaderReachabilityDiagnosticTests.HeaderReachabilityDiagnostic_ReportsFrozenSixSeedCounters
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsContactStream
+  TacticalDirector.MatchEngine.MatchBalanceDiagnosticTests.MatchBalanceDiagnostic_ReportsScorelineAsymmetry
+  TacticalDirector.MatchEngine.MatchEngineMarkingTests.IdentityProbe_SixSeedDigestsAtFrame18000
+  TacticalDirector.MatchEngine.PlatformDivergenceDiagnosticTests.PlatformDivergenceDiagnostic_SixSeedSharesAndStateTrace
+  TacticalDirector.MatchEngine.ShotOutcomeDiagnosticTests.ShotOutcomeDiagnostic_ReportsDistribution
+  TacticalDirector.MatchEngine.TackleIntentDiagnosticTests.TackleIntentDiagnostic_ReportsHowOftenAnIntentNamesTheCarrier
+  TacticalDirector.MatchEngine.W12GateFiringDiagnosticTests.W12GateFiringDiagnostic_ReportsPressingGateAndTriggerRates
+  TacticalDirector.MatchEngine.W8BDistributionDiagnosticTests.W8BDistributionDiagnostic_ReportsFrozenCorpusAndLongKickLandings
+  TacticalDirector.MatchEngine.W8StageADiagnosticTests.W8StageADiagnostic_ReportsFrozenSixSeedBaseline
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_DigestStability_IdenticalInputs
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_EntityIdPermutation_SameOutput
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_RngIsolation_CrossSubsystem
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Determinism_SaveLoad_ResumesIdentically
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_4231_TransToAtk_AMAdvances
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_F2Fallback_ValidArchetype
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_FullMatch_90Min_StateConsistency
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_LaneOverload_Resolved_BySpacing
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_OrchestratorNonInvocation_OfStage0Default
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_PhaseOscillationSuppressed
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Integration_SubstitutionSentinel_Preserved
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Performance_SpacingBudget_Under0_05ms
+  TacticalDirector.PositioningAI.Tests.PositioningAITests.Performance_ZeroHeapAlloc_InHotPath
+
+neutrality fixture output (HeaderReachabilityObserver_DoesNotChangeSnapshotDigests):
+  result=Passed duration=15.1 s; neutrality window: 23592 frames, first #10 evaluation at frame 22992
+
+longest 10 cases:
+     401.3 s  Passed    TacticalDirector.MatchEngine.MatchEngineShotSpeedTests.sim_match_engine_shot_speed
+     196.7 s  Passed    TacticalDirector.MatchEngine.MatchEngineKeeperClaimTests.sim_match_engine_keeper_claim
+     196.4 s  Passed    TacticalDirector.MatchEngine.MatchEngineInPossGateTests.sim_match_engine_inposs_gate
+     193.2 s  Passed    TacticalDirector.MatchEngine.MatchEngineCloseChanceTests.sim_match_engine_close_chance
+      99.5 s  Passed    TacticalDirector.MatchEngine.MatchEngineKeeperConversionTests.sim_match_engine_keeper_conversion
+      99.2 s  Passed    TacticalDirector.MatchEngine.MatchEngineKeeperContactTests.sim_match_engine_keeper_contact
+      81.8 s  Passed    TacticalDirector.MatchEngine.MatchEngineShotOutcomeTests.sim_match_engine_shot_outcomes
+      65.4 s  Passed    TacticalDirector.MatchEngine.MatchEngineGoalkeeperSaveTests.sim_match_engine_goalkeeper_saves
+      63.3 s  Passed    TacticalDirector.MatchEngine.MatchEnginePlayDevelopmentTests.sim_match_engine_play_develops
+      58.4 s  Passed    TacticalDirector.MatchEngine.MatchEngineDisciplineTests.sim_match_engine_discipline_plausible
+
+single-test run before the full run (same worktree, same Library, -testFilter on the one test):
+  head 9646b597: HeaderReachabilityObserver_DoesNotChangeSnapshotDigests result=Passed passed=1 failed=0 exit=0 (2026-11-21 05:00:51Z–2026-11-21 05:01:07Z); neutrality window: 23592 frames, first #10 evaluation at frame 22992

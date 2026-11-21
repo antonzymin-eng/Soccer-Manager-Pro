@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 20, 2026 — (v2.265) **PR #559 merges main `c7861ed` (PR #560, D-16).** Both sides' manifest entries kept; the branch's v2.262 label duplicates PR #560's v2.262 and is a branch-local record. **Modified by the merge resolution:** `docs/tracking/CHANGELOG.md` and this manifest. No path added or removed by the merge itself.
+**Last Updated:** November 21, 2026 — (v2.266) **PR #559 pinned-host Unity rerun at `9646b597`.** **New evidence directory** `docs/tracking/evidence/host-err010005-9646b597-20261121/` (its `SHA256SUMS` covers the rest): `README.md`, `SHA256SUMS`, `source-identity.txt`, `compile.txt`, `compile-editor-log.txt.xz`, `single-test-9646b597-results.xml.xz`, `editmode-results.xml.xz`, `editmode-editor-log.txt.xz` and `editmode-summary.txt`. Unity 6000.4.9f1, 0 `error CS`; four-assembly EditMode 1,507 passed / 0 failed / 30 skipped / 1 existing inconclusive. **Modified:** `docs/tracking/open-issues.md` (header and #441 status line), `docs/tracking/CHANGELOG.md`, this manifest, and CI tooling `tools/dotnet-ci/check_evidence_manifests.py` and `tools/tests/test_evidence_manifests.py` (58 registered directories). No `src/` change, no assembly added, no removals.
+
+**Last Updated (prior):** November 20, 2026 — (v2.265) **PR #559 merges main `c7861ed` (PR #560, D-16).** Both sides' manifest entries kept; the branch's v2.262 label duplicates PR #560's v2.262 and is a branch-local record. **Modified by the merge resolution:** `docs/tracking/CHANGELOG.md` and this manifest. No path added or removed by the merge itself.
 
 **Last Updated (prior):** November 20, 2026 — (v2.264) **PR #559 Codex review: #441 neutrality window.** **Modified:** `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`, `docs/tracking/CHANGELOG-src.md` v2.246, `docs/tracking/CHANGELOG.md` and this manifest. No assembly added, no removals.
 
