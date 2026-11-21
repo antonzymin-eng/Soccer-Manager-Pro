@@ -1782,9 +1782,10 @@ also writes the marked man's **world-frame velocity** (`_agents[id].Velocity` at
 the velocity is not mirrored. #8 §3.5.6 dispatches the mark-point MOVE as an Agent Movement #2 §3.5.3.1 tracking command
 with that feed-forward. #14 itself stays pure: the composer's signature and output are unchanged.
 
-**Activation.** The composition root's switch (`MatchEngineConstants.MarkMovementEnabled`, `[GT]`,
-default `false`) gates both this composition and Invariant 4 (`markMovementActive`, §2.3). With it
-off no target is ever composed and the pipeline is the pre-W13.1 one.
+**Activation.** The composition root's switch (`MatchEngineConstants.MarkMovementEnabled`, `[GT]`)
+gates both this composition and Invariant 4 (`markMovementActive`, §2.3). With it off no target is
+composed and the pipeline is the pre-W13.1 one. Its default was `false` from W13.1. It became **`true` at the
+W13 default flip (owner decision OD-2, November 21, 2026)**, after the W13-F5..F10 blockers were fixed.
 
 ---
 
@@ -1807,4 +1808,4 @@ off no target is ever composed and the pipeline is the pre-W13.1 one.
 | 0.13 | November 12, 2026 | AI agent (W13.1c review) | `ERR-008-028` amendment: §3.13.1 "Pace" wording corrected — `v` is the magnitude of the world-frame agent velocity (`_agents[id].Velocity`), frame-invariant, not of the #14 snapshot velocity; the #8 speed tier applies only while the marker is slower than his man. Documentation only. |
 | 0.14 | November 12, 2026 | AI agent (W13.1c final pass) | §3.13.1 stand-off paragraph gains the W13-F8 known limitation (the 1.0 m tight stand-off is at / below body contact; measured separations). No value or formula change. |
 | 0.15 | November 18, 2026 | AI agent (A′, owner decision D1) | `ERR-014-011`: new §3.6.5.8 "BallLoose release" — the knock velocity from closing speed and carrier momentum (three un-calibrated `[GT]`, one `[FIXED]` direction guard), the frame-local carrier fence on first touch, pickup and keeper hand contact, its lifetime and non-serialization, worked examples and correctness-only acceptance. §3.6.5.2's `BALL_LOOSE` row and §3.6.5.5 point to it; the constant index gains four rows. Spec and code in the same commit. |
-| 0.16 | November 21, 2026 | AI agent (W13 blockers) | `ERR-014-010` amendment 2 (W13-F9): §3.13 Step 8a drops a tackle request whose agent's final assignment no longer targets that opponent; the §3.10.2 known limitation becomes the resolved paragraph; not switch-gated (default behaviour changes). `ERR-014-012` (W13-F8): §3.13.1 contact floor `s_eff = max(s, r_marker + r_man + d_tol)` computed by the composition root (`[CROSS #2]` radii and settle tolerance; no new constant); the W13-F8 known limitation replaced by measured values and the goalward-runner residual. §3.13.1 "Pace" re-pointed to `MarkTargetVelocity` and the #8 §3.5.6 tracking MOVE (`ERR-008-029`). Spec + code, same commit. |
+| 0.16 | November 21, 2026 | AI agent (W13 blockers) | `ERR-014-010` amendment 2 (W13-F9): §3.13 Step 8a drops a tackle request whose agent's final assignment no longer targets that opponent; the §3.10.2 known limitation becomes the resolved paragraph; not switch-gated (default behaviour changes). `ERR-014-012` (W13-F8): §3.13.1 contact floor `s_eff = max(s, r_marker + r_man + d_tol)` computed by the composition root (`[CROSS #2]` radii and settle tolerance; no new constant); the W13-F8 known limitation replaced by measured values and the goalward-runner residual. §3.13.1 "Pace" re-pointed to `MarkTargetVelocity` and the #8 §3.5.6 tracking MOVE (`ERR-008-029`). "Activation" records the default flip (OD-2): `MarkMovementEnabled` default `true`. Spec + code, same commit. |

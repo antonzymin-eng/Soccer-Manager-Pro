@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-21 (W13 blockers + flip: MarkTargetVelocity writer (ERR-008-029); stand-off contact floor MarkContactFloorM (ERR-014-012); snapshot v30 trailing tracking block (ERR-002-001); + TestOnly_TackleIntents / TestOnly_MarkTargetVelocity)
 // Modified: 2026-11-18 (A′ / ERR-014-011: BallLoose knock from duel geometry + frame-local carrier fence on first touch, pickup and keeper hand contact; no schema/RNG change)
 // Modified: 2026-11-18 (merge of main into #440 Stage A: version history only)
 // Modified: 2026-11-16 (merge of W13 with main: version history only)
@@ -11559,4 +11560,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.17 (branch-local #440) | 2026-11-10 | — | #440 Stage A development-only observer at tackle/ownership/censor boundaries. No gameplay, snapshot, RNG or tuning change. |
 // | 2.23 | 2026-11-18 | — | Merge main 4cdb4823 into #440 Stage A (PR #544): both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change. |
 // | 2.24 | 2026-11-18 | — | A′ / ERR-014-011 (#14 §3.6.5.8, owner decision D1): BallLoose releases the ball with the geometry knock and fences the carrier out of first touch, loose pickup and keeper hand contact for the tackle frame. Fence is frame-local (cleared at Input, restart and Events), never serialized; no schema, RNG or draw change. |
+// | 2.25 | 2026-11-21 | — | W13 blockers (F5-F10) and default flip: RunMechanicsAI writes TacticalContext.MarkTargetVelocity (pure SelectMarkTargetVelocity replaces SelectMarkTargetSpeed; ERR-008-029) and floors the mark stand-off at the two #2 hitbox radii + MinStoppingDistanceM (MarkContactFloorM; ERR-014-012); Serialize/DeserializeWorldState append the v30 tracking half of each held MovementCommand (ERR-002-001); TestOnly_MarkTargetSpeed replaced by TestOnly_MarkTargetVelocity; + TestOnly_TackleIntents. No RNG stream / domain tag / draw-order change. |
 #endregion

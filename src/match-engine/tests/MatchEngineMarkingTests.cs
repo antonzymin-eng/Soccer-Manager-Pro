@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineMarkingTests.cs
 // Created:  2026-11-11
-// Modified: 2026-11-12
+// Modified: 2026-11-21 (W13 blockers F5-F10 asserted; default flip)
+// Modified (prior): 2026-11-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.13.1 / §3.10.2 (Invariant 4), Decision Tree #8 §3.1.7.2 / §3.1.8.2,
 //           Tactical Instructions #21 §3.4 (TightMarking), ERR-014-010 / ERR-008-027 / ERR-021-010, Code Standards #20
@@ -724,7 +725,8 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(a.E.TestOnly_MarkTarget(cb).HasTarget, c.TestOnly_MarkTarget(cb).HasTarget);
             Assert.IsTrue(c.TestOnly_MarkTarget(a.MarkingCb()).HasTarget, "the continued run holds a live mark target");
 
-            MatchEngine u = MatchEngine.RestoreFromSnapshot(header, payload, Seed);   // NOT re-armed: config says off
+            MatchEngine u = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            u.TestOnly_ArmMarkMovement(false);   // a restore under a different switch value (the config default is now on)
             var ru = new Rig(u, def) { AttackerCanonical = attacker, LockOwn = false };
             bool diverged = false;
             for (int i = 0; i < 600 && !diverged; i++)
@@ -732,7 +734,7 @@ namespace TacticalDirector.MatchEngine
                 ru.Tick();
                 if (!Equal(reference[i], u.CurrentSnapshotDigest)) diverged = true;
             }
-            Assert.IsTrue(diverged, "a restored engine left at the config default diverges from the armed run (OD-11 hazard)");
+            Assert.IsTrue(diverged, "a restored engine run under a different switch value diverges from the armed run (OD-11 hazard)");
         }
 
         /// <summary>
@@ -849,30 +851,28 @@ namespace TacticalDirector.MatchEngine
         // ── 9. switch-off identity ───────────────────────────────────────────────
 
         /// <summary>
-        /// Switch off (the shipped default, no arming) writes no mark target over a full five-minute match, whether the
-        /// engine is left as shipped or explicitly disarmed; the same match armed does write targets and differs. This is
-        /// a self-consistency check, NOT evidence of identity with the pre-W13.1 engine: the shipped default and
-        /// <c>Arm(false)</c> resolve through the same code path, so their equality here is true by construction. The
-        /// identity evidence is the env-gated <see cref="IdentityProbe_SixSeedDigestsAtFrame18000"/> compared across the
-        /// W13.0 and W13.1 tips (and the unchanged pre-existing suites).
+        /// W13 default flip (OD-2, November 21, 2026): the engine AS SHIPPED marks. Over a five-minute match the shipped default
+        /// (no arming call) writes mark targets and its digests equal the explicitly armed run at every 3,000-frame checkpoint;
+        /// <c>Arm(false)</c> writes no target and its match differs. Self-consistency of the switch, not identity with any
+        /// earlier engine.
         /// </summary>
         [Test]
-        public void SwitchOff_NeverWritesATarget_AndTheArmedMatchDiffers()
+        public void ShippedDefault_IsArmed_AndArmFalseWritesNothingAndDiffers()
         {
-            Assert.IsFalse(MatchEngineConstants.MarkMovementEnabled, "the shipped default is off");
+            Assert.IsTrue(MatchEngineConstants.MarkMovementEnabled, "the shipped default is on (W13 flip, OD-2)");
             const int Frames = 18000;
-            (List<byte[]> plain, List<float> tPlain, int nPlain) = RunArmedOrDefault(Frames, mode: 0);
-            (List<byte[]> off, List<float> tOff, int nOff) = RunArmedOrDefault(Frames, mode: 1);
+            (List<byte[]> plain, _, int nPlain) = RunArmedOrDefault(Frames, mode: 0);
+            (List<byte[]> off, _, int nOff) = RunArmedOrDefault(Frames, mode: 1);
             (List<byte[]> on, _, int nOn) = RunArmedOrDefault(Frames, mode: 2);
 
-            Assert.AreEqual(0, nPlain, "default: no mark target is ever written");
-            Assert.AreEqual(0, nOff, "explicitly disarmed: none either");
-            for (int i = 0; i < plain.Count; i++) CollectionAssert.AreEqual(plain[i], off[i], $"checkpoint {i}: Arm(false) differs from the default (same code path; by construction)");
-            CollectionAssert.AreEqual(tPlain, tOff);
-            Assert.Greater(nOn, 0, "armed: targets are written");
+            Assert.Greater(nPlain, 0, "shipped default: mark targets are written");
+            Assert.Greater(nOn, 0, "armed: mark targets are written");
+            for (int i = 0; i < plain.Count; i++)
+                CollectionAssert.AreEqual(on[(i + 1) * 5 - 1], plain[i], $"checkpoint {i}: the shipped default differs from Arm(true)");   // 3,000-frame vs 600-frame checkpoints
+            Assert.AreEqual(0, nOff, "explicitly disarmed: no mark target is ever written");
             bool differs = false;
-            for (int i = 0; i < plain.Count && !differs; i++) differs = !Equal(plain[i], on[(i + 1) * 5 - 1]);   // 3,000-frame checkpoints vs the armed run's 600-frame ones
-            Assert.IsTrue(differs, "the armed match differs from the switch-off match, so the no-target assertions above are not vacuous");
+            for (int i = 0; i < plain.Count && !differs; i++) differs = !Equal(plain[i], off[i]);
+            Assert.IsTrue(differs, "the disarmed match differs from the shipped one, so the switch is not vacuous");
         }
 
         /// <summary>mode 0 = engine as shipped (no arming call), 1 = Arm(false), 2 = Arm(true).</summary>
@@ -1516,4 +1516,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   ~8.6 m/s SPRINTING inside each physics step); the degenerate-velocity tolerance removed (no test emits the assert with the corrected rig); tight runner cases moved |
 // |         |            |        |   to the [Explicit] descriptive tests (W13-F8); RunnerEnvelope asserts the engine-written speed per stride; [Explicit] command-flip / OscillationGuard and        |
 // |         |            |        |   stationary-man settling tables; peaks re-measured.                                                                                                                  |
+// | 1.6     | 2026-11-21 | —      | W13 blockers: asserted RunnerTracking_* (no command churn / guard lock, goal-side, peak < stand-off + 1 m), GoalwardRunner_* (never GROUNDED, goal-side; no overlap for the ordinary stand-off), StationaryMan_* (settles on the point, clear of the body), Mirror_* (home/away stride-by-stride), MarkContactFloor_* (worked values), TackleIntents_SeenByTheEngine_* (F9 engine seam), RestoreContinuation_WhileTrackingARunner_* (v30). MarkTargetSpeed tests replaced by MarkTargetVelocity ones. Default flip: ShippedDefault_IsArmed_AndArmFalseWritesNothingAndDiffers replaces the switch-off-default test; the OD-11 restore hazard now disarms explicitly. |
 #endregion
