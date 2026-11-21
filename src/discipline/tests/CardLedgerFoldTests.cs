@@ -1,4 +1,5 @@
 // File:     src/discipline/tests/CardLedgerFoldTests.cs
+// Modified: 2026-11-20 (#44 T3 review: player-attributed summary guards and commit.)
 // Created:  2026-08-13
 // Modified: 2026-08-16, round 5 (round-5 reviewed-findings pass, L-code — v1.11: Substitution_WithA-
 //           BenchOutgoing_Throws gained the two OccupancyAt assertions its Incoming sibling already had,
@@ -150,6 +151,43 @@ namespace TacticalDirector.Discipline.Tests
 
         private static SubstitutionEvent Sub(int outgoing, int incoming) =>
             new SubstitutionEvent(outgoing, incoming, team: 0, substitutionReason: 0);
+
+        [Test]
+        public void FromPlayerCards_NullList_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => CardLedgerFold.FromPlayerCards(Competition, null));
+        }
+
+        [TestCase(-1, DisciplineConstants.CardKindYellow)]
+        [TestCase(100, (byte)3)]
+        public void FromPlayerCards_InvalidAttribution_Throws(int playerId, byte cardKind)
+        {
+            var cards = new[] { new CardLedgerFold.PlayerCard(playerId, cardKind) };
+            Assert.Throws<ArgumentOutOfRangeException>(() => CardLedgerFold.FromPlayerCards(Competition, cards));
+        }
+
+        [Test]
+        public void FromPlayerCards_ObservingEngineTicks_Throws()
+        {
+            var fold = CardLedgerFold.FromPlayerCards(Competition, Array.Empty<CardLedgerFold.PlayerCard>());
+            Assert.Throws<InvalidOperationException>(() => fold.ObserveTick(new FakeLedgerTap()));
+        }
+
+        [Test]
+        public void FromPlayerCards_SnapshotsTheSummaryAndCommitsExactlyOnce()
+        {
+            var cards = new[] { new CardLedgerFold.PlayerCard(100, DisciplineConstants.CardKindRed) };
+            var fold = CardLedgerFold.FromPlayerCards(Competition, cards);
+            cards[0] = new CardLedgerFold.PlayerCard(200, DisciplineConstants.CardKindYellow);
+            var state = new DisciplineState();
+            var rules = new DisciplineRules(state);
+
+            Assert.That(fold.Commit(rules), Is.EqualTo(1));
+            Assert.Throws<InvalidOperationException>(() => fold.Commit(rules));
+            Assert.That(state.Count, Is.EqualTo(1));
+            Assert.That(state.EntryAt(0), Is.EqualTo(new DisciplineEntry(
+                100, Competition, 0, DisciplineConstants.StraightRedBanMatches)));
+        }
 
         // ── Constructor guards (M25) ──────────────────────────────────────────────
         //
@@ -938,4 +976,5 @@ namespace TacticalDirector.Discipline.Tests
 // |         |            |        | write/clear pair left the whole suite green except this test,     |
 // |         |            |        | which then failed here (OccupancyAt(outgoingBench) read 101, not  |
 // |         |            |        | 300); reverted after observing the failure.                        |
+// | 1.12 | 2026-11-20 | — | #44 T3 review: verify attribution validation, tick refusal, and one-shot summary commit. |
 #endregion

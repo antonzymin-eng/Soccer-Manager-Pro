@@ -982,10 +982,17 @@ competition through the existing discipline rules after both clubs serve outstan
 Let `pR` and `pY` be the dimensionless straight-red and yellow probabilities per starter. Each
 lies in `[0, 1]` and their sum is at most 1. A draw below `pR` gives a straight red. A draw in
 `[pR, pR + pY)` gives one yellow. For example, with the defaults, a draw of 0.020 gives one
-yellow. Across 22 starters the defaults give expected counts of 0.99 yellows and 0.176 straight
-reds per fixture. They approximate the W8 B six-seed counts of six yellows and one straight red.
-The PM-2 model uses starters only and at most one card per player, so it covers straight reds
-and yellow accumulation.
+yellow. The provisional PM-2 defaults give expected counts of 0.99 yellows and 0.176 straight
+reds per fixture across 22 starters. They approximate a six-match observation of six yellows and
+one straight red. That sample gives limited precision, especially for dismissals.
+[W8 B measurement](../../tracking/w8-b-implementation-results.md)
+
+The model gives at most one card per starter. A player who starts all 38 fixtures expects about
+1.71 yellows. With independent draws and that many appearances, the probability of reaching the
+five-yellow threshold in one season is about 2.7%. The engine's card rates have moved between
+captures, so managed and quick-sim clubs can still have different suspension exposure. The
+foul/card calibration will characterize both paths before rates or thresholds are retuned.
+[Foul and discipline balance](../../tracking/foul-discipline-balance-design.md#7-recorded-not-fixed)
 
 **Scoreline compatibility.** For the same fixture key and ratings the goal model gives the same
 scoreline. An already-played fixture retains its applied result on load. A newly earned suspension

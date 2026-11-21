@@ -1,5 +1,6 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-11-20 (#44 T3 review: restrict card summary construction to the composing assembly.)
 // Modified: 2026-11-20 (#44 T3: accept player-attributed quick-sim card summaries.)
 // Modified: 2026-08-16, round 5 (round-5 reviewed-findings pass, L-t4, header only — v1.14; see version history)
 // Modified: 2026-08-16, latest of all, later still again (round-4 reviewed-findings pass, M-C — v1.13; see version history)
@@ -248,7 +249,7 @@ namespace TacticalDirector.Discipline
         /// Buffers cards already attributed to player ids in a completed quick-sim fixture.
         /// The caller supplies the order and commits once, after serving pre-existing bans.
         /// </summary>
-        public static CardLedgerFold FromPlayerCards(int competitionId, IReadOnlyList<PlayerCard> cards)
+        internal static CardLedgerFold FromPlayerCards(int competitionId, IReadOnlyList<PlayerCard> cards)
         {
             if (cards == null)
             {
@@ -652,9 +653,7 @@ namespace TacticalDirector.Discipline
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(cardKind), cardKind,
-                    "CardLedgerFold: CardIssuedEvent.CardKind must be 0 (yellow), 1 (red) or 2 (second " +
-                    "yellow) — F4. Refused at the tap rather than at Commit so the failure names the " +
-                    "tick's record, not a buffered copy of it.");
+                    "CardLedgerFold: CardKind must be 0 (yellow), 1 (red) or 2 (second yellow) (F4).");
             }
         }
 
@@ -669,16 +668,16 @@ namespace TacticalDirector.Discipline
         }
 
         /// <summary>One card, already attributed to a player — the buffered form held until <see cref="Commit"/>.</summary>
-        public readonly struct PlayerCard
+        internal readonly struct PlayerCard
         {
             /// <summary>The player who received the card.</summary>
-            public readonly int PlayerId;
+            internal readonly int PlayerId;
 
             /// <summary>The #17 card kind ordinal.</summary>
-            public readonly byte CardKind;
+            internal readonly byte CardKind;
 
             /// <summary>Creates a card summary entry for a known player.</summary>
-            public PlayerCard(int playerId, byte cardKind)
+            internal PlayerCard(int playerId, byte cardKind)
             {
                 PlayerId = playerId;
                 CardKind = cardKind;
@@ -862,4 +861,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | rows above. No behaviour or detail change — the full narrative    |
 // |         |            |        | still lives in those rows, as the header itself says.              |
 // | 1.15 | 2026-11-20 | — | #44 T3: buffers player-attributed summaries for the existing commit path. |
+// | 1.16 | 2026-11-20 | — | #44 T3 review: keep card summary construction internal. |
 #endregion

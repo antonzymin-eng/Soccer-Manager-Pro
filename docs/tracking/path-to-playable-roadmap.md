@@ -608,7 +608,10 @@ decided.
    scores can move once a new ban changes the available XI. Already-played outcomes are retained.
    In a 380-fixture Linux comparison against `c7861ed3` (20 clubs, seed `0x5EED1EA6D0DEC0DE`),
    T3 changed two scorelines with discipline wired, and each match kept its original winner.
-   The discipline-unwired comparison changed zero scorelines.
+   The discipline-unwired comparison changed zero scorelines. Reproduce each side with
+   `bash tools/quick-sim-card-impact.sh <checkout>` using `c7861ed3` for the base and this branch
+   for T3. The CSV hashes are `2775c43979049c2a5a2ffc3f454bcb10c05cfdae780e0caeb48d00273995d1ed`
+   (base) and `eb44baaddb6a9ddc8cabc4e9ea470f907eeca31863db8a78bb760f5289c19f24` (T3).
    See [#30 §3.4.1](../specs/season-competition-loop/section-3.md#quick-sim-cards-44-t3).
    **Merge #44 T3 before the PM-2 A4a quick-sim recapture** (engine-lane item 4, formerly step 6)
    and before the depth-phase recapture. The recapture uses an engine baseline containing this

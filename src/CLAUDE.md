@@ -98,5 +98,9 @@ provider choice and nothing else: the workflow is the authoritative definition o
 pass/fail conclusions, and is never restated here. Spec #19 §7.5 D4 tracks the decision; required-status
 activation for the proposed architecture/evidence gate is A8-owned and not in force.
 
+For changes to quick-sim fixture outcomes, use `bash tools/quick-sim-card-impact.sh <checkout>`
+to compare the fixed 20-club season with and without discipline. Compare the same two variants
+on the base and candidate revisions.
+
 Before finishing, verify layering, allocation behavior, deterministic replay implications, file
 headers/version history, constant tags, and mirrored home/away behavior where geometry is team-relative.

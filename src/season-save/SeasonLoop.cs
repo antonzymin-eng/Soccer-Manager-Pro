@@ -1,5 +1,6 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-11-20 (#44 T3 review: route quick-sim probability preflight through the existing driver.)
 // Modified: 2026-11-20 (#44 T3: quick-sim returns synthetic cards for the regular #44 commit.)
 // Modified: 2026-11-18 (Cooperative career shutdown.)
 // Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
@@ -211,6 +212,9 @@ namespace TacticalDirector.SeasonSave
             /// </summary>
             void RequireCommittableConfig();
 
+            /// <summary>Validates the season model's card probabilities before a round that may quick-sim.</summary>
+            void RequireQuickSimCardProbabilities();
+
             /// <summary>
             /// One club's FR-DC-011 ban-serving decrement for a played fixture, over the club's own
             /// roster (<paramref name="clubPlayerIds"/> — ERR-044-014: #44 no longer derives club
@@ -240,6 +244,10 @@ namespace TacticalDirector.SeasonSave
 
             /// <inheritdoc />
             public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
+
+            /// <inheritdoc />
+            public void RequireQuickSimCardProbabilities() => RoundResolutionModel.RequireCardProbabilities(
+                SeasonLoopConstants.QuickSimYellowProbability, SeasonLoopConstants.QuickSimStraightRedProbability);
 
             /// <inheritdoc />
             public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds) =>
@@ -1120,7 +1128,7 @@ namespace TacticalDirector.SeasonSave
                 _disciplineDriver.RequireCommittableConfig();
                 if (Mode != RoundResolutionMode.FullEngine)
                 {
-                    RoundResolutionModel.RequireCardProbabilities();
+                    _disciplineDriver.RequireQuickSimCardProbabilities();
                 }
             }
 
@@ -1886,7 +1894,9 @@ namespace TacticalDirector.SeasonSave
                 worldDay);
             foldOrNull = _disciplineDriver == null
                 ? null
-                : RoundResolutionModel.SynthesizeCards(in fixture, _state.Seed, _state.SeasonNumber, homeXi, awayXi);
+                : RoundResolutionModel.SynthesizeCards(
+                    in fixture, _state.Seed, _state.SeasonNumber, homeXi, awayXi,
+                    SeasonLoopConstants.QuickSimYellowProbability, SeasonLoopConstants.QuickSimStraightRedProbability);
             return result;
         }
 
@@ -2597,4 +2607,5 @@ namespace TacticalDirector.SeasonSave
 // | 1.48 | 2026-11-18 | — | Add opt-in stop checkpoints between complete season fixtures and match tick batches. |
 // | 1.49 | 2026-11-18 | — | Read the shutdown checkpoint interval from the season constant catalogue. |
 // | 1.50 | 2026-11-20 | — | #44 T3: quick-sim buffers both XIs' cards and commits them after ban serving. |
+// | 1.51 | 2026-11-20 | — | #44 T3 review: route the probability preflight through the existing discipline driver. |
 #endregion
