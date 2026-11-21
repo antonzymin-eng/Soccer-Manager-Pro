@@ -10,7 +10,20 @@
 
 ---
 
-> **UPDATED November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
+> **UPDATED November 21, 2026 (W13 blockers fixed; default flipped ON), v1.54:** W13-F5..F10 fixed on branch
+> `claude/laughing-knuth-rj7vec` (unmerged): Agent Movement #2 §3.5.3.1 tracking command (`ERR-002-001`),
+> #8 §3.5.6 tracking MOVE (`ERR-008-029`), #14 Step 8a tackle reconciliation (`ERR-014-010` amendment 2) and
+> §3.13.1 contact floor (`ERR-014-012`); snapshot schema 29 → 30. `MarkMovementEnabled` now defaults to `true`
+> (OD-2). The 120-match off/on measurement is retained ([evidence](evidence/w13-flip-measurement-20261121/README.md)).
+> Results, per match, off → on:
+> - goals −16 to −17%;
+> - tackle attempts ×2.3;
+> - collision knockdowns +49% (new issue);
+> - #434 formation / Duty sensitivity reduced for F433 but not for F4231 or Duty.
+>
+> Pinned Unity, frozen lane and calibration are still open.
+
+> **UPDATED (prior) November 20, 2026 (W8 C sequence status), v1.53:** Sequence row 8 now records
 > W8 C and its paired measurement as complete. The October #441 note is a single quote.
 
 > **UPDATED (prior) November 20, 2026 (#441 current-main diagnosis), v1.52:** The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026)
@@ -596,7 +609,7 @@ was a passive mirror of the incoming ball — `TargetIntent` computed a real aim
 nothing downstream. Resolved as of `ERR-010-002`; the detection gap that let it ship unnoticed is
 not.
 
-### W13 — Defensive AI #14's mark assignment never moves a defender — ⚠️ **W13.0 MERGED (PR #545); W13.1 AND W13.1c MERGED (PR #547, November 16, 2026); WIRING SWITCHED OFF BY DEFAULT; FLIP, MEASUREMENT AND CALIBRATION PENDING**
+### W13 — Defensive AI #14's mark assignment never moves a defender — ⚠️ **W13.0 MERGED (PR #545); W13.1 AND W13.1c MERGED (PR #547, November 16, 2026); BLOCKERS F5–F10 FIXED AND DEFAULT FLIPPED ON (November 21, 2026, branch `claude/laughing-knuth-rj7vec`, unmerged); CALIBRATION, PINNED UNITY AND FROZEN LANE PENDING**
 **Evidence (plan §1.1, verified at main `d4b026aa`):** #14 assigns MAN_MARK / INTERCEPT_RUNNER / COVER_GK_ZONE every 10 Hz stride, but its assignments reach gameplay only through tackle intents (`TackleIntentEvaluator`, the assigned opponent within 3 m) and the trap's demotion of DEFENSE-line marks. The per-agent `GetAssignment` has no production caller, the team `MarkDirective` is read by nothing but a `TestOnly_` seam, and `MarkAssignment.TargetPosition` has no reader outside `defensive-ai` except the serializer. No invariant (1 back-line ZONAL, 2 ≤ 4 MAN_MARK, 3 20 m) constrains anything that moves today. **C10** (§4: `MarkAssigner` is ball-blind) is the same finding from the tackle side; no earlier item covered movement. The highest prior item was W12, so this is W13.
 
 **W13.0 — D1 (`b91a8ce`) and D2 (`5d99fa0`) merged to main in PR #545 (`c7ec1131`, November 10, 2026); the review fixes (`fd73de7`) are on branch `claude/great-sagan-rpcmhp`, unmerged.** Two live defects found while verifying the plan: **D1 `ERR-014-008`** (the away team's #14 defended the wrong goal: `DefendsX0(teamId)` against a snapshot already in the defending team's canonical frame) and **D2 `ERR-014-009`** (retained marks kept their commit-time `TargetPosition`, blinding Invariant 3). Both were fixed with their spec text (#14 §1/§2/§3/§5) and tests; KD-W1 exempts defect fixes. D-05 (no behaviour-changing landing inside an open A→B / B→C window) was **not verified** from this checkout (the plan's OD-1 says to check `path-to-playable-roadmap.md` at commit time); the owner approved landing W13.0 first. **Validation to date is the non-certifying Linux `dotnet-ci` gate only.** Pending hand-offs, none run: the frozen-lane (SDK 8.0.426 / CLR 8.0.32) six-seed characterization and digest adoption (plan §9 ④, owner decision), and the pinned Unity 6000.4.9f1 compile and EditMode validation (`src/CLAUDE.md`).
@@ -614,6 +627,64 @@ not.
 **Remaining W13 follow-ups (not started):** **W13-F5** the goalward-runner collision (still GROUNDED 19 / 40 strides on the corrected rig, min gap 0.68 / 0.50 m, ends 6–10 m behind; diagnose in the engine with a free-running attacker; **blocks the default flip**); **W13-F6** the gate's WALK / JOG flapping and OscillationGuard locks at any jog-band speed (**blocks the default flip**); **W13-F7** the stationary-man orbit (**blocks the default flip**); **W13-F8** the 1.0 m `TightMarking` stand-off at body contact (**blocks flipping with `TightMarking`**; calibration / owner decision); the real fix for F5–F7 and the residual pace-tier lag is an Agent Movement #2 arrival-braking / target-speed command or a gate position term — an owner decision; **W13.2** per-team `MarkingScheme` (a #21 field and a world-schema bump after #543's v29); **W13-F1** `MarkTargetEntityId` (ERR for the #14 §7.2 / #21 §3.5 stage conflict); **F2** between-lines pickup (only if §10 shows residual exposure); **F4** trap step-up after the D4 unit fix — the plan defines no F3. Formation / Duty player controls stay blocked until the default flip (OD-2). The §3 retained-trace diagnosis is a hand-off to the #543 owner's agent and does not block code.
 
 **Additional tracked follow-ups (November 12 review):** **[W13-F9](open-issues-resolved.md#w13-stale-tackle-after-demotion)** promotes the stale-request limitation above to an explicit default-flip blocker; attach fix/replay evidence to the existing ERR-014-010 record, not a duplicate ERR. **[W13-F10](open-issues-resolved.md#w13-mirror-asymmetry)** tracks unexplained home/away differences and blocks using the F8 probe data to set the tight-marking floor. Existing [F5](open-issues-resolved.md#w13-goalward-runner-collision), [F6](open-issues-resolved.md#w13-gate-flapping-guard-locks), [F7](open-issues-resolved.md#w13-stationary-man-orbit) and [F8](open-issues-resolved.md#w13-tight-standoff-body-contact) remain their owning issue records; movement planning links them instead of creating a parallel status register. See their dated review qualifications.
+
+
+**Blockers fixed and default flipped ON — November 21, 2026 (branch `claude/laughing-knuth-rj7vec`, unmerged).**
+
+- **F5 / F6 / F7** — `ERR-002-001` + `ERR-008-029`. A mark-point MOVE is now one Agent Movement #2 §3.5.3.1 *tracking*
+  command: the point's velocity as feed-forward plus arrival braking within the controlled floor, extrapolated at
+  60 Hz from the 10 Hz command (≤ 0.2 s). The W13.1c walk / jog tier is withdrawn. Corrected rig, both teams:
+  - 0 command changes and 0 guard locks; was 32 / 59 flips and 4 locks at 2.6 m/s.
+  - Peak gap 2.17 m at 2.6 / 3.5 / 5.0 m/s; was 2.73–3.13 m.
+  - Goalward runner: 0 / 40 GROUNDED strides; was 19 / 40.
+  - Stationary man: the marker settles at 0.00 m/s, 0.05 m from the point; he used to orbit at 2.20 m/s.
+
+  A first 0.1 s staleness limit dropped the feed-forward on the sixth frame of every stride. That alone left 2–3
+  guard locks per run; 0.2 s removed them.
+- **F8** — `ERR-014-012`. The stand-off is floored at the two hitbox radii + 0.1 m. A tight marker is goal-side 15 / 15
+  against a stationary man and on every stride against a 2.6 m/s runner; was 4 / 15 and 6 / 60 away.
+- **F9** — `ERR-014-010` amendment 2. #14 Step 8a reconciles tackle requests with the final assignments. Not
+  switch-gated.
+- **F10** — explained. Mirror rounding was amplified by the flip and the orbit. Home and away are now
+  stride-identical, except where bodies touch.
+
+Residual: `w13-tight-goalward-contact` (0.02 m transient overlap; #2's 2.0 m/s² walking acceleration).
+
+The former `[Explicit]` descriptions are now asserted regressions in `MatchEngineMarkingTests`.
+`MarkMovementEnabled` defaults to **true** (OD-2).
+
+**Flip measurement** ([evidence](evidence/w13-flip-measurement-20261121/README.md); descriptive, non-certifying Linux,
+6 seeds × #434 C0–C9 × off / on; per-match means, off → on):
+
+| Metric | Off | On |
+|---|---|---|
+| Goals, home | 6.37 | 5.27 |
+| Goals, away | 4.90 | 4.13 |
+| Shots | | +16 to +24% |
+| Tackles missed | 10.7 | 24.8 |
+| Tackle fouls | 0.53 | 1.12 |
+| Grounded agent-ticks | | +55% |
+| Guard-lock entries | | −21% |
+
+#434 sensitivity (changed team's goals against C0):
+
+| Case | Off | On |
+|---|---|---|
+| F433 home | ×2.70 | ×1.33 |
+| F433 away | ×2.05 | ×0.87 |
+| F4231 home | ×1.56 | ×2.10 |
+| all-Attack home | ×2.89 | ×3.33 |
+
+New finding [`w13-loose-ball-knockdowns`](open-issues.md#w13-loose-ball-knockdowns): collision knockdowns rise from
+1,884 to 2,799 per match. Most happen with the ball loose, when both teams compose mark points.
+
+**Still open:**
+- pinned Unity compile / EditMode;
+- frozen-lane identity;
+- the full §10 protocol;
+- stand-off calibration (KD-W1);
+- W13.2;
+- the #434 player-control blocker (not discharged).
 
 
 ---
@@ -796,7 +867,7 @@ throughout; `[GT]` landings are frozen per KD-W1 until the final pass.
 | 6 | ~~**W5**~~ / ~~**W7**~~ / ~~**W6**~~ ✅ **WIRED Sep 15, 2026** | W5/W7 are landed and W6 now gives open-play possession a physical Controlled carrier/attachment/release path. W6 itself did not arm W2. The separately pre-registered P-W6-1 run and same-head/same-seed disarmed control are complete and clear the historical stall blocker; only the separate production activation change remains before the post-W2 calibration pass. |
 | 7 | **W3** + AGENT_BALL fan-out — **WIRED BUT DORMANT** | PR #439 is landed; do not rebuild the fan-out. #441 owns Head-contact reachability before W9. The [post-C rerun](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026) records the missed arrival and the remaining timing constraint. |
 | 8 | **W8 B → C** ✅ **LANDED**, then **W9**, **W10** | B landed in PR #511. W8 C landed November 6 in PR #542, with the law change and paired B→C measurement complete. See the [roadmap §5.1](path-to-playable-roadmap.md) for the remaining W9/W10 gates and the [W8 C results](w8-c-implementation-results.md) for the measurement. |
-| 9 | **W13** defender-marking wiring — **W13.0 MERGED (PR #545); W13.1 / W13.1c LANDED ON BRANCH, UNMERGED; switch default OFF** | Frozen-lane identity + §10 measurement, Unity compile, stand-off calibration and the flip (OD-2) are pending; it is behind `MarkMovementEnabled`, so it does not enter the B→C window until flipped. |
+| 9 | **W13** defender-marking wiring — **W13.0 / W13.1 / W13.1c MERGED; blockers F5–F10 fixed and the default flipped ON on branch `claude/laughing-knuth-rj7vec` (November 21, 2026, unmerged)** | It is a behaviour-changing landing outside any open A→B / B→C window: W8 C has landed. The flip measurement is retained. Pinned Unity, frozen lane and stand-off calibration are still pending, and so are the #434 player-control blocker and the loose-ball knockdown finding. |
 | — | **then** governed calibration and quick-sim recapture/refit | Complete-engine calibration stays under KD-W1; PM-2 uses its explicitly selected anchor, with KD-7a/KD-8 shape disposition before milestone closeout. |
 > **W2's ARMING gates two separate held decisions, and is itself blocked by a third, un-isolated
 > finding — recorded August 17, 2026 with the owner's decision pass, corrected same-day (L11).** This
@@ -890,6 +961,7 @@ HISTORY v2.1 entry for the record of this update.
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 1.54 | 2026-11-21 | — | W13 blockers F5–F10 fixed (`ERR-002-001`, `ERR-008-029`, `ERR-014-010` amendment 2, `ERR-014-012`); `MarkMovementEnabled` default flipped to true; 120-match flip measurement recorded; open-issue links repointed to the archive; sequence row 9 updated. |
 | 1.53 | 2026-11-20 | — | Record W8 C and its paired measurement as complete in sequence row 8. Join the October #441 note into one quote. |
 | 1.52 | 2026-11-20 | — | Point W3 and the landing sequence at the post-C #441 result in §6.7, with the October result retained as historical evidence. #441 remains a W9 prerequisite. |
 | 1.51 | 2026-11-19 | — | Status sync: #434 (PR #543), W13.1/W13.1c (PR #547) and #440 A′ (PRs #544, #549) recorded as merged; W13 heading updated. Documentation only. |

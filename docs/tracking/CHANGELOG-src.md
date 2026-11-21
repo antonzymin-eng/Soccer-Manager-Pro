@@ -14,7 +14,26 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.244 — Career Home standings paged.** New `src/client-app/CareerStandingsPage.cs` v1.0 (+ `.meta`): a fixed-size page of the league table by row index, `[FIXED] ROWS_PER_PAGE = 8`, `Current` (page holding the managed club) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.10: `StandingsHeading(in home, in page)` (*Positions {first} to {last} of {total}*); new roles `table.page`, `table.page.previous` (*Higher positions*), `table.page.current` (*Your position*), `table.page.next` (*Lower positions*). `S0ScreensBehaviour.Career.cs` v1.10: rows move into a *Standings rows* column under the heading; only the page's rows are active; the three controls follow the rows and reuse `RefreshSchedulePaging`'s boundary-focus rule; the page resets with the season. `src/match-client-unity/README.md` P7b item 7 adds the standings keyboard check. Tests: `CareerScreensTests` v1.7 (+3), `CareerScreenTextTests` v1.5 (+1). Unity EditMode ClientApp + UiFramework 350 / 0 / 3. **PR #557 review fixes:** `S0FocusNavigation` v1.2 adds `Role.Region`, a read-only content block that is a Tab stop. `S0ScreensBehaviour.cs` v1.15: a `_revealGroups` map lets `Focus` show a control's whole group first when it fits, and `Reveal(..., alignTopWhenTall)` shows the top of a focused item taller than the viewport. A new `ScrollRegion` lets `ChoiceArrow` scroll a focused Region by `S0UiConstants.REGION_SCROLL_SHARE` (v1.2, `[FIXED] 0.5` of the viewport), never past its edges. `S0ScreensBehaviour.Career.cs` v1.11 wraps the page heading and rows in a *Standings page* Region. The three paging controls reveal the whole standings block, and a page change reveals the focused control again after the new rows are laid out. `S0FocusNavigationTests` v1.2 (+1). Unity EditMode 351 / 0 / 3.
+> **Last Updated:** November 21, 2026 — **v2.245 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.25:
+- `SelectMarkTargetVelocity` replaces `SelectMarkTargetSpeed`;
+- `MarkContactFloorM` (instance and pure static) floors the stand-off;
+- the v30 trailing tracking block is written and read;
+- `TestOnly_MarkTargetVelocity` replaces `TestOnly_MarkTargetSpeed`, and `TestOnly_TackleIntents` is new.
+
+`MatchEngineConstants.cs` v1.49: `SNAPSHOT_SCHEMA_VERSION` 29 → 30 and `MarkMovementEnabled` default `true`. New tests:
+- `src/agent-movement/Tests/AgentMovementTrackingTests.cs` v1.0;
+- `src/defensive-ai/Tests/TackleRequestReconciliationTests.cs` v1.0;
+- `src/match-engine/tests/MarkingFlipMeasurementTests.cs` v1.1 (env-gated, descriptive).
+
+Changed tests:
+- `MatchEngineMarkingTests.cs` v1.6: asserted F5–F10 regressions, v30 restore, and the default-ON switch test;
+- `MatchEngineSnapshotSchemaTests.cs` v1.28: pin 30 and a digest probe;
+- `DispatcherTests.cs` v1.4;
+- `PassInFlightPossessionTests.cs` v1.1: fixture pinned to marking off.
+
+No new assembly, `.asmdef` or RNG stream / domain tag / draw site. Full account: `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.244 — Career Home standings paged.** New `src/client-app/CareerStandingsPage.cs` v1.0 (+ `.meta`): a fixed-size page of the league table by row index, `[FIXED] ROWS_PER_PAGE = 8`, `Current` (page holding the managed club) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.10: `StandingsHeading(in home, in page)` (*Positions {first} to {last} of {total}*); new roles `table.page`, `table.page.previous` (*Higher positions*), `table.page.current` (*Your position*), `table.page.next` (*Lower positions*). `S0ScreensBehaviour.Career.cs` v1.10: rows move into a *Standings rows* column under the heading; only the page's rows are active; the three controls follow the rows and reuse `RefreshSchedulePaging`'s boundary-focus rule; the page resets with the season. `src/match-client-unity/README.md` P7b item 7 adds the standings keyboard check. Tests: `CareerScreensTests` v1.7 (+3), `CareerScreenTextTests` v1.5 (+1). Unity EditMode ClientApp + UiFramework 350 / 0 / 3. **PR #557 review fixes:** `S0FocusNavigation` v1.2 adds `Role.Region`, a read-only content block that is a Tab stop. `S0ScreensBehaviour.cs` v1.15: a `_revealGroups` map lets `Focus` show a control's whole group first when it fits, and `Reveal(..., alignTopWhenTall)` shows the top of a focused item taller than the viewport. A new `ScrollRegion` lets `ChoiceArrow` scroll a focused Region by `S0UiConstants.REGION_SCROLL_SHARE` (v1.2, `[FIXED] 0.5` of the viewport), never past its edges. `S0ScreensBehaviour.Career.cs` v1.11 wraps the page heading and rows in a *Standings page* Region. The three paging controls reveal the whole standings block, and a page change reveals the focused control again after the new rows are laid out. `S0FocusNavigationTests` v1.2 (+1). Unity EditMode 351 / 0 / 3.
 
 > **Last Updated (prior):** November 20, 2026 — **v2.243 — Career on at startup.** `src/match-client-unity/README.md` (P7b career binding): the tracked scene now sets `_enableCareer: 1`, step 1 checks that Career is on, and the section links the `cd3c7b99` and `52d1f000` pinned-host runs; the "remains opt-in" sentence is removed. No `.cs` file, asmdef, schema, RNG stream or draw order changed. Full account: `docs/tracking/CHANGELOG.md`.
 
@@ -2961,6 +2980,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.245 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
 | 2.244 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
 | 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |
 | 2.242 | 2026-11-19 | — | Show completed-round scores and aligned standings with goal difference. |
