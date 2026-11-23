@@ -1,6 +1,8 @@
 # Open Issues
 
-**Last Updated:** November 23, 2026 — archived the tight goalward contact fix and recorded the W13.2 implementation and §10 evidence. 44 active / 85 archived.
+**Last Updated:** November 23, 2026 — recorded the general launch and walking acceleration follow-up. 45 active / 85 archived.
+
+**Last Updated (prior):** November 23, 2026 — archived the tight goalward contact fix and recorded the W13.2 implementation and §10 evidence. 44 active / 85 archived.
 
 **Last Updated (prior):** November 21, 2026 — W13 blockers pass: W13-F5..F10 resolved and archived; mark movement switched on by default (OD-2); new `w13-tight-goalward-contact` residual and `w13-loose-ball-knockdowns` finding; W13 and #434 entries updated with the 120-match off/on measurement. 45 active / 84 archived.
 
@@ -51,6 +53,10 @@ history by the original convention; they were not merged.
 <a id="w13-tight-goalward-contact"></a>
 
 The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-contact) is archived.
+
+<a id="agent-launch-walk-acceleration"></a>
+
+- **General launch and walking acceleration under tracking — OPEN.** *Opened November 23, 2026 (W13 review).* In the goalward runner rig, the 2.0 m/s² launch and walking rate (§3.2.4) matches the runner's acceleration and cannot recover the lag in the sampled tracking command before the jog band. ERR-002-002 addresses tight marking by opting into the physical acceleration curve. In the §3.5.3.1 worked example, the initial slope of that curve is `(8 − 0.3) × 2 = 15.4 m/s²`. Applying the same rule to ordinary markers failed the shot-distance acceptance check at 24.38 m against its 24.00 m ceiling. The open work is to characterize launch and walking across movement consumers and evaluate a shared movement response against the tracking, shot-distance and collision evidence. [Acceleration experiment](evidence/w13-follow-ups-20261123/README.md#unrestricted-acceleration-experiment).
 
 <a id="w13-loose-ball-knockdowns"></a>
 

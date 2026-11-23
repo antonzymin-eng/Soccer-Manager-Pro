@@ -183,7 +183,9 @@ namespace TacticalDirector.ClientApp
         {
             if (a.Kind != b.Kind || a.TeamId != b.TeamId)
                 return false;
-            return a.Kind == ManagerCommandKind.SetTeamTactic ? a.NewTeamTactic.Equals(b.NewTeamTactic) : a.Kind == ManagerCommandKind.Substitute && a.OutSlotIndex == b.OutSlotIndex && a.BenchIndex == b.BenchIndex && a.Reason == b.Reason;
+            return a.Kind == ManagerCommandKind.SetTeamTactic
+                ? a.PreserveMarkingScheme == b.PreserveMarkingScheme && a.NewTeamTactic.Equals(b.NewTeamTactic)
+                : a.Kind == ManagerCommandKind.Substitute && a.OutSlotIndex == b.OutSlotIndex && a.BenchIndex == b.BenchIndex && a.Reason == b.Reason;
         }
     }
 }
@@ -192,4 +194,5 @@ namespace TacticalDirector.ClientApp
 // | 1.0     | 2026-10-08 | —      | Exact suffix reconciliation, duplicate-kind guard and end settlement. |
 // | 1.1     | 2026-10-15 | —      | Match Flow §6 (PR #505): an accepted substitution stays Pending until a captured roster cue proves execution or the authoritative pending queue proves cancellation (ObserveFrame). Only the in-flight command occupies the outbound slot, so several accepted orders can wait for one stoppage. Full time settles every unexecuted order as NotApplied. |
 // | 1.2     | 2026-10-21 | —      | Gate J J-02: a Refused row keeps the engine's typed substitution reason from the driver's refused record. |
+// | 1.3     | 2026-11-23 | —      | Match commands to feedback with the marking scheme retention choice. |
 #endregion

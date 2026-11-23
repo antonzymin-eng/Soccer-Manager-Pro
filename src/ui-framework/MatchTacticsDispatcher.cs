@@ -105,7 +105,7 @@ namespace TacticalDirector.UiFramework
                 case IntentKind.SetTeamTactic:
                 {
                     TacticalInstructions.TeamTactic tactic = intent.NewTeamTactic;
-                    return ManagerCommand.SetTeamTactic(intent.TeamId, in tactic);
+                    return ManagerCommand.SetTeamTactic(intent.TeamId, in tactic, intent.PreserveMarkingScheme);
                 }
                 case IntentKind.SetPlayerTactic:
                 {
@@ -150,4 +150,5 @@ namespace TacticalDirector.UiFramework
 // | 1.1     | 2026-10-18 | —      | §5-P7: the three season kinds (AdvanceRound / AdvanceDay /      |
 // |         |            |        | StartNextSeason) are refused with a routing message — they     |
 // |         |            |        | belong to the season dispatcher (#38 Appendix C).              |
+// | 1.2     | 2026-11-23 | —      | ERR-021-011: carry scheme retention through to the queued command. |
 #endregion

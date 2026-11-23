@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 3.13
-**Updated:** November 23, 2026 (v3.13 — ERR-002-002 and ERR-021-011. Record the goalward tracking correction and the W13.2 team scheme, v31 serialization and preset retention.)
+**Version:** 3.14
+**Updated:** November 23, 2026 (v3.14 — ERR-021-011 browser command retention and ERR-002-002 measured rig clearance.)
+**Updated (prior):** November 23, 2026 (v3.13 — ERR-002-002 and ERR-021-011. Record the goalward tracking correction and the W13.2 team scheme, v31 serialization and preset retention.)
 **Updated (prior):** November 21, 2026 (v3.12 — **W13 marking blockers: ERR-002-001, ERR-008-029 and ERR-014-012 filed and RESOLVED; ERR-014-010 amendment 2 (W13-F9) RESOLVED; ERR-008-028 superseded — spec + code + tests same commit.** #2 gains the §3.5.3.1 tracking command (snapshot v30). #8 §3.5.6 dispatches the mark-point MOVE through it. #14 §3.13.1 adds a contact floor to the stand-off, and §3.13 Step 8a drops tackle requests from demoted agents. Prior update below.)
 **Updated (prior):** November 20, 2026 (v3.11 — **ERR-010-005 review amendment (PR #559 P2).** The approach filter could clear an agent's KD-7 latch while the ball was still in range, so a ball turning back re-committed the same agent; the latch now clears only on possession, landing or leaving that agent's range. The physical-identity claim is narrowed: the probe cannot attribute the digest change to specific serialized fields. Census unchanged.)
 **Updated (prior):** November 20, 2026 (v3.10 — **ERR-010-005 filed and resolved, spec + code same branch (#441).** The Stage-0 header trigger (`gk-heading-engine-integration-design.md` §4.2) required the ball to be "moving toward" the candidate but never quantified it, and the code dropped it, so the passer was committed to a header on their own pass (1,600 of 1,702 pass-attributed commits). §4.2 now states `v_xy · (agent − ball)_xy ≥ 0`; commits fall 1,765 → 142 with still 0 executed headers. No new constant, schema or RNG change.)
@@ -926,8 +927,10 @@ marker with a fresh moving target, using the existing velocity tolerance and
 stale-command interval. The engine derives this opt-in from the active player tactic at
 the physics update. The unrestricted review implementation failed the default shot-speed
 scenario at 24.38 m against its 24.00 m ceiling. Ordinary marking keeps the prior
-walking rate. The 3 m/s and 5 m/s rig cases assert body clearance at every physics
-frame for both teams.
+walking rate. The 3 m/s and 5 m/s tight rig cases assert body clearance at every
+physics frame for both teams. Both speeds measured minimum gaps of 0.921654 m
+home and 0.920705 m away, versus two radii of 0.84 m. The general launch and
+walking response remains [open](open-issues.md#agent-launch-walk-acceleration).
 The 1.0 m and 2.0 m distances remain governed by KD-W1. This correction alters
 trajectories and digests for matches that exercise the movement path.
 
@@ -943,6 +946,13 @@ team tactic. #14 §3.10, §3.13.1 and §6.1 document consumption of the team sch
 the uncalibrated ManOriented 2/5 limits. Manager presets preserve the team's configured
 scheme at kickoff and during play under #26 §3.1. The paired digest probe, active/pending restore,
 preset-retention and mirrored back-line tests cover the new field and routing.
+
+**Browser review follow-up.** A browser tactic update assembled from Balanced
+defaults used to reset the selected team's scheme. The intent and tick-stamped
+command carry a retention flag. The engine reads the team's pending scheme
+when it stages the update, after any earlier commands in the same drain. Replay
+uses the same flag and apply order. Explicit full-tactic commands can still select
+a new scheme. The browser and S0 presenter tests cover the two non-default schemes.
 
 ---
 

@@ -61,11 +61,31 @@ repeat-run and restore checks. The analyzer decoded M1–M8 in both arms.
 | Off | 5–3 | 12–20 | 1,080–1,024 | 13–4 |
 | On | 3–4 | 10–13 | 1,432–1,423 | 11–13 |
 
-The totals of 2,104 off and 2,855 on match the same-seed #562 comparison.
-The on digest also matches the v31 build that restored the legacy
-acceleration during diagnosis. The elevated collision rate remains open
+This pair used default instructions for every player. Neither arm exercised
+the `TightMarking` acceleration. It establishes the inherited collision counts
+and current-schema repeat/restore behavior for this seed. Totals of 2,104 off
+and 2,855 on match the same-seed #562 comparison, and the on digest matches the
+v31 build that restored the legacy acceleration during diagnosis. The elevated collision rate remains open
 under [`w13-loose-ball-knockdowns`](../../open-issues.md#w13-loose-ball-knockdowns).
 The full current-source §10 corpus and Unity Editor validation are pending.
+
+### Goalward runner clearance
+
+The scripted `GoalwardRunner_MarkerRetreats_NeverGrounded_NoOverlap_GoalSide`
+test logs the minimum of the centre-to-centre gaps sampled after each of 240
+physics ticks in the runner's approach. Two Strength-10 hitbox radii sum to 0.84 m.
+The test ran on the Linux shim with SDK 8.0.426 and CLR 8.0.32.
+
+| Stand-off | Runner top speed (m/s) | Home gap (m) | Away gap (m) |
+|---|---:|---:|---:|
+| Ordinary | 3.0 | 1.753952 | 1.758318 |
+| Ordinary | 5.0 | 1.753952 | 1.758318 |
+| Tight | 3.0 | 0.921654 | 0.920705 |
+| Tight | 5.0 | 0.921654 | 0.920705 |
+
+Minimum tight clearance was 0.081654 m at home and 0.080705 m away.
+The scripted rig exercises the overlap correction directly. The one-minute
+tight sensitivity arms above configure tight marking in live play.
 
 ## Unrestricted acceleration experiment
 
@@ -159,7 +179,7 @@ goalkeeper/heading mechanics.
 
 ## Initial current-schema characterization
 
-The first full schema-v31 C0 pair reached full time at tick 324,000 and
+The first full schema-v31 C0 pair used seed `0000000000000001`, reached full time at tick 324,000 and
 decoded 53,999 samples per arm. Both arms passed halfway snapshot
 continuation. The first pair predates the separate kickoff-repeat receipt. The subsequent
 schema-v31 off-arm rerun reproduced its all-tick digest

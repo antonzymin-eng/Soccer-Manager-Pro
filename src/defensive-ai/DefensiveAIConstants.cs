@@ -14,9 +14,8 @@
 using UnityEngine;
 
 using TacticalDirector.PressingAI;
-using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
-
 using TacticalDirector.TacticalInstructions;
+using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.DefensiveAI
 {

@@ -100,8 +100,10 @@ namespace TacticalDirector.ClientApp
         public void SelectMarkingScheme(MarkingScheme scheme)
         {
             RequireReady();
-            if (Flow.Current != ClientScreens.TacticsSetup || !Enum.IsDefined(typeof(MarkingScheme), scheme))
-                throw new InvalidOperationException("Marking scheme selection requires a valid setup draft.");
+            if (!Enum.IsDefined(typeof(MarkingScheme), scheme))
+                throw new ArgumentOutOfRangeException(nameof(scheme), scheme, "Unknown marking scheme.");
+            if (Flow.Current != ClientScreens.TacticsSetup)
+                throw new InvalidOperationException("Marking scheme selection requires Tactics Setup.");
             DraftMarkingScheme = scheme;
         }
 
@@ -241,4 +243,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
 // | 1.2     | 2026-11-03 | —      | Optional career composition, UI completion polling and busy guard. |
 // | 1.3     | 2026-11-05 | —      | §5-P8: compose the career's Transfers and Club Finances registrations (nine screens). |
+// | 1.4     | 2026-11-23 | —      | Reject undefined marking scheme selections with an argument error. |
 #endregion

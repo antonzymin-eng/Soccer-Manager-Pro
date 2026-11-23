@@ -1626,10 +1626,16 @@ namespace TacticalDirector.MatchEngine
         /// ERR-021-002), so a change made MID-match is restore-deterministic. The default is
         /// <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
         /// </summary>
-        public void SetTeamTactic(int teamId, in TeamTactic tactic)
+        public void SetTeamTactic(int teamId, in TeamTactic tactic) =>
+            SetTeamTactic(teamId, in tactic, preserveMarkingScheme: false);
+
+        /// <summary>Stages a tactic, optionally carrying forward the team's pending marking scheme.</summary>
+        public void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme)
         {
             GuardTeamId(teamId);
-            _pendingTeamTactics[teamId] = tactic;
+            _pendingTeamTactics[teamId] = preserveMarkingScheme
+                ? tactic.WithMarkingScheme(_pendingTeamTactics[teamId].MarkingScheme)
+                : tactic;
         }
 
         /// <summary>
@@ -2817,9 +2823,6 @@ namespace TacticalDirector.MatchEngine
             (_posSnapshots[team].TeamPossessionIsOwnTeam, _defSnapshots[team].PossessionOwnerEntityId);
 
         internal MarkingScheme TestOnly_ActiveMarkingScheme(int team) => _activeTeamTactics[team].MarkingScheme;
-
-        // Preset decisions run before the stride commits staged tactics.
-        internal MarkingScheme PendingMarkingScheme(int team) => _pendingTeamTactics[team].MarkingScheme;
 
         /// <summary>Test-only (W13.1c): the movement command currently held for <paramref name="agentId"/> (commands persist
         /// between 10 Hz AI strides), so a test can count walk / jog command flips. Read-only.</summary>
@@ -11603,4 +11606,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.26 | 2026-11-20 | — | ERR-010-005 PR #559 review P2: TryCommitHeaderIntents clears an agent's KD-7 episode latch only when the ball is possessed or below HeaderTriggerMinBallHeightM, or the agent is outside HeaderTriggerRangeM of it. It no longer clears every non-nearest agent, so a ball reversing in range (or a nearer agent interrupting) cannot re-commit the same agent. Same serialized bool[]; no schema, RNG or constant change. |
 // | 2.27 | 2026-11-21 | — | W13 blockers (F5-F10) and default flip: RunMechanicsAI writes TacticalContext.MarkTargetVelocity (pure SelectMarkTargetVelocity replaces SelectMarkTargetSpeed; ERR-008-029) and floors the mark stand-off at the two #2 hitbox radii + MinStoppingDistanceM (MarkContactFloorM; ERR-014-012); Serialize/DeserializeWorldState append the v30 tracking half of each held MovementCommand (ERR-002-001); TestOnly_MarkTargetSpeed replaced by TestOnly_MarkTargetVelocity; + TestOnly_TackleIntents. No RNG stream / domain tag / draw-order change. |
 // | 2.28    | 2026-11-23 | —      | W13.2: stage and serialize per-team schemes in v31; expose the pending scheme to AI preset decisions. |
+// | 2.29    | 2026-11-23 | —      | ERR-021-011: optionally carry the pending scheme into a team tactic update. |
 #endregion

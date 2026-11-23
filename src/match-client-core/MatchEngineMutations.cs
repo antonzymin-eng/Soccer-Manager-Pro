@@ -40,7 +40,8 @@ namespace TacticalDirector.MatchClientCore
         public bool MatchEnded => _engine.MatchEnded;
 
         /// <inheritdoc/>
-        public void SetTeamTactic(int teamId, in TeamTactic tactic) => _engine.SetTeamTactic(teamId, in tactic);
+        public void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false) =>
+            _engine.SetTeamTactic(teamId, in tactic, preserveMarkingScheme);
 
         /// <inheritdoc/>
         public void SetPlayerTactic(int agentId, in PlayerTactic tactic) => _engine.SetPlayerTactic(agentId, in tactic);
@@ -56,4 +57,5 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0): pass-through adapter from a live         |
 // |         |            |        | MatchEngine to the ILiveMatchMutations command surface.        |
 // | 1.1     | 2026-10-15 | —      | Match Flow §6.4: forwards RequestSubstitution and its typed result. |
+// | 1.2     | 2026-11-23 | —      | ERR-021-011: forward marking scheme retention to the engine. |
 #endregion

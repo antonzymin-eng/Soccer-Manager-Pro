@@ -267,7 +267,7 @@ namespace TacticalDirector.UiFramework.Tests
 
             public bool MatchEnded => false;
 
-            public void SetTeamTactic(int teamId, in TeamTactic tactic) =>
+            public void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false) =>
                 Calls.Add("SetTeamTactic(" + teamId + ")");
 
             public void SetPlayerTactic(int agentId, in PlayerTactic tactic) =>

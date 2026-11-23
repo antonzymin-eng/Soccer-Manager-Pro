@@ -966,11 +966,11 @@ namespace TacticalDirector.MatchEngine
         /// <summary>One stride of the envelope run.</summary>
         private readonly struct EnvelopeRow
         {
-            public readonly int Stride; public readonly float Gap; public readonly bool GoalSide;
+            public readonly int Stride; public readonly float Gap, MinPhysicsGap; public readonly bool GoalSide;
             public readonly float MarkerSpeed, ManSpeed, SlotToMan; public readonly AgentMovementState State;
             public readonly AgentMovementState Command; public readonly bool GuardLocked;
-            public EnvelopeRow(int stride, float gap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state, AgentMovementState command, bool guardLocked)
-            { Stride = stride; Gap = gap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; Command = command; GuardLocked = guardLocked; }
+            public EnvelopeRow(int stride, float gap, float minPhysicsGap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state, AgentMovementState command, bool guardLocked)
+            { Stride = stride; Gap = gap; MinPhysicsGap = minPhysicsGap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; Command = command; GuardLocked = guardLocked; }
         }
 
         /// <summary>
@@ -1009,6 +1009,7 @@ namespace TacticalDirector.MatchEngine
             var rows = new List<EnvelopeRow>();
             for (int st = 0; st < strides; st++)
             {
+                float minPhysicsGap = float.PositiveInfinity;
                 for (int t = 0; t < Stride; t++)
                 {
                     float time = (st * Stride + t + 1) / 60.0f;
@@ -1016,15 +1017,14 @@ namespace TacticalDirector.MatchEngine
                     rig.AttackerVelocity = new Vector2(dirX * Mathf.Min(topSpeed, Accel * time), 0.0f);
                     rig.AttackerCanonical = start + new Vector2(dirX * along, 0.0f);
                     rig.Tick();
+                    float gap = Vector2.Distance(Pos(e, marker), Pos(e, rig.Attacker));
+                    minPhysicsGap = Mathf.Min(minPhysicsGap, gap);
                     if (assertClearEachTick)
-                    {
-                        float gap = Vector2.Distance(Pos(e, marker), Pos(e, rig.Attacker));
                         Assert.Greater(gap, DefaultPairRadiiM, $"stride {st}, frame {t}: body gap {gap:F3} m");
-                    }
                 }
                 Vector2 m = Pos(rig.E, marker), man = Pos(rig.E, rig.Attacker);
                 AgentState ms = rig.E.TestOnly_AgentSnapshot(marker);
-                rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
+                rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), minPhysicsGap, Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
                     ms.Velocity.magnitude, rig.E.TestOnly_MarkTargetVelocity(marker).magnitude,   // the speed the engine WROTE for the marked man (his physics speed is perturbed by contact)
                     Vector2.Distance(rig.E.TestOnly_FormationSlot(marker), man), ms.CurrentState,
                     rig.E.TestOnly_Command(marker).DesiredState, ms.OscillationGuard.GetState().IsLocked));
@@ -1268,9 +1268,13 @@ namespace TacticalDirector.MatchEngine
         public void GoalwardRunner_MarkerRetreats_NeverGrounded_NoOverlap_GoalSide(int def, float topSpeed, bool tight)
         {
             var sum = Summarise(RunEnvelope(def, topSpeed, tight, 40, out _, startX: 26.0f, dirX: -1.0f, assertClearEachTick: true));
+            float minPhysicsGap = float.PositiveInfinity;
+            foreach (EnvelopeRow row in sum.Rows)
+                minPhysicsGap = Mathf.Min(minPhysicsGap, row.MinPhysicsGap);
+            TestContext.Progress.WriteLine(FormattableString.Invariant(
+                $"GOALWARD def={def} v={topSpeed:F1} tight={tight} minGap={minPhysicsGap:F6} m clearance={minPhysicsGap - DefaultPairRadiiM:F6} m"));
             string trace = DescribeEnvelope(sum.Rows);
             Assert.AreEqual(0, sum.Grounded, $"GROUNDED strides. {trace}");
-            Assert.Greater(sum.MinGap, DefaultPairRadiiM, $"bodies overlapped (min gap {sum.MinGap:F2} m). {trace}");
             Assert.AreEqual(0, sum.NotGoalSide, $"strides not goal-side. {trace}");
             Assert.AreEqual(0, sum.LockEntries, $"OscillationGuard lock entries. {trace}");
         }

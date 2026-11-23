@@ -10,8 +10,10 @@
 
 using NUnit.Framework;
 
+using TacticalDirector.DeterministicSim;
 using TacticalDirector.MatchClientCore;
 using TacticalDirector.TacticalInstructions;
+using TacticalDirector.UiFramework;
 
 namespace TacticalDirector.MatchClientWeb.Tests
 {
@@ -135,6 +137,42 @@ namespace TacticalDirector.MatchClientWeb.Tests
 
             Assert.AreEqual(0, _host.Session.Commands.Count, "Drained.");
             Assert.AreEqual(1, _host.Session.Driver.Log.Count, "And recorded in the replay log.");
+        }
+
+        [TestCase(0, MarkingScheme.Zonal, false)]
+        [TestCase(1, MarkingScheme.ManOriented, false)]
+        [TestCase(0, MarkingScheme.ManOriented, true)]
+        [TestCase(1, MarkingScheme.Zonal, true)]
+        public void Intent_TeamTactic_PreservesMarkingSchemeAtApplyAndReplay(
+            int team, MarkingScheme scheme, bool queueSchemeChange)
+        {
+            var setup = new MatchSetup(Seed,
+                homeTactic: TeamTactic.Balanced.WithMarkingScheme(MarkingScheme.Zonal),
+                awayTactic: TeamTactic.Balanced.WithMarkingScheme(MarkingScheme.ManOriented));
+            _host.Stop();
+            _host = new MatchClientHost(setup);
+            _router = new MatchClientRouter(_host);
+            if (queueSchemeChange)
+                _host.Dispatch(ManagerIntent.SetTeamTactic(team, TeamTactic.Balanced.WithMarkingScheme(scheme)));
+
+            Assert.AreEqual(200, _router.Route("GET", $"/intent?kind=SetTeamTactic&team={team}&mentality=Attacking").Status);
+            for (int tick = 0; tick < DeterministicSimConstants.AI_PHASE_STRIDE; tick++)
+                _host.Session.TickOnce();
+            byte[] actual = _host.Session.CurrentSnapshotDigest;
+            var log = _host.Session.Driver.Log;
+            Assert.AreEqual(queueSchemeChange ? 2 : 1, log.Count);
+            ManagerCommand browserCommand = log[log.Count - 1].Command;
+            Assert.AreEqual(Mentality.Attacking, browserCommand.NewTeamTactic.Mentality);
+
+            var expected = new MatchSession(setup);
+            expected.Commands.Enqueue(ManagerCommand.SetTeamTactic(team, browserCommand.NewTeamTactic.WithMarkingScheme(scheme)));
+            for (int tick = 0; tick < DeterministicSimConstants.AI_PHASE_STRIDE; tick++)
+                expected.TickOnce();
+            CollectionAssert.AreEqual(expected.CurrentSnapshotDigest, actual);
+
+            var replayed = new MatchSession(setup);
+            new TickStampedCommandReplay(log).AdvanceTo(replayed, _host.Session.CurrentTick);
+            CollectionAssert.AreEqual(actual, replayed.CurrentSnapshotDigest);
         }
 
         // ── Fail-loud parsing ───────────────────────────────────────────────────────────────────

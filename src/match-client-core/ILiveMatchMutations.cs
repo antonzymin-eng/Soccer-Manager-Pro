@@ -32,8 +32,8 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>True once full time has fired. The drain drops any command while this is set — a finished match is never mutated (§6.2).</summary>
         bool MatchEnded { get; }
 
-        /// <summary>Live, stride-committed: stages a team tactic change (FR-TI-027).</summary>
-        void SetTeamTactic(int teamId, in TeamTactic tactic);
+        /// <summary>Stages a team tactic change for the next stride (FR-TI-027), with optional marking scheme retention.</summary>
+        void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false);
 
         /// <summary>Live, stride-committed: stages a per-agent tactic change (FR-TI-027).</summary>
         void SetPlayerTactic(int agentId, in PlayerTactic tactic);
@@ -48,4 +48,5 @@ namespace TacticalDirector.MatchClientCore
 // | 1.0     | 2026-07-24 | —      | Initial creation (P0/P2): closed live-mutator surface for the  |
 // |         |            |        | deterministic command channel + tick/match-ended read signals. |
 // | 1.1     | 2026-10-15 | —      | Match Flow §6.4: SubstitutePlayer replaced by RequestSubstitution, which returns SubstitutionRequestResult. |
+// | 1.2     | 2026-11-23 | —      | ERR-021-011: forward the command's scheme retention choice. |
 #endregion
