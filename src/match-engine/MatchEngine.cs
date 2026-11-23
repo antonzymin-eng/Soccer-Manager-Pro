@@ -1,4 +1,5 @@
 // File:     src/match-engine/MatchEngine.cs
+// Modified: 2026-11-21 (W13 blockers + flip: MarkTargetVelocity writer (ERR-008-029); stand-off contact floor MarkContactFloorM (ERR-014-012); snapshot v30 trailing tracking block (ERR-002-001); + TestOnly_TackleIntents / TestOnly_MarkTargetVelocity)
 // Modified: 2026-11-18 (A′ / ERR-014-011: BallLoose knock from duel geometry + frame-local carrier fence on first touch, pickup and keeper hand contact; no schema/RNG change)
 // Modified: 2026-11-18 (merge of main into #440 Stage A: version history only)
 // Modified: 2026-11-16 (merge of W13 with main: version history only)
@@ -2803,13 +2804,17 @@ namespace TacticalDirector.MatchEngine
         /// serialized, so a restored engine must be re-armed. Takes effect from the next AI stride.</summary>
         internal void TestOnly_ArmMarkMovement(bool armed) => _markMovementOverride = armed;
 
+        /// <summary>Test-only (W13-F9): a copy of the tackle-intent requests #14 published for team <paramref name="teamId"/> at
+        /// the last AI stride — exactly the span the engine's tackle consumers read. Allocates; never on a production path.</summary>
+        internal TackleIntentRequest[] TestOnly_TackleIntents(int teamId) => _defensive[teamId].GetTackleIntentRequests().ToArray();
+
         /// <summary>Test-only (W13.1c): the movement command currently held for <paramref name="agentId"/> (commands persist
         /// between 10 Hz AI strides), so a test can count walk / jog command flips. Read-only.</summary>
         internal MovementCommand TestOnly_Command(int agentId) => _commands[agentId];
 
-        /// <summary>Test-only (W13.1c): the marked man's speed (m/s) the mechanics AI wrote beside the mark target at the
-        /// last AI stride (0 when there is no marked man).</summary>
-        internal float TestOnly_MarkTargetSpeed(int agentId) => _tacticalContexts[agentId].MarkTargetSpeed;
+        /// <summary>Test-only (W13 F5-F7): the mark point's world velocity (m/s) the mechanics AI wrote beside the mark target
+        /// at the last AI stride (zero when there is no marked man).</summary>
+        internal Vector2 TestOnly_MarkTargetVelocity(int agentId) => _tacticalContexts[agentId].MarkTargetVelocity;
 
         /// <summary>Test-only (W13.1): the per-agent mark point the mechanics AI wrote into
         /// <paramref name="agentId"/>'s TacticalContext at the last AI stride — <c>HasTarget</c> and the WORLD-space
@@ -3997,18 +4002,23 @@ namespace TacticalDirector.MatchEngine
                         && !(teamPossessor >= 0 && _teamIds[teamPossessor] == t))
                     {
                         MarkAssignment markAssignment = _defensive[t].GetAssignment(i);
+                        // W13-F8 (ERR-014-012): the stand-off never puts a settled marker inside his man's body — at least
+                        // the two hitbox radii plus the tracking command's settle tolerance (#14 §3.13.1 contact floor).
+                        float standoff = Mathf.Max(
+                            TacticalDirector.DefensiveAI.TacticTranslation.MarkStandoffM(
+                                _activePlayerTactics[i].Instructions.TightMarking),
+                            MarkContactFloorM(i, markAssignment.TargetEntityId));
                         if (MarkTargetComposer.TryCompose(
                                 markAssignment, _defSnapshots[t], tacticalTick,
-                                TacticalDirector.DefensiveAI.TacticTranslation.MarkStandoffM(
-                                    _activePlayerTactics[i].Instructions.TightMarking),
+                                standoff,
                                 out Vector2 canonicalMark))
                         {
                             ctx.HasMarkTarget = true;
                             ctx.MarkTarget = MirrorPitchIfAway(t, canonicalMark);
-                            // W13.1c (ERR-008-028): the marked man's speed from THIS stride's world state (a speed is
-                            // frame-invariant, so no mirror); 0 for COVER_GK_ZONE (no man). Drives the dispatcher's
-                            // pace tier so a marker is never walking after a runner. No state is kept across strides.
-                            ctx.MarkTargetSpeed = SelectMarkTargetSpeed(markAssignment.TargetEntityId, _agents);
+                            // W13-F5/F6/F7 (ERR-008-029): the marked man's WORLD velocity from THIS stride's world state (the
+                            // point is world-mapped above, so no mirror); zero for COVER_GK_ZONE (no man). The dispatcher hands
+                            // it to the #2 §3.5.3.1 tracking command as the point's feed-forward. No state is kept across strides.
+                            ctx.MarkTargetVelocity = SelectMarkTargetVelocity(markAssignment.TargetEntityId, _agents);
                         }
                     }
                     // Cheap-item addition (new §3.2/§7.7): Positioning AI #12's rest-defense coverage
@@ -4070,16 +4080,41 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// W13.1c (ERR-008-028, M1): the speed (m/s) of the marked opponent for <see cref="TacticalContext.MarkTargetSpeed"/>:
-        /// <c>|_agents[id].Velocity|</c> from the CURRENT stride's world state, and 0 when there is no marked man
-        /// (<paramref name="targetEntityId"/> &lt; 0, i.e. a COVER_GK_ZONE point or no target) or the id is outside the squad.
-        /// A magnitude of the WORLD-frame velocity, hence identical for the home and the away mirror. Pure; no state.
+        /// W13-F8 (ERR-014-012, #14 §3.13.1): the contact floor (m) on a mark stand-off — the marker's and the marked man's
+        /// Agent Movement #2 §3.5.4.3 hitbox radii (via <see cref="AgentPhysicalProperties.From"/>, 0.3525 + 0.0075·(Strength − 1) m
+        /// each, [CROSS]) plus the §3.5.3.1 tracking settle tolerance <see cref="LocomotionConstants.MinStoppingDistanceM"/> (0.1 m,
+        /// [CROSS]), so a marker settled anywhere within his tolerance of the point is clear of his man's body. Zero when there
+        /// is no marked man (COVER_GK_ZONE or no target). Worked example: Strength 10 and 20 ⇒ 0.42 + 0.495 + 0.1 = 1.015 m.
+        /// Pure; zero allocation.
         /// </summary>
-        internal static float SelectMarkTargetSpeed(int targetEntityId, AgentState[] agents)
+        private float MarkContactFloorM(int markerId, int targetEntityId)
+        {
+            if (targetEntityId < 0 || targetEntityId >= MatchEngineConstants.SQUAD_SIZE)
+                return 0.0f;
+            return MarkContactFloorM(in _agents[markerId], in _attrs[markerId], in _agents[targetEntityId], in _attrs[targetEntityId]);
+        }
+
+        /// <summary>The pure form of <see cref="MarkContactFloorM(int, int)"/> for one marker / man pair.</summary>
+        internal static float MarkContactFloorM(
+            in AgentState marker, in PlayerAttributes markerAttrs, in AgentState man, in PlayerAttributes manAttrs)
+        {
+            return AgentPhysicalProperties.From(in marker, in markerAttrs).HitboxRadius
+                 + AgentPhysicalProperties.From(in man, in manAttrs).HitboxRadius
+                 + LocomotionConstants.MinStoppingDistanceM;
+        }
+
+        /// <summary>
+        /// W13-F5/F6/F7 (ERR-008-029; supersedes the W13.1c speed): the WORLD-frame velocity (m/s) of the marked opponent for
+        /// <see cref="TacticalContext.MarkTargetVelocity"/> — <c>_agents[id].Velocity</c> from the CURRENT stride's world state —
+        /// and zero when there is no marked man (<paramref name="targetEntityId"/> &lt; 0, a COVER_GK_ZONE point or no target) or
+        /// the id is outside the squad. The mark point is the man plus a goal-side stand-off whose direction turns slowly, so its
+        /// velocity is taken as the man's. World frame for both teams (the point is world-mapped too). Pure; no state.
+        /// </summary>
+        internal static Vector2 SelectMarkTargetVelocity(int targetEntityId, AgentState[] agents)
         {
             if (targetEntityId < 0 || targetEntityId >= agents.Length)
-                return 0.0f;
-            return agents[targetEntityId].Velocity.magnitude;
+                return Vector2.zero;
+            return agents[targetEntityId].Velocity;
         }
 
         /// <summary>
@@ -7577,6 +7612,18 @@ namespace TacticalDirector.MatchEngine
             }
 
             WriteHandlingLawState(buf, ref o);
+
+            // v30 (W13-F5/F6/F7, Agent Movement #2 §3.5.3.1): the tracking half of every held MovementCommand —
+            // IsTracking, TargetVelocity, IssueTimeS. Cross-tick: written on a stride, read every physics tick (the
+            // extrapolation origin and feed-forward). Appended last so no earlier offset moves; the six-field block
+            // above stays as it was.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                CanonicalSerializer.WriteBool(buf, ref o, _commands[i].IsTracking);
+                CanonicalSerializer.WriteF32(buf, ref o, _commands[i].TargetVelocity.x);
+                CanonicalSerializer.WriteF32(buf, ref o, _commands[i].TargetVelocity.y);
+                CanonicalSerializer.WriteF32(buf, ref o, _commands[i].IssueTimeS);
+            }
             payload.BytesWritten = o;
         }
 
@@ -7926,6 +7973,18 @@ namespace TacticalDirector.MatchEngine
 
             ReadHandlingLawState(buf, ref o);
             ValidateRestoredKeeperHandControl();
+
+            // v30 — the tracking half of each held command (writer mirror above); rebuild the full command.
+            for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
+            {
+                bool isTracking = CanonicalSerializer.ReadBool(buf, ref o);
+                Vector2 targetVelocity = new Vector2(CanonicalSerializer.ReadF32(buf, ref o), CanonicalSerializer.ReadF32(buf, ref o));
+                float issueTimeS = CanonicalSerializer.ReadF32(buf, ref o);
+                MovementCommand c = _commands[i];
+                _commands[i] = MovementCommand.ReconstructFromSnapshot(
+                    c.TargetPosition, c.DesiredState, c.DecelerationMode, c.FacingMode, c.FacingTarget,
+                    c.OverrideSafetyConstraints, isTracking, targetVelocity, issueTimeS);
+            }
 
             // Trailing region: the event ledger. RunSnapshotPhase appends the canonical event-ledger bytes
             // (EventBus.SerializeLedger — a 1-byte domain tag + u32 count, then any Tier A records) AFTER the
@@ -11518,4 +11577,5 @@ namespace TacticalDirector.MatchEngine
 // | 2.24 | 2026-11-18 | — | A′ / ERR-014-011 (#14 §3.6.5.8, owner decision D1): BallLoose releases the ball with the geometry knock and fences the carrier out of first touch, loose pickup and keeper hand contact for the tackle frame. Fence is frame-local (cleared at Input, restart and Events), never serialized; no schema, RNG or draw change. |
 // | 2.25 | 2026-11-20 | — | ERR-010-005 (#441): TryCommitHeaderIntents passes _ball.Velocity to GkHeadingIntentSource.NearestHeaderCandidate, which now skips an agent the ball is moving away from (design §4.2 "moving toward them"). Ends the passer's commit on their own pass (#441 §6.7: 1,600 of 1,702 pass-attributed commits). No new constant, cross-tick state, schema, RNG stream, domain tag or draw site; snapshot digests change via the serialized Heading attempt state; ball/agent trajectories bit-identical on the six frozen seeds (#441 §6.8). |
 // | 2.26 | 2026-11-20 | — | ERR-010-005 PR #559 review P2: TryCommitHeaderIntents clears an agent's KD-7 episode latch only when the ball is possessed or below HeaderTriggerMinBallHeightM, or the agent is outside HeaderTriggerRangeM of it. It no longer clears every non-nearest agent, so a ball reversing in range (or a nearer agent interrupting) cannot re-commit the same agent. Same serialized bool[]; no schema, RNG or constant change. |
+// | 2.27 | 2026-11-21 | — | W13 blockers (F5-F10) and default flip: RunMechanicsAI writes TacticalContext.MarkTargetVelocity (pure SelectMarkTargetVelocity replaces SelectMarkTargetSpeed; ERR-008-029) and floors the mark stand-off at the two #2 hitbox radii + MinStoppingDistanceM (MarkContactFloorM; ERR-014-012); Serialize/DeserializeWorldState append the v30 tracking half of each held MovementCommand (ERR-002-001); TestOnly_MarkTargetSpeed replaced by TestOnly_MarkTargetVelocity; + TestOnly_TackleIntents. No RNG stream / domain tag / draw-order change. |
 #endregion

@@ -2,6 +2,7 @@
 // Created:  2026-05-29
 // Modified: 2026-07-23
 // Modified: 2026-07-26 (ERR-008-014 — + LooseBallCollector routing field, host-designated)
+// Modified: 2026-11-21 (W13-F5/F6/F7 / ERR-008-029 — MarkTargetSpeed replaced by MarkTargetVelocity, the mark point's world velocity for the tracking MOVE)
 // Modified: 2026-11-12 (W13.1c / ERR-008-028 — + MarkTargetSpeed, the marked man's speed for the mark-MOVE pace tier)
 // Modified: 2026-11-11 (W13.1 / ERR-008-027 — + HasMarkTarget / MarkTarget per-agent mark-point carrier, host-written, default off)
 // Author:   —
@@ -148,15 +149,15 @@ namespace TacticalDirector.DecisionTree
         public Vector2 MarkTarget;
 
         /// <summary>
-        /// W13.1c (ERR-008-028, #8 §3.5.6): the speed (m/s) of the opponent this agent is marking, read from the
-        /// CURRENT stride's world state by the host and written in the same block as <see cref="MarkTarget"/>;
-        /// 0 when there is no marked man (no target, or a COVER_GK_ZONE point). A speed is frame-invariant, so no
-        /// mirror applies. Consumed only by <c>ActionDispatcher</c> when <see cref="HasMarkTarget"/>: a MOVE to the
-        /// mark point paces at the LARGER of its distance tier and this man's speed tier, so a marker is never
-        /// walking after a runner. Zero value = identity (unused unless <see cref="HasMarkTarget"/>);
-        /// <see cref="Stage0Default"/> seeds 0. Per-stride input; not serialized.
+        /// W13 F5/F6/F7 (ERR-008-029, #8 §3.5.6, supersedes the W13.1c MarkTargetSpeed): the WORLD-frame velocity (m/s)
+        /// of the mark point — the marked opponent's current velocity, read by the host from the CURRENT stride's world
+        /// state and written in the same block as <see cref="MarkTarget"/>; zero when there is no marked man (no target,
+        /// or a COVER_GK_ZONE point). Consumed only by <c>ActionDispatcher</c> when <see cref="HasMarkTarget"/>: the mark-point
+        /// MOVE is dispatched as an Agent Movement #2 §3.5.3.1 tracking command that matches this velocity and settles on
+        /// the point. Zero value = identity (unused unless <see cref="HasMarkTarget"/>); <see cref="Stage0Default"/> seeds
+        /// zero. Per-stride input; not serialized.
         /// </summary>
-        public float MarkTargetSpeed;
+        public Vector2 MarkTargetVelocity;
 
         // ── Formation Slot ────────────────────────────────────────────────────
 
@@ -201,7 +202,7 @@ namespace TacticalDirector.DecisionTree
                 LooseBallCollector = false,
                 HasMarkTarget      = false,
                 MarkTarget         = Vector2.zero,
-                MarkTargetSpeed    = 0f,
+                MarkTargetVelocity = Vector2.zero,
                 _formationSlot     = formationSlot,
                 HasMarkDirective   = false,
                 HasAttackIntent    = false
@@ -278,4 +279,6 @@ namespace TacticalDirector.DecisionTree
 // |         |            |        | agent. A position + a flag: no #14 type, no asmdef reference.                          |
 // | 1.11    | 2026-11-12 | —      | W13.1c (ERR-008-028): + MarkTargetSpeed (m/s of the marked man; 0 = none), written beside |
 // |         |            |        |   MarkTarget by MatchEngine; read by ActionDispatcher for the mark-MOVE pace tier.          |
+// | 1.12    | 2026-11-21 | —      | W13-F5/F6/F7 (ERR-008-029): MarkTargetSpeed replaced by MarkTargetVelocity (world-frame     |
+// |         |            |        |   m/s of the mark point; zero = none), the feed-forward of the §3.5.3.1 tracking MOVE.       |
 #endregion

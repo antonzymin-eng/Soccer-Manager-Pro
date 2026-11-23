@@ -3,13 +3,23 @@
 **Purpose:** Defines all classes, structs, and enums used by the Agent Movement System. This is the authoritative reference for data contracts between the movement system and external systems (Collision System, Perception, Animation, Tactical AI). Every public-facing data structure referenced in Sections 3.1-3.4 is defined here with full field documentation and usage notes.
 
 **Created:** February 10, 2026, 3:45 PM PST  
-**Updated:** March 4, 2026, 12:00 AM PST  
-**Version:** 1.4  
+**Updated:** November 21, 2026 (v1.5 — ERR-002-001: §3.5.3.1 tracking command)  
+**Version:** 1.5  
 **Status:** Draft — ERR-007 resolved (AM-002-001 applied)  
 **Dependencies:** Section 3.1 (State Machine), Section 3.2 (Locomotion & PerformanceContext), Section 3.3 (Directional Movement), Section 3.4 (Turning & Momentum)
 
 ---
 ---
+
+## CHANGELOG v1.4 -> v1.5 (November 21, 2026)
+
+**ERR-002-001 (W13-F5/F6/F7):** new **§3.5.3.1 Tracking command** — three fields on `MovementCommand`
+(`IsTracking`, `TargetVelocity`, `IssueTimeS`), the `Track(target, targetVelocity, issueTimeS)` factory and the 60 Hz
+tracking law (arrival braking within the controlled floor + target-velocity feed-forward, extrapolated from the
+10 Hz command). Every pre-existing factory leaves the new fields false/zero and executes exactly as before. The held
+command's tracking fields are cross-tick state (match-engine snapshot schema v30). One new constant,
+`TRACK_EXTRAPOLATION_MAX_S` [FIXED] 0.2 s; the law otherwise reuses `MinDecelerationFloor`, `MinStoppingDistanceM`
+and `KINEMATIC_HALF`.
 
 ## CHANGELOG v1.3 -> v1.4 (March 4, 2026)
 
@@ -887,6 +897,86 @@ public struct MovementCommand
     }
 }
 ```
+
+---
+
+### 3.5.3.1 Tracking command (ERR-002-001, November 21, 2026)
+
+**Why.** A `MovementCommand` carries a destination and a locomotion band, but no speed in m/s and no arrival
+policy: the band ceiling is the only speed control, and nothing brakes on arrival. Measured on W13's marking rig
+(both teams), a marker therefore (a) circled a stationary mark point at a constant 2.20 m/s, never settling
+(W13-F7); (b) flipped WALK ↔ JOG almost every 10 Hz stride against a 2.6–3.5 m/s man (32 / 59 strides) and
+tripped the §3.1.7 OscillationGuard (4 lock entries per minute of pursuit, W13-F6); and (c) was knocked GROUNDED
+for 19 / 40 strides by a man running at him toward goal (W13-F5). A producer at 10 Hz cannot express "be on this
+point, which is moving at this velocity" with a band alone.
+
+**Fields** (all default to false / zero — the prior behaviour):
+
+| Field | Type / unit | Range | Meaning |
+|---|---|---|---|
+| `IsTracking` | bool | — | Execute the tracking law below instead of the ordinary destination law. |
+| `TargetVelocity` | Vector2, m/s, world XY | finite | Velocity of the tracked point (zero for a stationary point). |
+| `IssueTimeS` | float, s | finite, ≥ 0 | Match-clock time of issue — the same clock `Update` receives as `currentTime`. |
+
+`Track(target, targetVelocity, issueTimeS)` sets `IsTracking = true`, `DesiredState = SPRINTING` (the band
+**ceiling** only), `DecelerationMode = CONTROLLED`, `FacingMode = AUTO_ALIGN`. No other factory sets the fields.
+
+**Law (evaluated every 60 Hz frame from the held command).** With `t` = `currentTime`:
+
+1. Command age `a = t − IssueTimeS`; extrapolation interval `τ = clamp(a, 0, TRACK_EXTRAPOLATION_MAX_S)`.
+2. Tracked point `p* = TargetPosition + TargetVelocity · τ` (m).
+3. Feed-forward `v_ff = TargetVelocity` while `a ≤ TRACK_EXTRAPOLATION_MAX_S`, else **0** (an unrefreshed command
+   freezes at its last extrapolation instead of running on).
+4. `e = p* − position`, `d = |e|` (m). Arrival speed `v_arr = √(KINEMATIC_HALF · MinDecelerationFloor · max(0, d − d_tol))`
+   (m/s), with `d_tol = MinStoppingDistanceM`: the largest speed from which braking at the controlled floor
+   `MinDecelerationFloor` (2.5 m/s²) still stops within the remaining distance. Zero inside the settle tolerance.
+5. Desired velocity `v_des = v_ff + v_arr · e / d` (m/s; `v_des = v_ff` when `d ≤ d_tol`).
+6. `commandSpeed = min(bandCeiling(DesiredState), |v_des|)` — then the existing aerobic clamp (§3.2) applies.
+   Movement intent, the requested turn angle and Step-8 steering use the **direction of `v_des`**, not
+   `TargetPosition − position` (an agent that has passed a moving point keeps running with it).
+7. Speed update (only for a tracking command; every other command is unchanged):
+   - **JOGGING / SPRINTING:** below `commandSpeed`, accelerate on the agent's **physical** exponential curve toward
+     the pace / directional / aerobic top speed and clamp at `commandSpeed` (a requested speed limits the speed
+     reached, not the acceleration available to reach it); above it, brake at `MinDecelerationFloor` down to
+     `commandSpeed`.
+   - **DECELERATING:** the §3.2.5 braking step, floored at `min(speed, commandSpeed)` — a tracking agent brakes to the
+     tracked speed, not to rest, and never accelerates while DECELERATING (the §3.1 machine re-enters JOGGING once
+     `commandSpeed > speed + CommandSpeedHysteresis`).
+   - IDLE / WALKING / STUMBLING / GROUNDED: unchanged (they already move toward `min(topSpeed, commandSpeed)` or
+     ignore it).
+
+Physical constraints are not bypassed: turn-rate limits, the state machine and its OscillationGuard, fatigue,
+collision knockdown and the safety step all apply exactly as for any other command.
+
+**Constants.** `TRACK_EXTRAPOLATION_MAX_S` **[FIXED] 0.2 s** — two 10 Hz tactical heartbeats. A producer refreshes
+the command every heartbeat, so a held command is consumed at ages up to and including 0.1 s (six frames, which
+float clock rounding can put a few ulps above 0.1); the limit sits a whole heartbeat beyond that. (A 0.1 s limit
+was implemented first and dropped the feed-forward on the sixth frame of every stride, which by itself produced
+WALK → DECELERATING → WALK flips and guard locks.) `MinDecelerationFloor` [GT] 2.5 m/s², `MinStoppingDistanceM` [GT]
+0.1 m and `KINEMATIC_HALF` [FIXED] 2 are reused unchanged from §3.2.5.
+
+**Worked examples.** (i) Stationary point 1.0 m ahead: `v_arr = √(2 · 2.5 · 0.9) = 2.12 m/s` toward it; at 0.1 m or
+closer, 0. (ii) Point 0.5 m ahead moving 3.0 m/s along the same line: `3.0 + √(2 · 2.5 · 0.4) = 4.41 m/s`.
+(iii) Command issued at 5.0 s with `TargetPosition = (10, 0)`, `TargetVelocity = (3, 0)`, agent at (10.3, 0) at
+5.1 s: `τ = 0.1`, `p* = (10.3, 0)`, `d = 0`, `v_des = (3, 0)`. At 6.0 s the command is stale: `p* = (10.6, 0)`,
+`v_ff = 0`.
+
+**Measured (W13 marking rig, both teams, non-certifying Linux).** Stationary man: marker settles at 0.00 m/s,
+0.05 m from the point. 2.6 / 3.5 / 5.0 m/s upfield runner: 0 command changes, 0 guard locks, peak gap 2.17 m for
+a 2.0 m stand-off. Goalward runner: 0 GROUNDED strides, minimum gap 1.76 m.
+
+**Residual (recorded, not fixed).** From rest, the IDLE launch and WALKING accelerations (2.0 m/s², §3.2.4) are
+not changed by this section; a point that accelerates from rest at ≥ 2 m/s² therefore gains up to ~0.2 m on the
+agent before he reaches JOGGING (the feed-forward is up to one heartbeat old). Against W13's 1.0 m TightMarking
+stand-off that is a 0.02 m transient body overlap.
+
+**Snapshot.** The held command is cross-tick state; its three tracking fields are serialized as the trailing
+block of the match-engine world state (schema v30) and round-trip through `ReconstructFromSnapshot`'s full-field
+overload.
+
+**Producers.** Decision Tree #8 §3.5.6 dispatches a mark-point MOVE as a tracking command (ERR-008-029). No other
+producer uses it; a universal stop-at-destination rule is deliberately **not** introduced (formation-slot MOVE,
+DRIBBLE, PRESS, INTERCEPT and keeper movement keep their existing run-through behaviour).
 
 ---
 

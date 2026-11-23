@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MatchEngineMarkingTests.cs
 // Created:  2026-11-11
-// Modified: 2026-11-12
+// Modified: 2026-11-21 (W13 blockers F5-F10 asserted; default flip)
+// Modified (prior): 2026-11-12
 // Author:   —
 // Spec:     Defensive AI #14 §3.13.1 / §3.10.2 (Invariant 4), Decision Tree #8 §3.1.7.2 / §3.1.8.2,
 //           Tactical Instructions #21 §3.4 (TightMarking), ERR-014-010 / ERR-008-027 / ERR-021-010, Code Standards #20
@@ -724,7 +725,8 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(a.E.TestOnly_MarkTarget(cb).HasTarget, c.TestOnly_MarkTarget(cb).HasTarget);
             Assert.IsTrue(c.TestOnly_MarkTarget(a.MarkingCb()).HasTarget, "the continued run holds a live mark target");
 
-            MatchEngine u = MatchEngine.RestoreFromSnapshot(header, payload, Seed);   // NOT re-armed: config says off
+            MatchEngine u = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            u.TestOnly_ArmMarkMovement(false);   // a restore under a different switch value (the config default is now on)
             var ru = new Rig(u, def) { AttackerCanonical = attacker, LockOwn = false };
             bool diverged = false;
             for (int i = 0; i < 600 && !diverged; i++)
@@ -732,7 +734,57 @@ namespace TacticalDirector.MatchEngine
                 ru.Tick();
                 if (!Equal(reference[i], u.CurrentSnapshotDigest)) diverged = true;
             }
-            Assert.IsTrue(diverged, "a restored engine left at the config default diverges from the armed run (OD-11 hazard)");
+            Assert.IsTrue(diverged, "a restored engine run under a different switch value diverges from the armed run (OD-11 hazard)");
+        }
+
+        /// <summary>
+        /// v30 (W13-F5/F6/F7): save while the marker is TRACKING a running man, on a non-stride tick — so the held command has
+        /// IsTracking true, a non-zero TargetVelocity and a non-zero age — then restore and continue 600 ticks: every digest
+        /// equals the uninterrupted run, and the restored held command equals the saved one field for field.
+        /// </summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void RestoreContinuation_WhileTrackingARunner_IsByteIdentical(int def)
+        {
+            Rig a = WarmRig(def);
+            Vector2 o = IntroduceAttacker(a);
+            a.Strides(DefensiveAIConstants.MarkDwellTicks + 2);
+            int marker = a.MarkingCb();
+            Assert.GreaterOrEqual(marker, 0, "precondition: acquired");
+            a.LockOwn = false;
+            a.AttackerVelocity = new Vector2(2.6f, 0.0f);
+            for (int k = 0; k < 3 * Stride + 2; k++)
+            {
+                a.AttackerCanonical = o + new Vector2(2.6f * (k + 1) / 60.0f, 0.0f);
+                a.Tick();
+            }
+            MovementCommand held = a.E.TestOnly_Command(marker);
+            Assert.IsTrue(held.IsTracking, "precondition: tracking at capture");
+            Assert.Greater(held.TargetVelocity.magnitude, 2.0f, "precondition: non-zero feed-forward at capture");
+            Assert.AreNotEqual(0UL, a.E.CurrentTick % (ulong)Stride, "precondition: mid-stride (non-zero command age)");
+
+            SnapshotHeader header = a.E.CaptureDurableHeader();
+            SnapshotPayload payload = a.E.CaptureDurablePayload();
+            Vector2 start = a.AttackerCanonical.Value;
+
+            var reference = new List<byte[]>();
+            for (int i = 0; i < 600; i++)
+            {
+                a.AttackerCanonical = start + new Vector2(2.6f * (i + 1) / 60.0f, 0.0f);
+                a.Tick();
+                reference.Add(a.E.CurrentSnapshotDigest);
+            }
+
+            MatchEngine c = MatchEngine.RestoreFromSnapshot(header, payload, Seed);
+            c.TestOnly_ArmMarkMovement(true);
+            Assert.AreEqual(held, c.TestOnly_Command(marker), "restored held command equals the saved one");
+            var rc = new Rig(c, def) { LockOwn = false, AttackerVelocity = a.AttackerVelocity };
+            for (int i = 0; i < 600; i++)
+            {
+                rc.AttackerCanonical = start + new Vector2(2.6f * (i + 1) / 60.0f, 0.0f);
+                rc.Tick();
+                CollectionAssert.AreEqual(reference[i], c.CurrentSnapshotDigest, $"tick {i}: restored tracking engine diverged");
+            }
         }
 
         private static bool Equal(byte[] x, byte[] y)
@@ -799,30 +851,28 @@ namespace TacticalDirector.MatchEngine
         // ── 9. switch-off identity ───────────────────────────────────────────────
 
         /// <summary>
-        /// Switch off (the shipped default, no arming) writes no mark target over a full five-minute match, whether the
-        /// engine is left as shipped or explicitly disarmed; the same match armed does write targets and differs. This is
-        /// a self-consistency check, NOT evidence of identity with the pre-W13.1 engine: the shipped default and
-        /// <c>Arm(false)</c> resolve through the same code path, so their equality here is true by construction. The
-        /// identity evidence is the env-gated <see cref="IdentityProbe_SixSeedDigestsAtFrame18000"/> compared across the
-        /// W13.0 and W13.1 tips (and the unchanged pre-existing suites).
+        /// W13 default flip (OD-2, November 21, 2026): the engine AS SHIPPED marks. Over a five-minute match the shipped default
+        /// (no arming call) writes mark targets and its digests equal the explicitly armed run at every 3,000-frame checkpoint;
+        /// <c>Arm(false)</c> writes no target and its match differs. Self-consistency of the switch, not identity with any
+        /// earlier engine.
         /// </summary>
         [Test]
-        public void SwitchOff_NeverWritesATarget_AndTheArmedMatchDiffers()
+        public void ShippedDefault_IsArmed_AndArmFalseWritesNothingAndDiffers()
         {
-            Assert.IsFalse(MatchEngineConstants.MarkMovementEnabled, "the shipped default is off");
+            Assert.IsTrue(MatchEngineConstants.MarkMovementEnabled, "the shipped default is on (W13 flip, OD-2)");
             const int Frames = 18000;
-            (List<byte[]> plain, List<float> tPlain, int nPlain) = RunArmedOrDefault(Frames, mode: 0);
-            (List<byte[]> off, List<float> tOff, int nOff) = RunArmedOrDefault(Frames, mode: 1);
+            (List<byte[]> plain, _, int nPlain) = RunArmedOrDefault(Frames, mode: 0);
+            (List<byte[]> off, _, int nOff) = RunArmedOrDefault(Frames, mode: 1);
             (List<byte[]> on, _, int nOn) = RunArmedOrDefault(Frames, mode: 2);
 
-            Assert.AreEqual(0, nPlain, "default: no mark target is ever written");
-            Assert.AreEqual(0, nOff, "explicitly disarmed: none either");
-            for (int i = 0; i < plain.Count; i++) CollectionAssert.AreEqual(plain[i], off[i], $"checkpoint {i}: Arm(false) differs from the default (same code path; by construction)");
-            CollectionAssert.AreEqual(tPlain, tOff);
-            Assert.Greater(nOn, 0, "armed: targets are written");
+            Assert.Greater(nPlain, 0, "shipped default: mark targets are written");
+            Assert.Greater(nOn, 0, "armed: mark targets are written");
+            for (int i = 0; i < plain.Count; i++)
+                CollectionAssert.AreEqual(on[(i + 1) * 5 - 1], plain[i], $"checkpoint {i}: the shipped default differs from Arm(true)");   // 3,000-frame vs 600-frame checkpoints
+            Assert.AreEqual(0, nOff, "explicitly disarmed: no mark target is ever written");
             bool differs = false;
-            for (int i = 0; i < plain.Count && !differs; i++) differs = !Equal(plain[i], on[(i + 1) * 5 - 1]);   // 3,000-frame checkpoints vs the armed run's 600-frame ones
-            Assert.IsTrue(differs, "the armed match differs from the switch-off match, so the no-target assertions above are not vacuous");
+            for (int i = 0; i < plain.Count && !differs; i++) differs = !Equal(plain[i], off[i]);
+            Assert.IsTrue(differs, "the disarmed match differs from the shipped one, so the switch is not vacuous");
         }
 
         /// <summary>mode 0 = engine as shipped (no arming call), 1 = Arm(false), 2 = Arm(true).</summary>
@@ -970,7 +1020,7 @@ namespace TacticalDirector.MatchEngine
                 Vector2 m = Pos(rig.E, marker), man = Pos(rig.E, rig.Attacker);
                 AgentState ms = rig.E.TestOnly_AgentSnapshot(marker);
                 rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
-                    ms.Velocity.magnitude, rig.E.TestOnly_MarkTargetSpeed(marker),   // the speed the engine WROTE for the marked man (his physics speed is perturbed by contact)
+                    ms.Velocity.magnitude, rig.E.TestOnly_MarkTargetVelocity(marker).magnitude,   // the speed the engine WROTE for the marked man (his physics speed is perturbed by contact)
                     Vector2.Distance(rig.E.TestOnly_FormationSlot(marker), man), ms.CurrentState,
                     rig.E.TestOnly_Command(marker).DesiredState, ms.OscillationGuard.GetState().IsLocked));
             }
@@ -1145,10 +1195,226 @@ namespace TacticalDirector.MatchEngine
             Assert.IsTrue(rows.Count == 40);
         }
 
-        /// <summary>With the switch off no mark speed is written for anyone, even with a man running at 5 m/s that #14 marks.</summary>
+        // ── W13-F5..F10: asserted regressions of the former descriptive blockers ──────────────────────
+
+        /// <summary>Like <see cref="RunEnvelope"/>, but also returns the per-stride lock-entry count and the GROUNDED strides.</summary>
+        private static (List<EnvelopeRow> Rows, int Flips, int LockEntries, int Grounded, int NotGoalSide, float Peak, float MinGap)
+            Summarise(List<EnvelopeRow> rows)
+        {
+            int flips = 0, locks = 0, grounded = 0, notGoalSide = 0; float peak = 0.0f, minGap = 99.0f;
+            AgentMovementState prevCmd = rows[0].Command; bool prevLocked = rows[0].GuardLocked;
+            foreach (EnvelopeRow r in rows)
+            {
+                if (r.Command != prevCmd) flips++;
+                if (r.GuardLocked && !prevLocked) locks++;
+                if (r.State == AgentMovementState.GROUNDED) grounded++;
+                if (r.Stride >= 2 && !r.GoalSide) notGoalSide++;
+                peak = Mathf.Max(peak, r.Gap); minGap = Mathf.Min(minGap, r.Gap);
+                prevCmd = r.Command; prevLocked = r.GuardLocked;
+            }
+            return (rows, flips, locks, grounded, notGoalSide, peak, minGap);
+        }
+
+        /// <summary>Sum of two default-attribute (Strength 10) #2 §3.5.4.3 hitbox radii: 2 × (0.3525 + 9 × 0.0075) = 0.84 m.</summary>
+        private static float DefaultPairRadiiM =>
+            2.0f * (TacticalDirector.CollisionSystem.AgentPhysicsSnapshotConstants.HitboxRadiusBase
+                    + 9 * TacticalDirector.CollisionSystem.AgentPhysicsSnapshotConstants.HitboxRadiusPerStrength);
+
+        /// <summary>
+        /// W13-F6 (and the residual W13.1c lag): against an UPFIELD runner accelerating at 2 m/s² to 2.6 / 3.5 / 5.0 m/s, with the
+        /// ordinary and the TightMarking stand-off, the held command never changes (one tracking command), the marker's
+        /// OscillationGuard never locks, he is goal-side on every stride from 2 on, and the peak gap stays below the stand-off
+        /// plus 1.0 m (the plan's 3.0 m target for the 2.0 m stand-off). Before the fix (gate reverted state, corrected rig):
+        /// 2.6 m/s 32 / 59 flips and 4 lock entries; tight away 54 strides not goal-side; peak 3.09 / 3.13 m at 5.0 m/s.
+        /// MEASURED after: 0 flips, 0 locks, peak 2.17 m (1.17 m tight), both teams identical.
+        /// </summary>
+        [TestCase(0, 2.6f, false)]
+        [TestCase(1, 2.6f, false)]
+        [TestCase(0, 3.5f, false)]
+        [TestCase(1, 3.5f, false)]
+        [TestCase(0, 5.0f, false)]
+        [TestCase(1, 5.0f, false)]
+        [TestCase(0, 2.6f, true)]
+        [TestCase(1, 2.6f, true)]
+        public void RunnerTracking_NoCommandChurnNoGuardLock_GoalSideAndWithinStandoffPlus1m(int def, float topSpeed, bool tight)
+        {
+            var sum = Summarise(RunEnvelope(def, topSpeed, tight, 60, out _));
+            float standoff = tight ? DefensiveAIConstants.MarkStandoffTightM : DefensiveAIConstants.MarkStandoffM;
+            string trace = DescribeEnvelope(sum.Rows);
+            Assert.AreEqual(0, sum.Flips, $"command flips. {trace}");
+            Assert.AreEqual(0, sum.LockEntries, $"OscillationGuard lock entries. {trace}");
+            Assert.AreEqual(0, sum.NotGoalSide, $"strides not goal-side. {trace}");
+            Assert.Less(sum.Peak, standoff + 1.0f, $"peak gap {sum.Peak:F2} m. {trace}");
+            Assert.Greater(sum.MinGap, DefaultPairRadiiM, $"bodies overlapped (min gap {sum.MinGap:F2} m). {trace}");
+        }
+
+        /// <summary>
+        /// W13-F5: a man running TOWARD the defended goal at his goal-side marker (3 and 5 m/s caps, ordinary and tight stand-off).
+        /// The marker retreats with him: he is never GROUNDED, never guard-locked, and goal-side on every stride from 2 on; with
+        /// the ordinary stand-off the bodies never overlap. Before the fix: GROUNDED 19 / 40 strides, minimum gap 0.68 / 0.50 m,
+        /// ends 6-10 m behind. MEASURED after: 0 GROUNDED strides, minimum gap 1.76 m (ordinary). RESIDUAL (recorded, not
+        /// asserted): with the 1.0 m TightMarking stand-off the minimum gap is 0.82 m at stride 8 — 0.02 m inside the two
+        /// Strength-10 hitbox radii (0.84 m) — while the man accelerates from rest at 2 m/s²: the marker's IDLE-launch / WALKING
+        /// acceleration (#2 §3.2.4, 2.0 m/s²) equals the man's, so the 10 Hz feed-forward latency is not recovered until he
+        /// jogs. The resulting contact is not a knockdown, but its collision response differs between the home and away runs
+        /// (see the mirror test).
+        /// </summary>
+        [TestCase(0, 3.0f, false)]
+        [TestCase(1, 3.0f, false)]
+        [TestCase(0, 5.0f, false)]
+        [TestCase(1, 5.0f, false)]
+        [TestCase(0, 3.0f, true)]
+        [TestCase(1, 3.0f, true)]
+        public void GoalwardRunner_MarkerRetreats_NeverGrounded_NoOverlap_GoalSide(int def, float topSpeed, bool tight)
+        {
+            var sum = Summarise(RunEnvelope(def, topSpeed, tight, 40, out _, startX: 26.0f, dirX: -1.0f));
+            string trace = DescribeEnvelope(sum.Rows);
+            Assert.AreEqual(0, sum.Grounded, $"GROUNDED strides. {trace}");
+            if (!tight)
+                Assert.Greater(sum.MinGap, DefaultPairRadiiM, $"bodies overlapped (min gap {sum.MinGap:F2} m). {trace}");
+            Assert.AreEqual(0, sum.NotGoalSide, $"strides not goal-side. {trace}");
+            Assert.AreEqual(0, sum.LockEntries, $"OscillationGuard lock entries. {trace}");
+        }
+
+        /// <summary>
+        /// W13-F7 / W13-F8: after a 60-stride closure on a STATIONARY man the marker has SETTLED — over the next 15 strides his
+        /// speed is below IdleEnter (0.1 m/s) and he is within the tracking settle tolerance (MinStoppingDistanceM, 0.1 m) of
+        /// the mark point, goal-side every stride, and clear of the man's body (gap above the two hitbox radii). Before the fix
+        /// he circled the point at a constant 2.20 m/s (0.01-0.86 m from it); a tight marker stood 0.82 m from his man and was
+        /// goal-side on 4 / 15 strides (away). MEASURED after: 0.00 m/s, 0.05 m (0.09 m tight) from the point, gap 1.96 m
+        /// (0.95 m tight), 15 / 15 goal-side, both teams identical.
+        /// </summary>
+        [TestCase(0, false)]
+        [TestCase(1, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void StationaryMan_MarkerSettlesOnThePoint_GoalSide_ClearOfTheBody(int def, bool tight)
+        {
+            var e = new MatchEngine(Seed);
+            e.TestOnly_ArmMarkMovement(true);
+            var rig = new Rig(e, def) { LockOwn = true };
+            rig.Strides(6);
+            if (tight) SetTightMarking(e, rig);
+            rig.AttackerCanonical = new Vector2(19.5f, 34.0f);
+            rig.Strides(DefensiveAIConstants.MarkDwellTicks + 1);
+            int marker = rig.MarkingCb();
+            Assert.GreaterOrEqual(marker, 0, "precondition: acquired");
+            rig.LockOwn = false;
+            rig.Strides(60);
+            Vector2 goal = W(def, DefensiveAIConstants.OwnGoalCenter);
+            for (int st = 0; st < 15; st++)
+            {
+                rig.Strides(1);
+                Vector2 m = Pos(e, marker), man = Pos(e, rig.Attacker);
+                float speed = e.TestOnly_AgentSnapshot(marker).Velocity.magnitude;
+                float fromPoint = Vector2.Distance(m, e.TestOnly_MarkTarget(marker).Target);
+                Assert.Less(speed, MovementThresholds.IdleEnter, $"stride {st}: still moving at {speed:F2} m/s (orbit)");
+                Assert.LessOrEqual(fromPoint, LocomotionConstants.MinStoppingDistanceM + 1e-3f, $"stride {st}: {fromPoint:F2} m from the point");
+                Assert.Less(Vector2.Distance(m, goal), Vector2.Distance(man, goal), $"stride {st}: not goal-side");
+                Assert.Greater(Vector2.Distance(m, man), DefaultPairRadiiM, $"stride {st}: inside the man's body");
+            }
+        }
+
+        private static void SetTightMarking(MatchEngine e, Rig rig)
+        {
+            TacticalInstructions.PlayerInstructions ins = new TacticalInstructions.PlayerInstructions(
+                TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default,
+                TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default, TacticalInstructions.InstrBias.Default,
+                true, -1, TacticalInstructions.SetPieceDutyFlags.None);
+            foreach (int cb in new[] { rig.Cb2, rig.Cb3 })
+                e.SetPlayerTactic(cb, new TacticalInstructions.PlayerTactic(TacticalInstructions.PlayerRole.Default, TacticalInstructions.Duty.Support, ins));
+        }
+
+        /// <summary>
+        /// W13-F10: the mirrored home and away runs of the same scenarios agree stride by stride — the same goal-side flag,
+        /// locomotion state and held command band on every stride, and gaps within the tracking settle tolerance
+        /// (MinStoppingDistanceM, 0.1 m). MEASURED: the upfield runs are identical to 1e-4 m; the goalward run differs by at most
+        /// 0.013 m, because each marker settles at a slightly different spot inside the 0.1 m tolerance during the stationary
+        /// closure (a ~1e-6 m mirror rounding difference picks a different stopping frame) and the difference decays.
+        /// Explanation of the pre-fix asymmetry (tight runner not goal-side 1 home vs 54 away strides; tight stationary
+        /// goal-side 12 vs 4 / 15; goalward minimum gap 0.68 vs 0.50 m): the same rounding difference amplified by the
+        /// stride-by-stride WALK / JOG flip (strict speed &gt; JogEnter one frame apart), the stationary orbit and body
+        /// contact; with one tracking command and arrival settling there is nothing chaotic left to amplify it, except
+        /// contact. RESIDUAL: the TightMarking goalward run touches (see the goalward test) and then diverges by up to 1.06 m
+        /// (3 m/s) / 0.06 m (5 m/s) between the teams — collision response is the remaining amplifier, so it is excluded here.
+        /// </summary>
+        [TestCase(2.6f, false, 19.5f, 1.0f, 60)]
+        [TestCase(5.0f, false, 19.5f, 1.0f, 60)]
+        [TestCase(2.6f, true, 19.5f, 1.0f, 60)]
+        [TestCase(3.0f, false, 26.0f, -1.0f, 40)]
+        [TestCase(5.0f, false, 26.0f, -1.0f, 40)]
+        public void Mirror_HomeAndAwayRunsAgreeStrideByStride(float topSpeed, bool tight, float startX, float dirX, int strides)
+        {
+            List<EnvelopeRow> home = RunEnvelope(0, topSpeed, tight, strides, out _, startX, dirX);
+            List<EnvelopeRow> away = RunEnvelope(1, topSpeed, tight, strides, out _, startX, dirX);
+            Assert.AreEqual(home.Count, away.Count);
+            for (int k = 0; k < home.Count; k++)
+            {
+                Assert.AreEqual(home[k].Gap, away[k].Gap, LocomotionConstants.MinStoppingDistanceM, $"stride {k}: gap");
+                Assert.AreEqual(home[k].GoalSide, away[k].GoalSide, $"stride {k}: goal-side");
+                Assert.AreEqual(home[k].State, away[k].State, $"stride {k}: locomotion state");
+                Assert.AreEqual(home[k].Command, away[k].Command, $"stride {k}: command band");
+            }
+        }
+
+        /// <summary>
+        /// W13-F8 (ERR-014-012): the contact floor on the stand-off is the two #2 §3.5.4.3 hitbox radii plus the tracking settle
+        /// tolerance. Worked values: Strength 10 + 10 ⇒ 0.42 + 0.42 + 0.1 = 0.94 m (below the 1.0 m tight stand-off, which then
+        /// governs); Strength 20 + 20 ⇒ 0.495 + 0.495 + 0.1 = 1.09 m (above it, so the floor governs).
+        /// </summary>
+        [TestCase(10, 10, 0.94f)]
+        [TestCase(20, 20, 1.09f)]
+        [TestCase(1, 20, 0.9475f)]
+        public void MarkContactFloor_IsTheTwoHitboxRadiiPlusTheSettleTolerance(int markerStrength, int manStrength, float expected)
+        {
+            PlayerAttributes a = PlayerAttributes.CreateDefault(); a.Strength = markerStrength;
+            PlayerAttributes b = PlayerAttributes.CreateDefault(); b.Strength = manStrength;
+            AgentState s = default;
+            Assert.AreEqual(expected, MatchEngine.MarkContactFloorM(in s, in a, in s, in b), 1e-4f);
+        }
+
+        /// <summary>
+        /// W13-F9 at the engine seam: in the Invariant-4 scenario (two midfielders, one attacker; armed), every tackle request the
+        /// engine's consumers can read names an agent whose committed assignment targets that same opponent — on every stride,
+        /// both teams. A request from the demoted duplicate would fail this.
+        /// </summary>
         [TestCase(0)]
         [TestCase(1)]
-        public void MarkTargetSpeed_SwitchOff_IsZeroEverywhere(int def)
+        public void TackleIntents_SeenByTheEngine_MatchTheFinalAssignments(int def)
+        {
+            Rig rig = WarmRig(def, armed: true);
+            rig.LockOwn = false;
+            rig.CarrierCanonical = new Vector2(75.0f, 60.0f);   // out of every defender's 15 m radius
+            Vector2 man = new Vector2(40.0f, 34.0f);
+            rig.AttackerCanonical = man;
+            int m6 = rig.Own + 6, m7 = rig.Own + 7, requests = 0, duplicateDemotedInRange = 0;
+            for (int st = 0; st < DefensiveAIConstants.MarkDwellTicks + 12; st++)
+            {
+                for (int t = 0; t < Stride; t++)
+                {
+                    // Both midfielders held 1-2 m goal-side of the man (inside the 3 m tackle radius): the retained #14
+                    // reproduction (agents 17 / 18 vs 100) at the engine seam.
+                    Place(rig.E, m6, W(def, man + new Vector2(-2.0f, 0.0f)));
+                    Place(rig.E, m7, W(def, man + new Vector2(-1.0f, 0.0f)));
+                    rig.Tick();
+                }
+                MarkAssignment a6 = rig.E.TestOnly_MarkAssignment(m6), a7 = rig.E.TestOnly_MarkAssignment(m7);
+                if ((a6.Mode == MarkMode.Zonal) != (a7.Mode == MarkMode.Zonal)) duplicateDemotedInRange++;
+                foreach (TackleIntentRequest req in rig.E.TestOnly_TackleIntents(def))
+                {
+                    MarkAssignment a = rig.E.TestOnly_MarkAssignment(req.AgentEntityId);
+                    Assert.AreEqual(req.TargetEntityId, a.TargetEntityId, $"stride {st}: agent {req.AgentEntityId} requests {req.Mode} on {req.TargetEntityId} but marks {a.TargetEntityId} ({a.Mode})");
+                    requests++;
+                }
+            }
+            Assert.Greater(duplicateDemotedInRange, 0, "precondition: Invariant 4 demoted one of two in-range midfielders");
+            Assert.Greater(requests, 0, "precondition: the scenario produces tackle requests");
+        }
+
+        /// <summary>With the switch off no mark velocity is written for anyone, even with a man running at 5 m/s that #14 marks.</summary>
+        [TestCase(0)]
+        [TestCase(1)]
+        public void MarkTargetVelocity_SwitchOff_IsZeroEverywhere(int def)
         {
             Rig off = WarmRig(def, armed: false);
             IntroduceAttacker(off);
@@ -1156,26 +1422,25 @@ namespace TacticalDirector.MatchEngine
             off.Strides(12);
             Assert.GreaterOrEqual(off.MarkingCb(), 0, "precondition: #14 still marks the running man with the switch off");
             for (int k = 0; k < 2 * Per; k++)
-                Assert.AreEqual(0.0f, off.E.TestOnly_MarkTargetSpeed(k), $"agent {k}: switch off writes no speed");
+                Assert.AreEqual(Vector2.zero, off.E.TestOnly_MarkTargetVelocity(k), $"agent {k}: switch off writes no velocity");
         }
 
         /// <summary>
-        /// The speed selection (review M1) as a pure function: the world-frame |velocity| of the marked man, 0 when there is no
-        /// marked man (a COVER_GK_ZONE point has TargetEntityId -1) or the id is outside the squad; the sign of the velocity
-        /// (the away mirror negates it) is irrelevant. The earlier engine-level "zero without a marked man" test never built a
-        /// COVER_GK_ZONE assignment and was vacuous in its armed half, so it was replaced by this.
+        /// The velocity selection as a pure function (ERR-008-029): the marked man's WORLD-frame velocity, zero when there is no
+        /// marked man (a COVER_GK_ZONE point has TargetEntityId -1) or the id is outside the squad. World frame for both teams:
+        /// the mark point is world-mapped, so its velocity must not be mirrored.
         /// </summary>
         [Test]
-        public void SelectMarkTargetSpeed_IsTheVelocityMagnitude_AndZeroWithoutAMan()
+        public void SelectMarkTargetVelocity_IsTheWorldVelocity_AndZeroWithoutAMan()
         {
             var agents = new AgentState[MatchEngineConstants.SQUAD_SIZE];
             agents[7].Velocity = new Vector2(3.0f, 4.0f);
-            agents[8].Velocity = new Vector2(-3.0f, -4.0f);   // the mirrored (away) velocity of the same man
-            Assert.AreEqual(5.0f, MatchEngine.SelectMarkTargetSpeed(7, agents), 1e-5f);
-            Assert.AreEqual(5.0f, MatchEngine.SelectMarkTargetSpeed(8, agents), 1e-5f, "frame-invariant");
-            Assert.AreEqual(0.0f, MatchEngine.SelectMarkTargetSpeed(3, agents), "a stationary man");
-            Assert.AreEqual(0.0f, MatchEngine.SelectMarkTargetSpeed(-1, agents), "COVER_GK_ZONE / no target (TargetEntityId -1)");
-            Assert.AreEqual(0.0f, MatchEngine.SelectMarkTargetSpeed(MatchEngineConstants.SQUAD_SIZE, agents), "outside the squad");
+            agents[8].Velocity = new Vector2(-3.0f, -4.0f);
+            Assert.AreEqual(new Vector2(3.0f, 4.0f), MatchEngine.SelectMarkTargetVelocity(7, agents));
+            Assert.AreEqual(new Vector2(-3.0f, -4.0f), MatchEngine.SelectMarkTargetVelocity(8, agents), "world frame, not mirrored");
+            Assert.AreEqual(Vector2.zero, MatchEngine.SelectMarkTargetVelocity(3, agents), "a stationary man");
+            Assert.AreEqual(Vector2.zero, MatchEngine.SelectMarkTargetVelocity(-1, agents), "COVER_GK_ZONE / no target (TargetEntityId -1)");
+            Assert.AreEqual(Vector2.zero, MatchEngine.SelectMarkTargetVelocity(MatchEngineConstants.SQUAD_SIZE, agents), "outside the squad");
         }
 
         // ── descriptive: INTERCEPT versus MOVE near the mark point ───────────────
@@ -1251,4 +1516,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   ~8.6 m/s SPRINTING inside each physics step); the degenerate-velocity tolerance removed (no test emits the assert with the corrected rig); tight runner cases moved |
 // |         |            |        |   to the [Explicit] descriptive tests (W13-F8); RunnerEnvelope asserts the engine-written speed per stride; [Explicit] command-flip / OscillationGuard and        |
 // |         |            |        |   stationary-man settling tables; peaks re-measured.                                                                                                                  |
+// | 1.6     | 2026-11-21 | —      | W13 blockers: asserted RunnerTracking_* (no command churn / guard lock, goal-side, peak < stand-off + 1 m), GoalwardRunner_* (never GROUNDED, goal-side; no overlap for the ordinary stand-off), StationaryMan_* (settles on the point, clear of the body), Mirror_* (home/away stride-by-stride), MarkContactFloor_* (worked values), TackleIntents_SeenByTheEngine_* (F9 engine seam), RestoreContinuation_WhileTrackingARunner_* (v30). MarkTargetSpeed tests replaced by MarkTargetVelocity ones. Default flip: ShippedDefault_IsArmed_AndArmFalseWritesNothingAndDiffers replaces the switch-off-default test; the OD-11 restore hazard now disarms explicitly. |
 #endregion

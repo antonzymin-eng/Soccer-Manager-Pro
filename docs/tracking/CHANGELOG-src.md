@@ -14,7 +14,26 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.246 — ERR-010-005 Codex review: neutrality window.** `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`: `HeaderReachabilityObserver_DoesNotChangeSnapshotDigests` no longer uses a fixed 18,000-frame window. It runs at least `NeutralityMinFrames` (18,000), stops `NeutralityTailFrames` (600) after the first #10 evaluation, and never exceeds `NeutralityMaxFrames` (108,000); the plain engine replays the same frame count, and the test logs the window. Its non-vacuity assertions are unchanged. On Linux .NET the window stays 18,000 frames (first evaluation at frame 3,775). Test-only; no production, schema, RNG or constant change.
+> **Last Updated:** November 21, 2026 — **v2.247 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.27:
+- `SelectMarkTargetVelocity` replaces `SelectMarkTargetSpeed`;
+- `MarkContactFloorM` (instance and pure static) floors the stand-off;
+- the v30 trailing tracking block is written and read;
+- `TestOnly_MarkTargetVelocity` replaces `TestOnly_MarkTargetSpeed`, and `TestOnly_TackleIntents` is new.
+
+`MatchEngineConstants.cs` v1.49: `SNAPSHOT_SCHEMA_VERSION` 29 → 30 and `MarkMovementEnabled` default `true`. New tests:
+- `src/agent-movement/Tests/AgentMovementTrackingTests.cs` v1.0;
+- `src/defensive-ai/Tests/TackleRequestReconciliationTests.cs` v1.0;
+- `src/match-engine/tests/MarkingFlipMeasurementTests.cs` v1.1 (env-gated, descriptive).
+
+Changed tests:
+- `MatchEngineMarkingTests.cs` v1.6: asserted F5–F10 regressions, v30 restore, and the default-ON switch test;
+- `MatchEngineSnapshotSchemaTests.cs` v1.28: pin 30 and a digest probe;
+- `DispatcherTests.cs` v1.4;
+- `PassInFlightPossessionTests.cs` v1.1: fixture pinned to marking off.
+
+No new assembly, `.asmdef` or RNG stream / domain tag / draw site. Full account: `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.246 — ERR-010-005 Codex review: neutrality window.** `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`: `HeaderReachabilityObserver_DoesNotChangeSnapshotDigests` no longer uses a fixed 18,000-frame window. It runs at least `NeutralityMinFrames` (18,000), stops `NeutralityTailFrames` (600) after the first #10 evaluation, and never exceeds `NeutralityMaxFrames` (108,000); the plain engine replays the same frame count, and the test logs the window. Its non-vacuity assertions are unchanged. On Linux .NET the window stays 18,000 frames (first evaluation at frame 3,775). Test-only; no production, schema, RNG or constant change.
 
 > **Last Updated (prior):** November 20, 2026 — **v2.245 — ERR-010-005 review: KD-7 latch.** `src/match-engine/MatchEngine.cs` v2.25 → **v2.26**: `TryCommitHeaderIntents` clears `_headerCommittedThisEpisode[i]` only when the ball is not airborne-loose or agent *i* is outside `HeaderTriggerRangeM`; it no longer clears every non-nearest agent. `src/match-engine/tests/MatchEngineGkHeadingTests.cs` v1.10 → **v1.11**: three home/away KD-7 latch locks. Same serialized `bool[]`; no schema, RNG or constant change.
 
@@ -2967,6 +2986,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
+| 2.247 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
 | 2.246 | 2026-11-20 | — | ERR-010-005 Codex review: the #441 neutrality test's window extends until #10 evaluates (min 18,000, max 108,000 frames). |
 | 2.245 | 2026-11-20 | — | ERR-010-005 review: KD-7 header latch cleared only on possession, landing or leaving the agent's range. |
 | 2.244 | 2026-11-20 | — | ERR-010-005: `NearestHeaderCandidate` takes the ball velocity and skips an agent the ball is moving away from; `TryCommitHeaderIntents` passes `_ball.Velocity`. |

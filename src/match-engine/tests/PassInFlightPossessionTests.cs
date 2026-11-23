@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/PassInFlightPossessionTests.cs
 // Created:  2026-08-08
-// Modified: 2026-08-08
+// Modified: 2026-11-21 (W13 default flip: Shot_EndsThePreviousPass fixture pinned to mark movement off)
+// Modified (prior): 2026-08-08
 // Author:   —
 // Spec:     Positioning AI #12 §3.0.1 / §3.0.2 / FR-PA-022 (ERR-012-011); Match Engine composition
 //           root (docs/tracking/match-engine-design.md §2.6); Testing Strategy #19; Code Standards #20
@@ -224,6 +225,12 @@ namespace TacticalDirector.MatchEngine
             // driven at goal and the intended receiver is the most advanced team-mate, i.e. goal-side
             // of the shooter, so the shot's own velocity still points at him.
             var engine = new MatchEngine(MatchSeed);
+            // The geometry below is grown by 900 ticks of default play, so it depends on everything that moves players.
+            // It was found (and its adequacy assertion passes) with #14 mark movement off; the W13 default flip (OD-2,
+            // November 21, 2026) moves the players and the found geometry no longer points the shot at the receiver.
+            // This test isolates the SHOT ADAPTER's latch clear, not marking, so its world is pinned to the one it was
+            // derived in. The adequacy assertion is unchanged and still guards the geometry.
+            engine.TestOnly_ArmMarkMovement(false);
 
             // Kickoff puts every home outfielder on ONE line (x = 26.25), and a shot outruns all of
             // them within the kick tick, so no team-mate is ever downrange at tick 0. Let the shape
@@ -435,4 +442,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   MIRRORED home and away, the untouched velocity branch, and the |
 // |         |            |        |   v20 round trip taken WHILE A PASS IS IN FLIGHT with an         |
 // |         |            |        |   explicit non-vacuity precondition.                             |
+// | 1.1     | 2026-11-21 | —      | W13 default flip (OD-2): Shot_EndsThePreviousPass_EvenWhenTheBallStillFliesTowardTheReceiver arms mark movement OFF — its 900-tick grown geometry was derived without marking and fails its own adequacy check with marking on; assertions unchanged. |
 #endregion

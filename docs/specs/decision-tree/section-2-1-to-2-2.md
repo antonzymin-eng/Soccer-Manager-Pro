@@ -9,11 +9,12 @@ how data flows through it, and what constitutes correct behaviour at the boundar
 each requirement.
 
 **Created:** March 01, 2026, 12:00 PM PST  
-**Updated:** November 12, 2026 (v1.1.6 — `ERR-008-028` amendment: the `MarkTargetSpeed` comment states the speed tier applies only while the marker is slower than his man.)
+**Updated:** November 21, 2026 (v1.1.7 — `ERR-008-029`: §2.2.6 `MarkTargetSpeed` (float) replaced by `MarkTargetVelocity` (Vector2, world m/s), the feed-forward of the §3.5.6 tracking MOVE)  
+**Updated (prior):** November 12, 2026 (v1.1.6 — `ERR-008-028` amendment: the `MarkTargetSpeed` comment states the speed tier applies only while the marker is slower than his man.)
 **Updated (prior):** November 12, 2026 (v1.1.5 — `ERR-008-028` (W13.1c): §2.2.6 `TacticalContext` gains `MarkTargetSpeed` (m/s of the marked man; default 0); §2.2.8 row extended.)
 **Updated (prior):** November 11, 2026 (v1.1.4 — `ERR-008-027` (W13.1): §2.2.6 `TacticalContext` gains the per-agent `HasMarkTarget` / `MarkTarget` carrier (position + flag; default false / zero); §2.2.8 ownership row added.)
 **Updated (prior):** May 18, 2026 (v1.1.3 patch — ERR-014-001 Option B: `MarkDirective?` field added to `TacticalContext` §2.2.6; ownership table row added)
-**Version:** 1.1.6  
+**Version:** 1.1.7  
 **Status:** ✅ APPROVED — Lead developer signed off April 27, 2026 (draft-level quality gate; see §9 approval checklist). v1.1.1 (May 17, 2026) is a non-behavioral patch per ERR-013-001 Option B: `PressDirective?` nullable field added to §2.2.6 `TacticalContext`; `Stage0Default` factory initializes it `null`; ownership table §2.2.8 row added; "frozen at Stage 0" comment amended. Approval status preserved.  
 **Specification Number:** 8 of 20 (Stage 0 — Physics Foundation)  
 **Author:** Claude (AI) with Anton (Lead Developer)
@@ -774,13 +775,13 @@ public struct TacticalContext
     public Vector2          MarkTarget;
 
     /// <summary>
-    /// W13.1c (ERR-008-028): speed (m/s) of the opponent this agent marks, from the CURRENT stride's world state,
-    /// written beside `MarkTarget`; 0 when there is no marked man. Frame-invariant (no mirror). Read by
-    /// ActionDispatcher: a mark-point MOVE paces at max(distance tier, this man's speed tier) while the marker is
-    /// slower than his man (§3.5.6).
+    /// W13 F5-F7 (ERR-008-029; supersedes the W13.1c MarkTargetSpeed): WORLD-frame velocity (m/s) of the
+    /// mark point - the marked man's velocity at the CURRENT stride - written beside `MarkTarget`; zero when
+    /// there is no marked man. Not mirrored (the point is world-mapped). Read by ActionDispatcher: the
+    /// mark-point MOVE is an Agent Movement #2 §3.5.3.1 tracking command with this feed-forward (§3.5.6).
     /// Zero value = identity; per-stride input, not serialized.
     /// </summary>
-    public float            MarkTargetSpeed;
+    public Vector2          MarkTargetVelocity;
 
     /// <summary>
     /// Stage 0 factory method. Returns a TacticalContext with hardcoded defaults
@@ -797,7 +798,7 @@ public struct TacticalContext
         MarkDirective        = null,
         HasMarkTarget        = false,
         MarkTarget           = Vector2.zero,
-        MarkTargetSpeed      = 0f,
+        MarkTargetVelocity   = Vector2.zero,
     };
 }
 ```
@@ -847,7 +848,7 @@ public readonly struct DecisionMadeEvent
 | `TacticalContext` | DT Spec #8 | DT (read-only), Formation System (Stage 1 writer) | Stage 0: hardcoded. Stage 1: Formation System populates. |
 | `PressDirective` | Pressing AI #13 | DT #8 (read-only), Pressing AI #13 (Stage 1 writer) | Stage 0: null. Stage 1+: #13 writes per-tick before DT runs. Struct defined in #13 §7.1. |
 | `AttackIntent[]` | Attacking AI #15 | DT #8 (read-only), Attacking AI #15 (Stage 1 writer) | Stage 0: null. Stage 1+: #15 writes per-tick before DT runs. Array indexed by agent EntityId; RUNNER role triggers MOVE_TO_POSITION target override in §3.1.7. Struct defined in #15 §2.2.2. |
-| `HasMarkTarget` / `MarkTarget` (W13.1, `ERR-008-027`) / `MarkTargetSpeed` (W13.1c, `ERR-008-028`) | DT Spec #8 (fields); value composed by Defensive AI #14 §3.13.1 | DT #8 (read-only: `OptionGenerator` MOVE target and PRESS priority-2 gate), match-engine `RunMechanicsAI` (sole writer) | Default `false` / zero (identity). Written per tick only while the engine's mark-movement switch is on; a world-space point plus a flag, and the marked man's speed (m/s, 0 = none) for the mark-MOVE pace tier, so #8 references no #14 type. |
+| `HasMarkTarget` / `MarkTarget` (W13.1, `ERR-008-027`) / `MarkTargetVelocity` (`ERR-008-029`; was W13.1c `MarkTargetSpeed`, `ERR-008-028`) | DT Spec #8 (fields); value composed by Defensive AI #14 §3.13.1 | DT #8 (read-only: `OptionGenerator` MOVE target and PRESS priority-2 gate), match-engine `RunMechanicsAI` (sole writer) | Default `false` / zero (identity). Written per tick only while the engine's mark-movement switch is on; a world-space point plus a flag, and the marked man's speed (m/s, 0 = none) for the mark-MOVE pace tier, so #8 references no #14 type. |
 | `MarkDirective` | Defensive AI #14 | DT #8 (read-only), Defensive AI #14 (Stage 1 writer) | Stage 0: null. Stage 1+: #14 writes per-tick before DT runs. Carries per-team marking parameters (offensive-line depth, offside-trap flag, step-up target depth, emergency flag). Struct defined in #14 §2.2.1. |
 | `DecisionMadeEvent` | DT Spec #8 | Event System #17 (Stage 2) | Stage 0: published but not consumed. |
 | `PossessionState` | DT Spec #8 | DT, orchestrator | Enum; 3 values. |
@@ -873,3 +874,4 @@ public readonly struct DecisionMadeEvent
 | 1.1.4 | November 11, 2026 | — | `ERR-008-027` (W13.1; spec + code, same commit). §2.2.6 `TacticalContext` gains `HasMarkTarget` (bool) and `MarkTarget` (Vector2, world metres): the per-agent mark point composed by #14 §3.13.1 and written by the composition root under its mark-movement switch (default off). The field-set freeze is amended here, as its own rule requires; `Stage0Default` seeds false / zero. §2.2.8 ownership table row added. Consumed by §3.1.7.2 (MOVE target) and §3.1.8.2 (PRESS priority 2 skipped). #8 gains no reference to a #14 type. Code: `TacticalContext.cs`, `OptionGenerator.cs`. |
 | 1.1.5 | November 12, 2026 | — | `ERR-008-028` (W13.1c; spec + code, same commit). §2.2.6 `TacticalContext` gains `MarkTargetSpeed` (float, m/s; the marked man's current speed, 0 = none; default 0, `Stage0Default` seeds it). Written by the composition root beside `MarkTarget`; consumed only by §3.5.6's mark-point pace tier. Field-set freeze amended as its own rule requires; no #14 type reaches #8. Code: `TacticalContext.cs`. |
 | 1.1.6 | November 12, 2026 | — | `ERR-008-028` amendment (W13.1c review): the `MarkTargetSpeed` field comment (§2.2.6) states the §3.5.6 speed tier applies only while the marker is slower than his man. No field added or changed. |
+| 1.1.7 | November 21, 2026 | — | `ERR-008-029` (W13-F5/F6/F7; spec + code, same commit): §2.2.6 `MarkTargetSpeed` (float, m/s) replaced by `MarkTargetVelocity` (Vector2, world-frame m/s of the marked man; zero = none), consumed by the §3.5.6 tracking MOVE; ownership row updated. |

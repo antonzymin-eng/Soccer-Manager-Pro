@@ -1,6 +1,7 @@
 // File:     src/match-engine/MatchEngineConstants.cs
 // Modified: 2026-11-16 (merge of W13 with main: version history only)
-// Modified: 2026-11-11 (W13.1 / ERR-014-010 — [GT] MarkMovementEnabled, the default-off engine switch for Defensive AI mark-target movement; no schema change)
+// Modified: 2026-11-21 (W13 default flip, OD-2: MarkMovementEnabled default false -> true; SNAPSHOT_SCHEMA_VERSION 29 -> 30 for the #2 tracking command, ERR-002-001)
+// Modified (prior): 2026-11-11 (W13.1 / ERR-014-010 — [GT] MarkMovementEnabled, the default-off engine switch for Defensive AI mark-target movement; no schema change)
 // Modified: 2026-11-09 (#434 kickoff formation, Duty and v29 restore)
 // Modified: 2026-11-06 (W8 C / ERR-011-021)
 // Modified: 2026-10-16 (owner-approved re-handling fix)
@@ -327,7 +328,10 @@ namespace TacticalDirector.MatchEngine
         /// indirect-restart taker. No save-file format change.</para>
         /// <para>v28 adds #11 per-slot signed 64-bit hand-control start frames beside ClaimTick.
         /// Live ownership and CONTACT budget are checked after decoding the full body; full time freezes timing.</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 29;
+        /// <para>v30 (W13-F5/F6/F7, Agent Movement #2 §3.5.3.1) appends, after the handling-law block, the tracking half
+        /// of each of the 22 held MovementCommands (IsTracking bool, TargetVelocity 2 × f32, IssueTimeS f32). No RNG stream,
+        /// domain tag, draw site or draw-order change; every digest moves (the payload grows by 22 × 13 bytes).</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 30;
 
         /// <summary>[DERIVED] Bytes per rotation binding/cache row: int32 slot + two float32 coordinates.</summary>
         public const int ROTATION_AGENT_STATE_BYTES = sizeof(int) + sizeof(float) + sizeof(float);
@@ -753,7 +757,9 @@ namespace TacticalDirector.MatchEngine
 
         /// <summary>
         /// [GT] Sole gate for Defensive AI (#14) mark-target movement (W13.1, <c>ERR-014-010</c> /
-        /// <c>ERR-008-027</c> / <c>ERR-021-010</c>), <b>default off</b>. When true, <c>RunMechanicsAI</c> turns each
+        /// <c>ERR-008-027</c> / <c>ERR-021-010</c>), <b>default ON since the W13 flip (OD-2, November 21, 2026)</b>, after
+        /// the W13-F5..F10 blockers were fixed (<c>ERR-002-001</c>, <c>ERR-008-029</c>, <c>ERR-014-010</c> amendment 2,
+        /// <c>ERR-014-012</c>); default off from W13.1 until then. When true, <c>RunMechanicsAI</c> turns each
         /// non-possessing defender's committed MAN_MARK / INTERCEPT_RUNNER / COVER_GK_ZONE assignment into a
         /// per-agent mark point (<c>MarkTargetComposer</c>, goal-side of his man) that the Decision Tree's
         /// MOVE_TO_POSITION targets, and enables #14 anti-chaos Invariant 4 (one marker per opponent). When false
@@ -764,7 +770,7 @@ namespace TacticalDirector.MatchEngine
         /// <c>MatchEngine.TestOnly_ArmMarkMovement</c> is a measurement/test seam, not the production
         /// activation path. Config key [match-engine] MarkMovementEnabled. UN-CALIBRATED.
         /// </summary>
-        public static readonly bool MarkMovementEnabled = Config.GetBool("match-engine", "MarkMovementEnabled", false);
+        public static readonly bool MarkMovementEnabled = Config.GetBool("match-engine", "MarkMovementEnabled", true);
 
         /// <summary>
         /// [GT] Minimum <c>ContactForceData.ForceMagnitude</c> (N) for a FROM_BEHIND agent-agent
@@ -1154,4 +1160,5 @@ namespace TacticalDirector.MatchEngine
 // | 1.47 | 2026-11-09 | — | Kickoff-fixed formation/Duty routing, count-prefixed v29 state and outcome validation. |
 // | 1.47 (branch-local W13) | 2026-11-11 | — | W13.1 / ERR-014-010: [GT] MarkMovementEnabled (default false) — the engine-wide switch for #14 mark-target movement. No schema, RNG or domain-tag change. |
 // | 1.48 | 2026-11-16 | — | Merge main 3871c9ac into W13: both v1.47 rows kept (#434 and W13 MarkMovementEnabled). No value change. |
+// | 1.49 | 2026-11-21 | — | W13-F5/F6/F7 (ERR-002-001): SNAPSHOT_SCHEMA_VERSION 29 -> 30 (trailing tracking half of each held MovementCommand). W13 default flip (OD-2): MarkMovementEnabled default false -> true. No RNG / domain-tag change. |
 #endregion
