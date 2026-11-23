@@ -217,7 +217,7 @@ namespace TacticalDirector.MatchEngine
 
             TacticPreset preset = catalogue.Presets[target];
             preset.ValidatePlayers(MatchEngineConstants.PLAYERS_PER_TEAM);
-            engine.SetTeamTactic(teamId, preset.Team);
+            engine.SetTeamTactic(teamId, preset.Team.WithMarkingScheme(engine.PendingMarkingScheme(teamId)));
             if (preset.Players != null)
             {
                 int baseIndex = teamId * MatchEngineConstants.PLAYERS_PER_TEAM;
@@ -284,11 +284,11 @@ namespace TacticalDirector.MatchEngine
 
                 if (t == 0)
                 {
-                    homeTactic = preset.Team;
+                    homeTactic = preset.Team.WithMarkingScheme(homeTactic.MarkingScheme);
                 }
                 else
                 {
-                    awayTactic = preset.Team;
+                    awayTactic = preset.Team.WithMarkingScheme(awayTactic.MarkingScheme);
                 }
                 if (preset.Players != null)
                 {
@@ -317,4 +317,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        |   manager AI. KickoffScore reads the A.3 scoring row off the       |
 // |         |            |        |   resolved preset (now on TacticPreset), not a fixed side-table.   |
 // |         |            |        |   Default (InCodeTacticPresetCatalogue) path is byte-identical.    |
+// | 1.2     | 2026-11-23 | —      | ERR-021-011: preserve each team scheme at kickoff and during AI preset changes. |
 #endregion

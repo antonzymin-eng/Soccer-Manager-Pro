@@ -181,6 +181,14 @@ def load_match(path, allow_short):
         counts = Counter(event["team"] for event in events if event["event"] == name)
         require([counts[0], counts[1]] == [int(n) for n in metadata[name + "s"].split(",")],
                 f"{path}: {name} ledger totals")
+    if "groundedEntries" in metadata:
+        fields = ("groundedEntries", "collisionKnockdowns", "slidingTackleEntries",
+                  "divingHeaderEntries", "otherGroundedEntries")
+        counts = [[int(n) for n in metadata[field].split(",")] for field in fields]
+        require(all(len(pair) == 2 and min(pair) >= 0 for pair in counts),
+                f"{path}: invalid grounded-entry counts")
+        require(counts[0] == [sum(pair[team] for pair in counts[1:]) for team in (0, 1)],
+                f"{path}: grounded-entry reasons do not reconcile")
     require(metadata["nonCarrierPresses"] == "0", f"{path}: marker pressed non-carrier")
     return metadata, events, samples, witness, marks, full_time
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-mode=${1:?Usage: run-marking-protocol.sh protocol|distances|schemes OUTPUT_DIRECTORY}
+mode=${1:?Usage: run-marking-protocol.sh protocol|distances|schemes|sensitivity OUTPUT_DIRECTORY}
 output=${2:?Set an output directory for the captures}
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
@@ -33,23 +33,35 @@ CONFIG
             --filter 'FullyQualifiedName~MarkingProtocol_Capture' | tee "$directory/capture-$armed.log"
 }
 
+capture_distances() {
+    export TD_MARKING_MEASURE_CASES="${TD_MARKING_MEASURE_CASES:-0,3,4,7,8}"
+    for distance in 1.5 2.0 2.5; do
+        capture "normal-$distance" true "$distance" 1.0 false Mixed
+    done
+    for distance in 0.75 1.0 1.25; do
+        capture "tight-$distance" true 2.0 "$distance" true Mixed
+    done
+}
+
+capture_schemes() {
+    capture mixed true 2.0 1.0 false Mixed
+    capture man-oriented true 2.0 1.0 false ManOriented
+}
+
 case "$mode" in
     protocol)
         capture . false 2.0 1.0 false Mixed
         capture . true 2.0 1.0 false Mixed
         ;;
     distances)
-        export TD_MARKING_MEASURE_CASES="${TD_MARKING_MEASURE_CASES:-0,3,4,7,8}"
-        for distance in 1.5 2.0 2.5; do
-            capture "normal-$distance" true "$distance" 1.0 false Mixed
-        done
-        for distance in 0.75 1.0 1.25; do
-            capture "tight-$distance" true 2.0 "$distance" true Mixed
-        done
+        capture_distances
         ;;
     schemes)
-        capture mixed true 2.0 1.0 false Mixed
-        capture man-oriented true 2.0 1.0 false ManOriented
+        capture_schemes
+        ;;
+    sensitivity)
+        capture_distances
+        capture_schemes
         ;;
     *)
         echo "Unknown capture mode: $mode" >&2

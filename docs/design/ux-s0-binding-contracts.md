@@ -1,9 +1,9 @@
 # System XI — S0 Binding Contracts
 
 **Created:** October 3, 2026\
-**Last Updated:** October 28, 2026\
-**Version:** 0.10\
-**Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11)\
+**Last Updated:** November 23, 2026\
+**Version:** 0.11\
+**Status:** REVIEWED IMPLEMENTATION CONTRACT — TO BUILD; Gate I PASS (journey §14.11). W13.2 setup amendment owner-approved November 23, 2026.\
 **Purpose:** complete the S0-I-001/002/003 implementation inputs for the owner-approved directions.\
 **Journey authority:** [S0 packet §14](ux-s0-pm1-journey.md#14-gate-i--p5b-implementation-handoff)\
 **Execution authority:** [detailed plan](ux-detailed-plan.md) §5, Gates I/J
@@ -16,6 +16,12 @@ catalogue or screen. The owner approved distinct demo squads, 100–200% text si
 the client formatter on October 3 (journey §14.10). That approval supplies direction;
 the concrete allocations passed final handoff review in journey §14.11. APPROVED specs remain
 authoritative. Exact class/file names below are proposed landing names, not existing symbols.
+
+**W13.2 setup amendment, November 23, 2026.** Asked directly whether to add the home
+marking-scheme selector and its four labels to S0 Tactics Setup, the owner replied,
+“Approve the selector and labels.” The selector sets Home's kickoff scheme and offers
+Mixed (default), Zonal, and Man-oriented. The four approved roles appear in the base
+copy register below.
 
 Audited source: `MatchSetup` accepts both squads; `MatchSession.BootEngine` calls
 `ConfigureSquads`; engine `LineupSelector` selects the XI/bench; `PlayerIdsByAgentId`
@@ -408,3 +414,4 @@ and the remaining client/host acceptance obligations still apply. No merge is au
 | 0.8 | October 28, 2026 | Records Anton Zymin's October 28 approval of the v0.7 base copy for all nine Gate J roles (three `reason.keeper_*`, six `feedback.substitution_refused_*`), unchanged. No key, argument signature, copy text or content hash changed. Visual acceptance and the remaining Gate J conditions are still due. |
 | 0.9 | October 28, 2026 | Owner decision of October 28 (record `p5b-real-client-acceptance.md` §10): a control that opens content in place keeps one title with a ▸/▾ state glyph. The Match View statistics toggle shows `heading.statistics` instead of `action.statistics_open` / `action.statistics_close`, and the earlier-feedback and comparison toggles gain the glyph. Binding only: no key, signature, copy text or content hash changed; `action.statistics_open` stays registered but is no longer shown. |
 | 0.10 | October 28, 2026 | Owner decisions of October 28 (record `p5b-real-client-acceptance.md` §11), copy approved by Anton Zymin in the same reply: `action.partial` becomes the report disclosure title “Partial statistics — incomplete” (was “Show partial statistics — incomplete”), shown with the ▸/▾ glyph in both states, so `action.statistics_close` is no longer shown; new `action.close` → Close for the pop-up Close control. A pop-up also closes on a click outside its frame. Register 150 → 151 roles; the catalogue content hash changes accordingly. No argument signature changed. |
+| 0.11 | November 23, 2026 | Explicit owner approval for the Home marking-scheme selector and its four base-copy roles. Register 151 → 155 roles. |

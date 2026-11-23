@@ -443,4 +443,5 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   behaviour unchanged.                                                                              |
 // | 1.5     | 2026-11-12 | —      | W13.1 review M2 (ERR-014-010 amendment): with MarkMovementActive the invariant order is 1, 3, 4, 2 (was 1, 2, 3, 4), so  |
 // |         |            |        |   duplicate markers no longer count against the MAN_MARK cap; with it false the order is exactly 1, 2, 3 as before.      |
+// | 1.6     | 2026-11-23 | —      | W13.2: apply per-scheme limits and count Invariant 2 demotions. |
 #endregion

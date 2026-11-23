@@ -1,0 +1,55 @@
+baseCommit=8d3e7fc7accb709c1d3b76f8a70b74747d109ef3
+sourceTreeAtBuild=5109bd27e91f74616e2e1ef33707c1714f189992
+runnerBlob=5362366e25dc1add906dd1dda05316131321f366
+analyzerBlob=f2d17ddc33dec7aa47b7ecda122cb9af172529ae
+engineBuildHash=6095ebdb6ff39ba3dfb7dfcde294e0c5cc31ff8bf3764a2c8d4f93f64c3c5909
+sensitivitySeeds=1,5A5A5A5A,99887766
+sensitivityCases=0,3,7
+sensitivityFrames=3600
+fullPairSeed=0000000099887766
+fullPairCase=C0
+fullPairFramesPerArm=324000
+
+.NET SDK:
+ Version:           8.0.426
+ Commit:            a021cd4eac
+ Workload version:  8.0.400-manifests.1f030c1a
+ MSBuild version:   17.11.69+4d6a29faa
+
+Runtime Environment:
+ OS Name:     debian
+ OS Version:  13
+ OS Platform: Linux
+ RID:         linux-x64
+ Base Path:   /workspace/.cloud-tools/dotnet/sdk/8.0.426/
+
+.NET workloads installed:
+Configured to use loose manifests when installing new manifests.
+There are no installed workloads to display.
+
+Host:
+  Version:      8.0.32
+  Architecture: x64
+  Commit:       b9a49e4a6d
+
+.NET SDKs installed:
+  8.0.426 [/workspace/.cloud-tools/dotnet/sdk]
+
+.NET runtimes installed:
+  Microsoft.AspNetCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.NETCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.NETCore.App]
+
+Other architectures found:
+  None
+
+Environment variables:
+  DOTNET_ROOT       [/workspace/.cloud-tools/dotnet]
+
+global.json file:
+  Not found
+
+Learn more:
+  https://aka.ms/dotnet/info
+
+Download .NET:
+  https://aka.ms/dotnet/download

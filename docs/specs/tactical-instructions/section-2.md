@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Section 2: Functional Requirements, Data Structures, Failure Modes
 
 **Created:** June 20, 2026
-**Last Updated:** November 11, 2026 (v0.9 — ERR-021-010 / W13.1: §2.2.2 `TightMarking` row defined by reference to #14 §3.13.1.)
-**Version:** 0.9
+**Last Updated:** November 23, 2026 (v0.10 — ERR-021-011: add the per-team scheme with a Mixed default and retention through AI preset switches.) Prior: November 11, 2026 (v0.9 — ERR-021-010 / W13.1: §2.2.2 `TightMarking` row defined by reference to #14 §3.13.1.)
+**Version:** 0.10
 **Status:** APPROVED baseline (June 20, 2026); **W8 B amendment APPROVED by owner, September 26, 2026**
 
 ---
@@ -76,7 +76,7 @@ snapshot order** (Appendix B) once FR-TI-028 activates.
 | DismarkIntensity | `DismarkIntensity` | back-prop ERR-021-005 (#23 `APPROVED` July 10, 2026) — → #12 dismark offset stage + #8 FM-DM-03; `Off = 0` identity; contracts owned by #23 (FR-DM-*); appended after MarkingOrientation (Appendix B) |
 | BuildUpStructure | `BuildUpStructure` | back-prop ERR-021-006 (#24 `APPROVED` July 10, 2026) — → #12 build-up overlay stage; `None = 0` identity; contracts owned by #24 (FR-BU-*); appended after DismarkIntensity (Appendix B) |
 | RotationFreedom | `RotationFreedom` | back-prop ERR-021-007 (#25 `APPROVED` July 10, 2026) — → #12 `RotationController`; `Off = 0` identity; contracts owned by #25 (FR-RO-*); appended after BuildUpStructure (Appendix B) |
-| MarkingScheme | `MarkingScheme` | W13.2 — Mixed (default), Zonal, or ManOriented. Applies independently to each team. Appended after RotationFreedom in Appendix B. |
+| MarkingScheme | `MarkingScheme` | W13.2 (ERR-021-011) — Mixed (default), Zonal, or ManOriented. Applies independently to each team. AI preset application preserves the team scheme at kickoff and at later switches. Appended after RotationFreedom in Appendix B. |
 
 `static TeamTactic Balanced` → Mentality.Balanced, Tempo.Standard (index 2), Width.Standard,
 Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5, DefensiveWidth.Standard,
@@ -143,4 +143,5 @@ Snapshot contribution is governed by FR-TI-028. In-match mutation timing by FR-T
 | 0.8 | 2026-09-26 | — | W8 B amendment APPROVED by owner, September 26, 2026. Approval covers amended FR-TI-022 together with #21 §3.4.1 and the paired #5/#11 W8 sections. The 35 m fallback is accepted as an uncalibrated B default; B wiring begins only after PR #461 merges. |
 | 0.7 | 2026-09-26 | — | W8 B review closure: the historical June APPROVED baseline remains approved, but the W8 amendment is explicitly PENDING OWNER APPROVAL. Merge is not treated as approval; B wiring remains blocked until owner acceptance of the amended FR-TI-022 / §3.4.1 contract. |
 | 0.9 | 2026-11-11 | — | W13.1 / ERR-021-010: §2.2.2 `TightMarking` row states what "tighter mark distance" means (the #14 §3.13.1 stand-off 1.0 m vs 2.0 m); mapping in §3.4. Field set and serialization unchanged. |
+| 0.10 | 2026-11-23 | — | ERR-021-011: add the per-team scheme with a Mixed default and retention through AI preset switches. |
 #endregion

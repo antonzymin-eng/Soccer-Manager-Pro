@@ -1,4 +1,7 @@
 // File:     src/match-engine/tests/MarkingProtocolTests.cs
+// Created:  2026-11-23
+// Modified: 2026-11-23
+// Author:   —
 // Spec:     W13 wiring plan §3 and §10
 // Purpose:  Opt-in full-match capture for the marking measurement protocol.
 
@@ -115,7 +118,8 @@ namespace TacticalDirector.MatchEngine
             SnapshotPayload checkpointPayload = null;
             using var continuation = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             int[] shots = new int[2], goals = new int[2], fouls = new int[2], offsides = new int[2], intents = new int[2];
-            int[] capDemotions = new int[2], knockdowns = new int[2];
+            int[] capDemotions = new int[2], groundedEntries = new int[2], collisionKnockdowns = new int[2];
+            int[] slidingTackleEntries = new int[2], divingHeaderEntries = new int[2], otherGroundedEntries = new int[2];
             bool[] groundedBefore = new bool[MatchEngineConstants.SQUAD_SIZE];
             int sampleCount = 0, markerPresses = 0, nonCarrierPresses = 0;
             for (int frame = 1; frame <= ticks; frame++)
@@ -147,7 +151,17 @@ namespace TacticalDirector.MatchEngine
                     RequireFinite(state.Velocity.x, state.Velocity.y, frame);
                     bool grounded = state.CurrentState == AgentMovementState.GROUNDED;
                     if (grounded && !groundedBefore[a])
-                        knockdowns[engine.AgentTeamId(a)]++;
+                    {
+                        int agentTeam = engine.AgentTeamId(a);
+                        groundedEntries[agentTeam]++;
+                        switch (state.GroundedReason)
+                        {
+                            case GroundedReason.COLLISION: collisionKnockdowns[agentTeam]++; break;
+                            case GroundedReason.SLIDING_TACKLE: slidingTackleEntries[agentTeam]++; break;
+                            case GroundedReason.DIVING_HEADER: divingHeaderEntries[agentTeam]++; break;
+                            default: otherGroundedEntries[agentTeam]++; break;
+                        }
+                    }
                     groundedBefore[a] = grounded;
                 }
 
@@ -239,7 +253,11 @@ namespace TacticalDirector.MatchEngine
                 $"goals={goals[0]},{goals[1]}",
                 $"fouls={fouls[0]},{fouls[1]}",
                 $"offsides={offsides[0]},{offsides[1]}",
-                $"knockdowns={knockdowns[0]},{knockdowns[1]}",
+                $"groundedEntries={groundedEntries[0]},{groundedEntries[1]}",
+                $"collisionKnockdowns={collisionKnockdowns[0]},{collisionKnockdowns[1]}",
+                $"slidingTackleEntries={slidingTackleEntries[0]},{slidingTackleEntries[1]}",
+                $"divingHeaderEntries={divingHeaderEntries[0]},{divingHeaderEntries[1]}",
+                $"otherGroundedEntries={otherGroundedEntries[0]},{otherGroundedEntries[1]}",
                 $"capDemotions={capDemotions[0]},{capDemotions[1]}",
                 $"tackleIntents={intents[0]},{intents[1]}",
                 $"tackleResolutions={engine.TestOnly_TackleResolvedByTeam(0)},{engine.TestOnly_TackleResolvedByTeam(1)}",
@@ -343,3 +361,8 @@ namespace TacticalDirector.MatchEngine
         }
     }
 }
+
+#region VersionHistory
+// | Version | Date       | Author | Notes |
+// | 1.0     | 2026-11-23 | —      | Add §10 capture, determinism and restore receipts, and classify GROUNDED entries by cause. |
+#endregion

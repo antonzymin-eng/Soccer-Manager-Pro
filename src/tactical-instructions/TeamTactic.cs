@@ -10,14 +10,6 @@
 
 namespace TacticalDirector.TacticalInstructions
 {
-    /// <summary>The defensive movement scheme selected by a team.</summary>
-    public enum MarkingScheme : byte
-    {
-        Mixed = 0,
-        Zonal = 1,
-        ManOriented = 2,
-    }
-
     /// <summary>
     /// One team's tactic (§2.2.1). Property order matches the Appendix B canonical snapshot order
     /// (digest-load-bearing once FR-TI-028 serializes it). <see cref="Balanced"/> reproduces the
@@ -167,6 +159,13 @@ namespace TacticalDirector.TacticalInstructions
             MarkingScheme = markingScheme;
         }
 
+        /// <summary>Copies the tactic with the team-owned marking scheme.</summary>
+        public TeamTactic WithMarkingScheme(MarkingScheme scheme) => new TeamTactic(
+            Mentality, Formation, Tempo, Width, Passing, Pressing, LineOfEngagement, DefensiveLine,
+            DefensiveWidth, TransitionWon, TransitionLost, OffsideTrap, TriggerPressMask, FocusPlay,
+            GkDistribution, TimeWasting, MarkingOrientation, DismarkIntensity, BuildUpStructure,
+            RotationFreedom, scheme);
+
         /// <summary>
         /// The balanced identity tactic (§2.2.1): Mentality.Balanced, F442, Tempo.Standard, Width.Standard,
         /// Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5,
@@ -211,4 +210,5 @@ namespace TacticalDirector.TacticalInstructions
 // |         |            |        |   defaulted ctor params (all three zero-value identities).     |
 // |         |            |        |   NOT serialized yet — WriteTeamTactic + schema bump land at   |
 // |         |            |        |   each owning spec's wiring stage (#21 Appendix B v0.5).       |
+// | 1.4     | 2026-11-23 | —      | ERR-021-011: append MarkingScheme and support scheme-preserving preset copies. |
 #endregion

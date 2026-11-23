@@ -1,8 +1,8 @@
 # Tactical Presets & AI-Manager Selection Specification #26 — Section 3: Formulas and Algorithms
 
 **Created:** July 8, 2026
-**Last Updated:** July 11, 2026 (v0.3 — PASS-1 M-1 gates closed; `MATCH_TICKS_TOTAL` promoted to `[CROSS]`)
-**Version:** 0.3
+**Last Updated:** November 23, 2026 (v0.4 — W13.2, preserve the team-owned marking scheme at AI preset application)
+**Version:** 0.4
 **Status:** APPROVED
 
 ---
@@ -13,6 +13,11 @@
 of a `TeamTacticConfig` for the managed team only (the other team's entry stays its own
 configured/default value); `Players` when present fills the managed team's roster entries of a
 `PlayerTacticConfig`, else `PlayerTacticConfig.Identity` rows. Pure construction; no engine call.
+
+At application, the kickoff applier takes `MarkingScheme` from the managed team's
+baseline tactic. The mid-match applier keeps the scheme from the team's pending
+tactic so a choice staged on the same stride survives. Other preset fields follow
+the usual projection. See #21 §2.2.1 and ERR-021-011.
 
 ## 3.2 Decision gate (FM-TP-02; composition root, KD-3)
 
@@ -109,4 +114,5 @@ pinned values (KD-7) and add no magnitudes.
 | 0.1 | 2026-07-08 | — | Initial FM-TP-01..04 with worked examples; ladder + hold = structural anti-churn. |
 | 0.2 | 2026-07-08 | — | PASS-1 M-1: §3.4 prerequisite note + `MATCH_TICKS_TOTAL` added to §3.5 as `[CROSS-PENDING]` (was an untagged phantom). |
 | 0.3 | 2026-07-11 | — | PASS-1 M-1 gates CLOSED: the engine substrate landed goal detection (score state, `GoalAwardedEvent`, centre-spot restart) + the match-length model; `MATCH_TICKS_TOTAL` promoted `[CROSS-PENDING]` → `[CROSS]` (authority `MatchEngineConstants.MATCH_TICKS_TOTAL` = 324 000); §3.2's half-time trigger and §3.4's live inputs are active in the engine. |
+| 0.4 | 2026-11-23 | — | ERR-021-011: preserve the managed team scheme at kickoff and on adaptation. |
 #endregion

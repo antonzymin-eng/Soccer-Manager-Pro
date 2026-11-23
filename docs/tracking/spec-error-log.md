@@ -6,8 +6,9 @@ approach, and every file requiring revision. Fixes are deferred — this log is 
 authoritative remediation backlog.
 
 **Created:** February 19, 2026, 5:00 PM PST
-**Version:** 3.12
-**Updated:** November 21, 2026 (v3.12 — **W13 marking blockers: ERR-002-001, ERR-008-029 and ERR-014-012 filed and RESOLVED; ERR-014-010 amendment 2 (W13-F9) RESOLVED; ERR-008-028 superseded — spec + code + tests same commit.** #2 gains the §3.5.3.1 tracking command (snapshot v30). #8 §3.5.6 dispatches the mark-point MOVE through it. #14 §3.13.1 adds a contact floor to the stand-off, and §3.13 Step 8a drops tackle requests from demoted agents. Prior update below.)
+**Version:** 3.13
+**Updated:** November 23, 2026 (v3.13 — ERR-002-002 and ERR-021-011. Record the goalward tracking correction and the W13.2 team scheme, v31 serialization and preset retention.)
+**Updated (prior):** November 21, 2026 (v3.12 — **W13 marking blockers: ERR-002-001, ERR-008-029 and ERR-014-012 filed and RESOLVED; ERR-014-010 amendment 2 (W13-F9) RESOLVED; ERR-008-028 superseded — spec + code + tests same commit.** #2 gains the §3.5.3.1 tracking command (snapshot v30). #8 §3.5.6 dispatches the mark-point MOVE through it. #14 §3.13.1 adds a contact floor to the stand-off, and §3.13 Step 8a drops tackle requests from demoted agents. Prior update below.)
 **Updated (prior):** November 20, 2026 (v3.11 — **ERR-010-005 review amendment (PR #559 P2).** The approach filter could clear an agent's KD-7 latch while the ball was still in range, so a ball turning back re-committed the same agent; the latch now clears only on possession, landing or leaving that agent's range. The physical-identity claim is narrowed: the probe cannot attribute the digest change to specific serialized fields. Census unchanged.)
 **Updated (prior):** November 20, 2026 (v3.10 — **ERR-010-005 filed and resolved, spec + code same branch (#441).** The Stage-0 header trigger (`gk-heading-engine-integration-design.md` §4.2) required the ball to be "moving toward" the candidate but never quantified it, and the code dropped it, so the passer was committed to a header on their own pass (1,600 of 1,702 pass-attributed commits). §4.2 now states `v_xy · (agent − ball)_xy ≥ 0`; commits fall 1,765 → 142 with still 0 executed headers. No new constant, schema or RNG change.)
 **Updated (prior):** November 18, 2026 (v3.09 — **ERR-014-011 filed and resolved, same commit** (A′, owner decision D1): a `BALL_LOOSE` tackle left the ball at rest at the carrier's feet and he re-took it in the same frame (37 of 37 #440 Stage A episodes). #14 §3.6.5.8 adds the geometry knock and a frame-local carrier fence; no schema or RNG change.)
@@ -914,10 +915,43 @@ change is required for the unit conversion itself.
 
 ---
 
+## ERR-002-002: Tight markers could overlap a goalward runner while accelerating
+
+**Finding.** ERR-002-001 added target-velocity feed-forward, but the linear IDLE/WALKING
+acceleration could not recover its sample lag in the goalward rig. Two Strength-10
+players overlapped by 0.02 m at the 1.0 m tight setting.
+
+**Resolution.** #2 §3.5.3.1 defines a capped physical acceleration update for a tight
+marker with a fresh moving target, using the existing velocity tolerance and
+stale-command interval. The engine derives this opt-in from the active player tactic at
+the physics update. The unrestricted review implementation failed the default shot-speed
+scenario at 24.38 m against its 24.00 m ceiling. Ordinary marking keeps the prior
+walking rate. The 3 m/s and 5 m/s rig cases assert body clearance at every physics
+frame for both teams.
+The 1.0 m and 2.0 m distances remain governed by KD-W1. This correction alters
+trajectories and digests for matches that exercise the movement path.
+
+## ERR-021-011: The team tactic lacked a persistent marking scheme
+
+**Finding.** The W13 movement switch selected behavior for the whole engine. The team
+tactic could scale candidate radius through `MarkingOrientation`, but it could not
+choose zonal, mixed or man-oriented movement, or retain that choice through preset changes.
+
+**Resolution.** #21 §2.2.1 and Appendix B define independent team scheme ordinals with
+Mixed as the default. World schema v31 appends the ordinal to each active and pending
+team tactic. #14 §3.10, §3.13.1 and §6.1 document consumption of the team scheme and
+the uncalibrated ManOriented 2/5 limits. Manager presets preserve the team's configured
+scheme at kickoff and during play under #26 §3.1. The paired digest probe, active/pending restore,
+preset-retention and mirrored back-line tests cover the new field and routing.
+
+---
+
 ## Error Index
 
 | ID | Title | Severity | Files Affected | Status |
 |----|-------|----------|---------------|--------|
+| ERR-002-002 | Tight marker overlapped a goalward runner by 0.02 m during tracking launch/walk. | Moderate | #2 §3.5.3.1, #14 §3.13.1, AgentMovementSystem, MatchEngineMarkingTests | ✅ Resolved: use the capped physical curve for a fresh moving track, with the existing velocity tolerance. |
+| ERR-021-011 | No persistent per-team marking scheme or preset-retention contract. | Moderate | #21 §2/Appendix B, #14 §3/§6, #26 §3.1, TeamTactic, ManagerAdaptation, MatchEngine, tests | ✅ Resolved: Mixed default, Zonal and ManOriented choices, v31 active/pending snapshots and team-owned scheme retention. |
 | ERR-012-013 | #434 source review found no formation consumer map and no Duty anchor stage; matching enum ordinals are not a map. `SlotComposer` computed only the raw formation anchor. | Moderate | #12 §3/§4; positioning-ai; MatchEngine | ✅ RESOLVED November 9, 2026, same commit: named map with live F442 fallback, first-RunTick in-place family initialization and agent-owned ±3 m Duty before ball offset. Support skips arithmetic; GK unchanged. FR-PA-039 retained; roster-index selection limitation owner-accepted. No RNG/tag/tuning changes; schema v29 is ERR-025-001. Mapping, rebinding, mixed-request, mirrored Duty and deterministic replay tests lock the contract. |
 | ERR-021-009 | #434 preflight found that general change-trigger/stride routing prose did not distinguish requested formation from the match-fixed family required by FR-PA-039. | Moderate | #21 §3/§4; MatchEngine; frame observation | ✅ RESOLVED November 9, 2026, same commit: kickoff-only sampling; accept complete mixed requests at normal stride, with non-formation fields applied and requested/effective formation exposed separately. Unknown live map falls back to F442, corrupt saved metadata rejects. No next-match persistence promise, RNG/tag or tuning change. |
 | ERR-025-001 | #434 preflight byte audit found the uncounted 177-byte rotation block assumed five rows although Appendix A's F4231 has six; loading with the wrong catalogue misaligns following bytes. | Moderate | #25 §2/Appendix B; MatchEngine v29 | ✅ RESOLVED November 9, 2026, same commit: serialize initialized/effective metadata before positioning state and count-prefix each contiguous rotation block; strict count/length gates and catalogue-first restore. Default/one/both F4231 overhead 18/27/36 bytes. Owner approved one-off append-last exception; v28 rejects. Existing outer formats, RNG/tag/tuning unchanged. Tests cover sixth-row state, corruption and continuation. |

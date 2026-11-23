@@ -439,4 +439,5 @@ namespace TacticalDirector.DefensiveAI
 // | 1.5     | 2026-11-12 | —      | W13.1c final pass: MarkStandoffTightM documents the known body-contact limitation (W13-F8); doc only, value unchanged. |
 // | 1.6     | 2026-11-18 | —      | A′ / ERR-014-011: + §3.6.5.8 BallLoose knock — [GT] TackleLoosePokeK 0.6, TackleLoosePokeMinSpeedMS 2.0 m/s, TackleLooseCarryK 0.5 (UN-CALIBRATED; owner decision D1) and [FIXED] TACKLE_LOOSE_COINCIDENT_M 0.01 m (degenerate-direction guard). |
 // | 1.7     | 2026-11-21 | —      | W13-F8 / ERR-014-012: MarkStandoffTightM doc records the composition root's contact floor and the residual; flip comment. No value change. |
+// | 1.8     | 2026-11-23 | —      | W13.2: add the uncalibrated per-scheme Invariant 1 and 2 limits. |
 #endregion

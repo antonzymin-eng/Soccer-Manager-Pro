@@ -637,6 +637,8 @@ namespace TacticalDirector.MatchEngine
             const ulong seed = 123;
             var baseline = new MatchEngine(seed);
             baseline.RunTick();
+            TeamTacticConfig mixed = TeamTacticFileLoader.Parse("[away]\nmarkingScheme = Mixed");
+            baseline.SetTeamTactic(1, mixed.ForTeam(1));
             baseline.RunTick();
             byte[] expected = baseline.CurrentSnapshotDigest;
 

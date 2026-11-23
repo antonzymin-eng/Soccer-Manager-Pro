@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 6: Performance Analysis and Budgets
 
 **Created:** May 17, 2026
-**Last Updated:** November 18, 2026 (v0.6 — A′ `ERR-014-011`: the tackle region gains the §3.6.5.8 BallLoose release constants — three `[GT]` (un-calibrated) and one `[FIXED]`.) Prior: (v0.5 — W13.1 `ERR-014-010`: §6.1 gains "Region: Mark-Target Composition" — two `[GT]` (un-calibrated) and one `[DERIVED]`.)
-**Version:** 0.6
+**Last Updated:** November 23, 2026 (v0.7 — W13.2 / ERR-021-011: catalogue the uncalibrated ManOriented back-line minimum and man-mark cap.) Prior: November 18, 2026 (v0.6 — A′ `ERR-014-011`: the tackle region gains the §3.6.5.8 BallLoose release constants — three `[GT]` (un-calibrated) and one `[FIXED]`.) Prior: (v0.5 — W13.1 `ERR-014-010`: §6.1 gains "Region: Mark-Target Composition" — two `[GT]` (un-calibrated) and one `[DERIVED]`.)
+**Version:** 0.7
 **Status:** APPROVED
 **Source:** `outline-detailed.md` v1.0 (May 17, 2026)
 
@@ -256,3 +256,4 @@ the `EmitAllZonal` function is an O(N_HOLD) memset — the most trivial path.
 | 0.4 | August 12, 2026 | AI agent (wiring backlog W2) | APPROVED patch. KD-6 revised (`ERR-014-006`): §6.1 gains "Region: Tackle Outcome Resolution" — ten `[GT]` + one `[FIXED]` constants, values copied verbatim from `section-3.md` §3.6.5.5. Catalogue grows from 26 entries (22 `[GT]` + 4 `[CROSS]`) to 37 (32 `[GT]` + 4 `[CROSS]` + 1 `[FIXED]`); §9.1 item 4's evidence count is now stale as a result and is flagged, not corrected, in this pass (see the W2 sweep report). |
 | 0.5 | November 11, 2026 | AI agent (W13.1) | `ERR-014-010`: §6.1 gains "Region: Mark-Target Composition" (`MARK_STANDOFF_M` 2.0, `MARK_STANDOFF_TIGHT_M` 1.0, both `[GT]` un-calibrated with the range invariant; `OWN_GOAL_CENTER` `[DERIVED]`). Catalogue grows from 37 to 40 entries; the §9.1 item 4 evidence count remains stale, as already flagged at v0.4, and is not corrected here. Hot-path cost of Invariant 4 / the composer: O(pool²) = 100 compares and O(22) lookups per tick, zero allocation (§6.2 enumeration unchanged in kind). |
 | 0.6 | November 18, 2026 | AI agent (A′, owner decision D1) | APPROVED patch. `ERR-014-011`: §6.1 tackle region gains `TACKLE_LOOSE_POKE_K` 0.6, `TACKLE_LOOSE_POKE_MIN_M_S` 2.0 m/s, `TACKLE_LOOSE_CARRY_K` 0.5 (un-calibrated `[GT]`) and `TACKLE_LOOSE_COINCIDENT_M` 0.01 m `[FIXED]`, for §3.6.5.8. |
+| 0.7 | 2026-11-23 | — | W13.2 / ERR-021-011: catalogue the uncalibrated ManOriented back-line minimum and man-mark cap. |

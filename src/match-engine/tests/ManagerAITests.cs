@@ -371,6 +371,33 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(Mentality.Attacking, engine.TestOnly_Mentality(HomeAgent));
         }
 
+        [TestCase(0, MarkingScheme.Zonal)]
+        [TestCase(1, MarkingScheme.ManOriented)]
+        public void AiPresetsKeepTheTeamsConfiguredMarkingScheme(int team, MarkingScheme scheme)
+        {
+            var engine = new MatchEngine(MatchSeed);
+            engine.ConfigureManager(team, ManagerMode.AI, TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE);
+            TeamTactic configured = TeamTactic.Balanced.WithMarkingScheme(scheme);
+            ManagerAdaptation.ApplyKickoff(engine, Catalogue, new TeamTacticConfig(
+                team == 0 ? configured : TeamTactic.Balanced,
+                team == 1 ? configured : TeamTactic.Balanced));
+            TickToFirstStride(engine);
+            Assert.That(engine.TestOnly_ActiveMarkingScheme(team), Is.EqualTo(scheme));
+            Assert.That(engine.TestOnly_ActiveMarkingScheme(1 - team), Is.EqualTo(MarkingScheme.Mixed));
+
+            var state = new ManagerState
+            {
+                Mode = ManagerMode.AI,
+                ProfileOrdinal = TacticalPresetsConstants.ARCHETYPE_AGGRESSIVE,
+                CurrentPresetOrdinal = TacticPresetLibrary.BalancedOrdinal,
+            };
+            ManagerAdaptation.RunDecisionPoint(engine, team, ref state, 252000, -1, 72000L, 324000L, Catalogue);
+            Assert.That(state.CurrentPresetOrdinal, Is.EqualTo(TacticPresetLibrary.PossessionOrdinal));
+            TickToFirstStride(engine);
+            Assert.That(engine.TestOnly_ActiveMarkingScheme(team), Is.EqualTo(scheme));
+            Assert.That(engine.TestOnly_ActiveMarkingScheme(1 - team), Is.EqualTo(MarkingScheme.Mixed));
+        }
+
         [Test]
         public void RunDecisionPoint_PatienceMultipliesHold()
         {
