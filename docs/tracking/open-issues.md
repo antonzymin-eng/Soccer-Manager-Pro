@@ -1,6 +1,6 @@
 # Open Issues
 
-**Last Updated:** November 21, 2026 — W13 blockers pass: W13-F5..F10 resolved and archived; mark movement switched on by default (OD-2); new `w13-tight-goalward-contact` residual and `w13-loose-ball-knockdowns` finding; W13 and #434 entries updated with the 120-match off/on measurement. 45 active / 84 archived.
+**Last Updated:** November 23, 2026 — archived the tight goalward contact fix and recorded the W13.2 implementation and §10 evidence. 44 active / 85 archived.
 
 **Last Updated (prior):** November 21, 2026 — #441: record the pinned-host Unity rerun of PR #559 at `9646b597` ([receipt](evidence/host-err010005-9646b597-20261121/README.md)); 0 failures, so the PR is host-cleared. 49 active / 78 archived.
 
@@ -48,7 +48,7 @@ history by the original convention; they were not merged.
 
 <a id="w13-tight-goalward-contact"></a>
 
-- **TightMarking vs a man accelerating from rest toward goal: 0.02 m transient body overlap, and the contact's collision response differs home vs away — OPEN, residual; does not block the default flip.** *Opened November 21, 2026 (W13 blockers pass; split from W13-F5 / F8 / F10).* On the corrected rig the man accelerates at 2 m/s² from rest straight at a goal-side TightMarking marker (1.0 m stand-off). The marker's minimum gap is 0.82 m at stride 8, against 0.84 m for two Strength-10 hitbox radii. He is never GROUNDED and is goal-side every stride. Cause: Agent Movement #2's IDLE-launch / WALKING acceleration (2.0 m/s², §3.2.4) equals the man's, so the up-to-one-heartbeat-old feed-forward of the §3.5.3.1 tracking command is not recovered until the marker jogs. The resulting contact's collision response differs between the mirrored runs: up to 1.06 m late in the 3 m/s case, 0.06 m at 5 m/s. Recorded in `GoalwardRunner_*` (overlap not asserted for the tight cases) and excluded from `Mirror_*`, both with this reason. Candidate fixes are owner decisions: a #2 walking/launch acceleration change, or calibrating `MARK_STANDOFF_TIGHT_M` (KD-W1). Neither is attempted. *Owning records: `ERR-002-001` / `ERR-014-012` residual notes; #2 §3.5.3.1; #14 §3.13.1.*
+The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-contact) is archived.
 
 <a id="w13-loose-ball-knockdowns"></a>
 
@@ -72,12 +72,13 @@ history by the original convention; they were not merged.
 > **Still open:**
 >
 > - pinned Unity 6000.4.9f1 compile and EditMode;
-> - the frozen-lane (SDK 8.0.426 / CLR 8.0.32) characterization;
-> - the plan's full §10 protocol (`marking.bin`, M1–M8 strata);
-> - calibration of the 2.0 m / 1.0 m stand-offs (KD-W1);
-> - the tight-marking residual [`w13-tight-goalward-contact`](#w13-tight-goalward-contact);
-> - the loose-ball knockdown finding;
-> - W13.2 per-team scheme.
+> - completion of the 66-match current-schema §10 capture;
+> - calibration of the 2.0 m / 1.0 m stand-offs, deferred under KD-W1;
+> - the loose-ball knockdown finding.
+>
+> **November 23 follow-up.** Tight goalward contact is resolved and W13.2 per-team schemes are
+> wired. The frozen same-schema comparison passed all six switch-off seeds. The current §10
+> instrument captures `marking.bin` and M1–M8 strata. See the [validation notes](w13-follow-up-validation.md).
 >
 > Formation / Duty player controls stay blocked: the flip does not discharge [`formation-duty-player-control-blocker`](#formation-duty-player-control-blocker) (see its update).
 

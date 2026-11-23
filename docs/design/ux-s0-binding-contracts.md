@@ -218,6 +218,7 @@ messages, prototype controls/captions and synthetic/captured-data warnings do no
 |---|---|
 | headings | `heading.menu` → From the touchline; `heading.setup` → Tactics Setup; `heading.match` → Match View; `heading.report` → Post-Match Report; `heading.changes` → Home team changes; `heading.statistics` → Match statistics |
 | entry/context | `context.menu` → Manage the home side in one demo match. The opponent is AI-managed.; `context.setup` → You manage Home. Away is AI-managed.; `context.mentality_choice` → Home Mentality — choose one |
+| setup marking | `context.marking_scheme` → Home marking scheme — choose one; `marking.mixed` → Mixed; `marking.zonal` → Zonal; `marking.man_oriented` → Man-oriented |
 | navigation | `action.demo` → Play a demo match; `action.start` → Start match; `action.back` → Back; `action.report` → View match report; `action.return` → Return to main menu |
 | playback | `action.slower` → Slower; `action.pause` → Pause; `action.resume` → Resume; `action.faster` → Faster; `context.speed_steps` → Speed steps: 1×, 3×, 5×, 10×. |
 | staging | `action.mentality` → Change Mentality; `action.substitution` → Make substitution; `action.submit` → Submit change; `action.cancel` → Cancel; `action.close` → Close; `action.compare` → Compare all seven Mentalities; `dialog.mentality` → Change Home Mentality; `dialog.substitution` → Make Home substitution |

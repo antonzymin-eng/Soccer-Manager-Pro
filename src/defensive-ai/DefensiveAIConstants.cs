@@ -16,6 +16,8 @@ using UnityEngine;
 using TacticalDirector.PressingAI;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
+using TacticalDirector.TacticalInstructions;
+
 namespace TacticalDirector.DefensiveAI
 {
     /// <summary>
@@ -340,6 +342,18 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         public static readonly int MaxManMarkAssignments = Config.GetInt("defensive-ai", "MaxManMarkAssignments", 4);
 
+        // [GT] Invariant 1/2 limits by scheme ordinal. Zonal uses Mixed's legacy tackle assignments.
+        // The ManOriented row is uncalibrated.
+        private static readonly (int Backline, int ManMarks)[] MarkingLimits =
+        {
+            (MinBacklineAgents, MaxManMarkAssignments),
+            (MinBacklineAgents, MaxManMarkAssignments),
+            (Config.GetInt("defensive-ai", "ManOrientedMinBacklineAgents", 2),
+             Config.GetInt("defensive-ai", "ManOrientedMaxManMarkAssignments", 5)),
+        };
+
+        internal static (int Backline, int ManMarks) LimitsFor(MarkingScheme scheme) => MarkingLimits[(int)scheme];
+
         /// <summary>
         /// [GT] Maximum displacement (m) of a non-ZONAL assignment from the agent's #12
         /// baseline anchor. Invariant 3 in §3.10 (FR-DA-027). Defensive AI #14 §6.1.
@@ -371,8 +385,8 @@ namespace TacticalDirector.DefensiveAI
         /// <c>PlayerInstructions.TightMarking</c> is set (#21 §3.4, via <see cref="TacticTranslation.MarkStandoffM"/>).
         /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. The composition root applies a contact
         /// floor of the two #2 hitbox radii + 0.1 m on top of it (ERR-014-012, W13-F8), so a settled marker is clear of his man's body:
-        /// with Strength 10 both, the floor (0.94 m) is below 1.0 m and this value governs. Residual: against a man accelerating from
-        /// rest toward goal the minimum gap is 0.82 m (0.02 m inside the radii). Config key [defensive-ai] MarkStandoffTightM.
+        /// with Strength 10 both, the floor (0.94 m) is below 1.0 m and this value governs.
+        /// Config key [defensive-ai] MarkStandoffTightM.
         /// Defensive AI #14 §3.13.1 / §6.1.
         /// </summary>
         public static readonly float MarkStandoffTightM = Config.GetFloat("defensive-ai", "MarkStandoffTightM", 1.0f);

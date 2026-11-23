@@ -1356,15 +1356,17 @@ namespace TacticalDirector.DefensiveAI.Tests
         }
 
         /// <summary>T-DA-045 — Invariant 2 violation: lowest-threat MAN_MARK demoted.</summary>
-        [Test]
-        public void T_DA_045_MaxManMarkDemotesLowestThreat()
+        [TestCase(TacticalInstructions.MarkingScheme.Mixed, 4)]
+        [TestCase(TacticalInstructions.MarkingScheme.ManOriented, 5)]
+        public void T_DA_045_MaxManMarkDemotesLowestThreat(TacticalInstructions.MarkingScheme scheme, int cap)
         {
-            int poolCount = 5;
+            const int poolCount = 6;
             DefensiveSnapshot snapshot = BuildInvariantSnapshot(poolCount);
-            int[] pool = new int[] { 10, 11, 12, 13, 14 };
+            snapshot.MarkMovementActive = true;
+            snapshot.MarkingScheme = scheme;
+            int[] pool = { 10, 11, 12, 13, 14, 15 };
 
-            // All five in MAN_MARK; opponents have varying firstTouch (threat).
-            // Lowest-threat opp: entityId 104, firstTouch=8 (12 - 4).
+            // Every assignment has a distinct opponent, so only Invariant 2 can reduce this census.
             MarkAssignment[] assignments = new MarkAssignment[poolCount];
             for (int i = 0; i < poolCount; i++)
             {
@@ -1378,7 +1380,7 @@ namespace TacticalDirector.DefensiveAI.Tests
                 };
             }
 
-            bool result = InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments);
+            bool result = InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments, out int demotions);
 
             int manMarkCount = 0;
             for (int i = 0; i < poolCount; i++)
@@ -1387,8 +1389,8 @@ namespace TacticalDirector.DefensiveAI.Tests
             }
 
             Assert.IsTrue(result, "Enforcer must return true (invariants satisfied after demotion).");
-            Assert.AreEqual(DefensiveAIConstants.MaxManMarkAssignments, manMarkCount,
-                "MAN_MARK count must equal MAX_MAN_MARK_ASSIGNMENTS after enforcement.");
+            Assert.AreEqual(cap, manMarkCount, "The selected scheme's cap applies.");
+            Assert.AreEqual(poolCount - cap, demotions, "Count only Invariant 2 demotions.");
         }
 
         /// <summary>T-DA-047 — Invariant 3 violation: over-displaced assignment demoted.</summary>

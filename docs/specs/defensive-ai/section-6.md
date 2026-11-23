@@ -96,6 +96,8 @@ calibration pass's input, not its output (§3.6.5.5).
 |---|---|---|---|---|
 | `MIN_BACKLINE_AGENTS` | `[GT]` | 3 | count | Minimum DEFENSE-line agents that must remain in ZONAL mode after assignment. Invariant 1 in §3.10 (FR-DA-025). |
 | `MAX_MAN_MARK_ASSIGNMENTS` | `[GT]` | 4 | count | Maximum simultaneous MAN_MARK assignments across the HOLD_SHAPE pool. Invariant 2 in §3.10 (FR-DA-026). |
+| `ManOrientedMinBacklineAgents` | `[GT]` | 2 | count | W13.2 ManOriented minimum zonal defenders. Uncalibrated. |
+| `ManOrientedMaxManMarkAssignments` | `[GT]` | 5 | count | W13.2 ManOriented assignment cap. Uncalibrated. |
 | `MAX_MARK_DISPLACEMENT_M` | `[GT]` | 20.0 | m | Maximum displacement of a non-ZONAL assignment from the agent's #12 baseline anchor. Invariant 3 in §3.10 (FR-DA-027). |
 
 ### Region: Mark-Target Composition (W13.1, `ERR-014-010`, §3.13.1)

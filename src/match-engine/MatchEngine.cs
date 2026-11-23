@@ -2808,6 +2808,16 @@ namespace TacticalDirector.MatchEngine
         /// the last AI stride — exactly the span the engine's tackle consumers read. Allocates; never on a production path.</summary>
         internal TackleIntentRequest[] TestOnly_TackleIntents(int teamId) => _defensive[teamId].GetTackleIntentRequests().ToArray();
 
+        internal int TestOnly_ManMarkCapDemotions(int team) => _defensive[team].LastManMarkCapDemotions;
+
+        internal bool TestOnly_MarkInvariantsHold(int team) =>
+            _defensive[team].AssignmentInvariantsHold(_defSnapshots[team]);
+
+        internal (bool Possession, int Carrier) TestOnly_MarkPossession(int team) =>
+            (_posSnapshots[team].TeamPossessionIsOwnTeam, _defSnapshots[team].PossessionOwnerEntityId);
+
+        internal MarkingScheme TestOnly_ActiveMarkingScheme(int team) => _activeTeamTactics[team].MarkingScheme;
+
         /// <summary>Test-only (W13.1c): the movement command currently held for <paramref name="agentId"/> (commands persist
         /// between 10 Hz AI strides), so a test can count walk / jog command flips. Read-only.</summary>
         internal MovementCommand TestOnly_Command(int agentId) => _commands[agentId];
@@ -3919,7 +3929,10 @@ namespace TacticalDirector.MatchEngine
                 _pressing[t].Tick(_pressSnapshots[t]);
 
                 // Defensive (#14) — team-level MarkDirective; OffensiveLineDepth is the DecisionContext carrier.
-                FillDefensiveSnapshot(t, tacticalTick, markMovementOn);
+                MarkingScheme scheme = _activeTeamTactics[t].MarkingScheme;
+                bool teamMarkMovement = markMovementOn && scheme != MarkingScheme.Zonal;
+                FillDefensiveSnapshot(t, tacticalTick, teamMarkMovement);
+                _defSnapshots[t].MarkingScheme = teamMarkMovement ? scheme : MarkingScheme.Mixed;
                 _defensive[t].Tick(_defSnapshots[t]);
                 MarkDirective mark = _defensive[t].GetMarkDirective();
                 CensusTackleIntents(t);
@@ -3998,7 +4011,7 @@ namespace TacticalDirector.MatchEngine
                     // composed (canonical frame) from the agent's committed #14 assignment and mapped back to
                     // world space. NO target for a team in possession (carrier or pass in flight): its agents
                     // attack. Pressers, the GK and sent-off agents are outside #14's pool and get none.
-                    if (markMovementOn
+                    if (teamMarkMovement
                         && !(teamPossessor >= 0 && _teamIds[teamPossessor] == t))
                     {
                         MarkAssignment markAssignment = _defensive[t].GetAssignment(i);
@@ -8537,11 +8550,14 @@ namespace TacticalDirector.MatchEngine
             DismarkIntensity dismark = (DismarkIntensity)CanonicalSerializer.ReadI32(buf, ref o);
             BuildUpStructure buildUp = (BuildUpStructure)CanonicalSerializer.ReadI32(buf, ref o);
             RotationFreedom rotation = (RotationFreedom)CanonicalSerializer.ReadI32(buf, ref o);
+            int scheme = CanonicalSerializer.ReadI32(buf, ref o);
+            if (scheme < (int)MarkingScheme.Mixed || scheme > (int)MarkingScheme.ManOriented)
+                throw new InvalidOperationException($"Invalid snapshot marking scheme ordinal {scheme}.");
 
             return new TeamTactic(
                 mentality, formation, tempo, width, passing, pressing, line, defensiveLine, defWidth,
                 transitionWon, transitionLost, offsideTrap, triggerMask, focusPlay, gkDist, timeWasting,
-                marking, dismark, buildUp, rotation);
+                marking, dismark, buildUp, rotation, (MarkingScheme)scheme);
         }
 
         /// <summary>Reads a <see cref="PlayerTactic"/> in the <see cref="WritePlayerTactic"/> (Appendix B) field order.</summary>
@@ -8615,6 +8631,7 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.DismarkIntensity);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.BuildUpStructure);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.RotationFreedom);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.MarkingScheme);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.

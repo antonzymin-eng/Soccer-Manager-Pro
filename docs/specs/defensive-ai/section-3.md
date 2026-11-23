@@ -1377,6 +1377,13 @@ Break.
 Result: 4 MAN_MARK assignments published. Agent 111 reverts to ZONAL
 (#12 baseline slot).
 
+**ManOriented variant (W13.2).** Two DEFENSE-line agents remain ZONAL and six midfield
+markers hold distinct in-range assignments. Their target threats in ascending marker ID order
+are 0.62, 0.55, 0.71, 0.48, 0.59 and 0.64. With the cap of five, Invariant 2 demotes
+the marker on the 0.48 threat and records one cap demotion. The other five retain MAN_MARK.
+The away team runs the same example in its own goal-left canonical frame.
+
+
 ---
 
 ## 3.11 Assignment Hysteresis (KD-11, binding to #2 §3.1)
@@ -1692,6 +1699,13 @@ resolved May 18, 2026.
 
 ### 3.13.1 Per-Agent Mark-Target Composition (W13.1, `ERR-014-010`; FR-DA-038)
 
+**Per-team marking scheme (W13.2).** With marking movement enabled, Mixed uses the standard
+invariant limits. Zonal keeps legacy assignments for tackle processing and emits no marking
+movement target. ManOriented uses the same movement and one-marker-per-opponent rule with
+`ManOrientedMinBacklineAgents` [GT] (default 2) and `ManOrientedMaxManMarkAssignments` [GT]
+(default 5). `MarkingOrientation` remains the independent candidate-radius dial.
+
+
 **Purpose.** §3.13 publishes a per-agent `MarkAssignment`, but its `targetPosition` is
 the *opponent's own position* (§2.2.2) — a marker sent there arrives on top of his man,
 not between him and the goal. §4.4.4 / §4.5.1 said the orchestrator "composes the
@@ -1746,10 +1760,9 @@ governs. Strength 1 + 20 ⇒ 0.9475 m. The floor never exceeds the 2.0 m ordinar
 [0.805, 2.0] m for the default constants. *Measured (non-certifying Linux, W13 marking rig, both teams, Strength 10).*
 Against a stationary man the tight marker settles 0.95 m from him, goal-side on 15 / 15 strides; pre-fix he was at
 0.82–1.11 m, goal-side 12 / 15 home and 4 / 15 away. Against a 2.6 m/s upfield runner he stays at 1.05–1.17 m,
-goal-side every stride; pre-fix he was not goal-side on 54 / 60 strides away. *Residual (recorded):* against a man
-who accelerates from rest toward goal, the tight marker's minimum gap is 0.82 m. That is 0.02 m inside the two
-radii, caused by #2's walking acceleration (#2 §3.5.3.1 residual). The resulting contact is not a knockdown, but
-its collision response differs between the home and away runs.
+goal-side every stride; pre-fix he was not goal-side on 54 / 60 strides away. The W13 follow-up uses #2's
+tracking acceleration for a moving point during launch and walking. The tight goalward case clears the two
+body radii at every physics tick in both directions at runner speeds of 3 and 5 m/s.
 
 Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
 that has never moved a defender; it is the calibration pass's input, not its output).

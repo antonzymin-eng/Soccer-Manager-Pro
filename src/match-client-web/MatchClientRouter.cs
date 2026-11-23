@@ -317,7 +317,7 @@ namespace TacticalDirector.MatchClientWeb
                 markingOrientation: b.MarkingOrientation,
                 dismarkIntensity:   b.DismarkIntensity,
                 buildUpStructure:   b.BuildUpStructure,
-                rotationFreedom:    b.RotationFreedom);
+                rotationFreedom:    b.RotationFreedom, markingScheme: b.MarkingScheme);
 
             return ManagerIntent.SetTeamTactic(teamId, in tactic);
         }

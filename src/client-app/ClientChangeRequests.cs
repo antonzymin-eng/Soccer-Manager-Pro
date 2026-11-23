@@ -48,7 +48,7 @@ namespace TacticalDirector.ClientApp
         internal TeamTactic WithMentality(Mentality mentality)
         {
             TeamTactic b = _currentTactic;
-            return new TeamTactic(mentality, b.Formation, b.Tempo, b.Width, b.Passing, b.Pressing, b.LineOfEngagement, b.DefensiveLine, b.DefensiveWidth, b.TransitionWon, b.TransitionLost, b.OffsideTrap, b.TriggerPressMask, b.FocusPlay, b.GkDistribution, b.TimeWasting, b.MarkingOrientation, b.DismarkIntensity, b.BuildUpStructure, b.RotationFreedom);
+            return new TeamTactic(mentality, b.Formation, b.Tempo, b.Width, b.Passing, b.Pressing, b.LineOfEngagement, b.DefensiveLine, b.DefensiveWidth, b.TransitionWon, b.TransitionLost, b.OffsideTrap, b.TriggerPressMask, b.FocusPlay, b.GkDistribution, b.TimeWasting, b.MarkingOrientation, b.DismarkIntensity, b.BuildUpStructure, b.RotationFreedom, markingScheme: b.MarkingScheme);
         }
 
         internal ClientChangeRecord Submit(in ManagerCommand command, in ManagerIntent intent, in MatchPlayerIdentity outgoing, in MatchPlayerIdentity incoming, ICommandDispatcher dispatcher)

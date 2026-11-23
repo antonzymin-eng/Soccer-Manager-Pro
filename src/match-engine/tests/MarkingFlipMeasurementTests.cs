@@ -29,7 +29,7 @@ namespace TacticalDirector.MatchEngine
     /// C5 / C6 all-Defend home / away; C7 / C8 all-Attack home / away; C9 both F4231. GK heading is enabled, as in that harness.
     /// </summary>
     [TestFixture]
-    internal sealed class MarkingFlipMeasurementTests
+    internal sealed partial class MarkingFlipMeasurementTests
     {
         private static readonly ulong[] DefaultSeeds =
         {
@@ -37,10 +37,10 @@ namespace TacticalDirector.MatchEngine
             0x3333333333333333UL, 0xDEADBEEFCAFEBABEUL, 0x0F0F0F0F0F0F0F0FUL,
         };
 
-        private static TeamTactic Tactic(TacticFormation f) => new TeamTactic(
+        private static TeamTactic Tactic(TacticFormation f, MarkingScheme scheme) => new TeamTactic(
             Mentality.Balanced, f, Tempo.Standard, TacticWidth.Standard, TacticPassing.Mixed, TacticPressing.Medium,
             LineOfEngagement.Standard, 0.5f, TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
-            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0, markingScheme: scheme);
 
         [Test]
         [Category("Calibration")]
@@ -82,15 +82,7 @@ namespace TacticalDirector.MatchEngine
             var e = new MatchEngine(seed);
             e.EnableGkHeading();
             e.TestOnly_ArmMarkMovement(armed);
-            int[] families = { c == 1 ? 1 : c == 3 || c == 9 ? 2 : 0, c == 2 ? 1 : c == 4 || c == 9 ? 2 : 0 };
-            for (int t = 0; t < 2; t++) e.SetTeamTactic(t, Tactic((TacticFormation)families[t]));
-            if (c >= 5 && c <= 8)
-            {
-                int t = c == 5 || c == 7 ? 0 : 1;
-                Duty duty = c <= 6 ? Duty.Defend : Duty.Attack;
-                for (int i = 1; i < 11; i++)
-                    e.SetPlayerTactic(t * 11 + i, new PlayerTactic(PlayerRole.Default, duty, PlayerInstructions.Default));
-            }
+            SetCase(e, c);
 
             int n = MatchEngineConstants.SQUAD_SIZE;
             int[] shots = new int[2], passes = new int[2], poss = new int[2];
@@ -166,6 +158,27 @@ namespace TacticalDirector.MatchEngine
                 gSlide.ToString(CultureInfo.InvariantCulture), gOther.ToString(CultureInfo.InvariantCulture),
                 gMarker.ToString(CultureInfo.InvariantCulture), gDef.ToString(CultureInfo.InvariantCulture),
                 gAtt.ToString(CultureInfo.InvariantCulture), gLoose.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private static void SetCase(MatchEngine e, int c, MarkingScheme scheme = MarkingScheme.Mixed, bool tight = false)
+        {
+            int[] families = { c == 1 ? 1 : c == 3 || c == 9 ? 2 : 0, c == 2 ? 1 : c == 4 || c == 9 ? 2 : 0 };
+            for (int t = 0; t < 2; t++)
+                e.SetTeamTactic(t, Tactic((TacticFormation)families[t], scheme));
+
+            int dutyTeam = c is >= 5 and <= 8 ? (c == 5 || c == 7 ? 0 : 1) : -1;
+            var instructions = tight
+                ? new PlayerInstructions(InstrBias.Default, InstrBias.Default, InstrBias.Default,
+                    InstrBias.Default, InstrBias.Default, InstrBias.Default, true, -1, SetPieceDutyFlags.None)
+                : PlayerInstructions.Default;
+            for (int t = 0; t < 2; t++)
+            {
+                if (!tight && t != dutyTeam)
+                    continue;
+                Duty duty = t == dutyTeam ? (c <= 6 ? Duty.Defend : Duty.Attack) : Duty.Support;
+                for (int slot = 1; slot < 11; slot++)
+                    e.SetPlayerTactic(t * 11 + slot, new PlayerTactic(PlayerRole.Default, duty, instructions));
+            }
         }
 
         private static ulong[] ParseSeeds(string s)

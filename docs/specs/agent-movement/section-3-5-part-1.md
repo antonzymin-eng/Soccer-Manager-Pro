@@ -902,6 +902,12 @@ public struct MovementCommand
 
 ### 3.5.3.1 Tracking command (ERR-002-001, November 21, 2026)
 
+A tracking agent accelerating toward a moving point uses the physical acceleration curve while
+launching or walking, capped at the tracking command speed. Ordinary walking brakes and the
+launch and walking rates for stationary targets retain their usual behavior. This lets a tight
+marker respond to a goalward runner before entering the jogging band.
+
+
 **Why.** A `MovementCommand` carries a destination and a locomotion band, but no speed in m/s and no arrival
 policy: the band ceiling is the only speed control, and nothing brakes on arrival. Measured on W13's marking rig
 (both teams), a marker therefore (a) circled a stationary mark point at a constant 2.20 m/s, never settling
@@ -965,10 +971,9 @@ closer, 0. (ii) Point 0.5 m ahead moving 3.0 m/s along the same line: `3.0 + √
 0.05 m from the point. 2.6 / 3.5 / 5.0 m/s upfield runner: 0 command changes, 0 guard locks, peak gap 2.17 m for
 a 2.0 m stand-off. Goalward runner: 0 GROUNDED strides, minimum gap 1.76 m.
 
-**Residual (recorded, not fixed).** From rest, the IDLE launch and WALKING accelerations (2.0 m/s², §3.2.4) are
-not changed by this section; a point that accelerates from rest at ≥ 2 m/s² therefore gains up to ~0.2 m on the
-agent before he reaches JOGGING (the feed-forward is up to one heartbeat old). Against W13's 1.0 m TightMarking
-stand-off that is a 0.02 m transient body overlap.
+**Goalward contact regression.** The previous tight-marking rig reached a 0.82 m gap,
+0.02 m inside two Strength-10 radii. The rolling test now checks clearance at every physics
+tick for both teams at runner speeds of 3 and 5 m/s, using the 1.0 m stand-off.
 
 **Snapshot.** The held command is cross-tick state; its three tracking fields are serialized as the trailing
 block of the match-engine world state (schema v30) and round-trip through `ReconstructFromSnapshot`'s full-field

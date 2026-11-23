@@ -1,6 +1,6 @@
 # W13 — Defender marking wiring plan
 
-> **Created:** November 10, 2026 · **Version:** 0.10 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
+> **Created:** November 10, 2026 · **Version:** 0.11 · **Status:** APPROVED FOR IMPLEMENTATION — the owner accepted all §11 recommendations (OD-1…OD-13) on November 10, 2026 (agent-attested record of the owner's answer in the working session, not a signed repository receipt)
 > **Purpose:** Make Defensive AI #14's mark assignment move defenders. Separately, give a
 > retained-trace diagnosis (for PR #543's merge decision) of whether its absence explains the
 > formation/Duty scoring sensitivity.
@@ -12,6 +12,11 @@
 > (`bash tools/dotnet-ci/run-gate.sh --fast --test-filter <f>`). The frozen lane (SDK 8.0.426 / CLR 8.0.32,
 > six-seed captures) exists only in the #543 owner's environment. Nothing in this plan was compiled,
 > run or measured.
+
+**November 23 follow-up.** The owner deferred distance tuning under KD-W1 and chose Mixed with
+ManOriented limits of two zonal back-line players and five man marks. See
+[W13 follow-up validation](w13-follow-up-validation.md) for the implementation, §10 capture and
+descriptive sensitivity commands.
 
 ## 0. Recommendation in brief
 
@@ -609,9 +614,17 @@ carrying `MarkTargetSpeed`. Test: a 5 m/s runner keeps its marker ≤ 3.0 m away
 ## 10. Post-wiring measurement (frozen lane; after #543 and W13.1)
 
 **Arms:**
-- (i) Switch off, C0 ×6: exact digests vs the W13.0 tip.
-- (ii) Armed: C0–C9 ×6 = 60 full matches.
-- "Before" = the post-W13.0 recapture, or #543's retained traces where R5 did not fire.
+- (i) Switch off, C0 ×6. Check two-run determinism and save/restore continuation on the current schema.
+- (ii) Armed, C0–C9 ×6 = 60 full matches. Run the same determinism and continuation checks.
+- Compare current off/on football measurements descriptively. Use #543’s retained traces for
+  historical comparisons where R5 did not require a recapture.
+
+**November 23 amendment.** The [November 13 same-schema comparison](evidence/w13-switch-off-neutrality-20261113/README.md)
+satisfies the original arm (i) identity requirement at the last comparable point
+(`39de4662` vs `6491de79`). Its .NET 8.0.425 result is non-certifying evidence. World
+schema v29 (#543), v30 (#562) and v31 (W13.2) change the digest preimage. F9's tackle
+request reconciliation changes play with either switch value by design. Current-schema
+validation therefore checks determinism within each arm.
 
 **Instrument.** #543's runner plus `marking.bin` per sample: mode u8, target i8, `HasMarkTarget` u8,
 target 2 × f32. It is armed through the config key, bound before the first engine construction.
@@ -623,13 +636,14 @@ target 2 × f32. It is armed through the config key, bound before the first engi
 - Δgoals / Δshots per case vs C0.
 
 **Hard stops.** NaN; an invariant breach; a target on a GK, presser, possessing team or inactive agent;
-a switch-off digest mismatch; a determinism or restore failure; integrity totals.
+a determinism or restore failure in either arm; unreconciled integrity totals.
 
 **Descriptive only.** Every football metric: no realism bands are approved. The owner judges whether
 the sensitivity shrinks.
 
-**Budget.** 66 captures × ~200 s ≈ 3.7 CPU-hours (~2 h wall at 2 concurrent), ~2.8 GB LFS, rerun of
-the §3 script.
+**Budget.** 66 captures at the original ~200 s estimate account for ~3.7 CPU-hours.
+The full kickoff repeat and half-match restore add ~5.5 CPU-hours at that rate.
+Plan for the capture streams and §3-style analysis separately.
 
 ## 11. Risks and open owner decisions
 
@@ -694,3 +708,4 @@ acquisition/closure/boundary/restore/determinism, and the identity probe.
 | 0.10 | 2026-11-21 | — | W13 blockers pass. The F5–F7 "owner decision" (arrival braking / target-speed command vs a gate position term) is taken as **an Agent Movement #2 tracking command**. It is opt-in: only the mark-point MOVE uses it, and there is no universal stop rule (`ERR-002-001`, `ERR-008-029`). F8 is taken as a contact floor from #2 radii rather than a constant change (`ERR-014-012`). F9 is Step 8a (`ERR-014-010` amendment 2). F10 is explained. OD-2 is executed (default ON) after a reduced §10. Its finding: F433 sensitivity falls, but F4231 and Duty sensitivity do not, and collision knockdowns rise 49%. |
 | 0.9 | 2026-11-19 | — | Merge status: PR #543 and PR #547 merged November 16, 2026; §3 diagnosis has no recorded result. No design change. |
 | 0.8 | 2026-11-13 | — | Landing-check status (§8 evidence for option b): W13.0 D1/D2 merged to main in PR #545; on `6491de79` the switch-off build equals main `39de4662` on every per-tick digest of six full frozen-corpus matches with an armed control that differs (non-certifying .NET 8.0.425, `evidence/w13-switch-off-neutrality-20261113/`), and pinned Unity compile plus MatchEngine / DefensiveAI / DecisionTree EditMode passed (`evidence/host-w13-6491de79-20261113/`). The frozen-lane identity is still owed. No design change. |
+| 0.11 | 2026-11-23 | — | Adopted the November 13 same-schema neutrality proof. Current §10 arms each verify repeat-run and restore determinism. Deferred distance tuning under KD-W1 and selected the W13.2 Mixed default with the uncalibrated ManOriented 2/5 row. |

@@ -254,6 +254,11 @@ namespace TacticalDirector.AgentMovement
             float kBase = AgentLocomotion.CalculateBaseAccelK(effectiveAccel);
             float kDir = AgentDirectionalMovement.ApplyDirectionalToAccelK(kBase, directionalMult);
 
+            // When the tracked point is moving, let the marker catch its sampled velocity on the
+            // physical acceleration curve even before he reaches the jogging band. Ordinary walks
+            // and stationary-target arrivals keep the linear walk rate.
+            bool accelerateToMovingTrack = command.IsTracking && command.TargetVelocity.sqrMagnitude > 0f
+                && topSpeed > state.Speed;
             float newSpeed = state.Speed;
 
             switch (state.CurrentState)
@@ -266,9 +271,12 @@ namespace TacticalDirector.AgentMovement
                     // fired). With movement intent (moving commandSpeed AND a non-degenerate
                     // target offset — AR-13 M-2), accelerate at the walking rate until the
                     // IDLE→WALKING transition takes over; otherwise decay as before.
-                    newSpeed = hasMovementIntent
-                        ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
-                        : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
+                    if (hasMovementIntent && accelerateToMovingTrack)
+                        newSpeed = TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt);
+                    else
+                        newSpeed = hasMovementIntent
+                            ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
+                            : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
                     break;
 
                 case AgentMovementState.WALKING:
@@ -277,7 +285,9 @@ namespace TacticalDirector.AgentMovement
                     float walkRate = state.Speed > topSpeed
                         ? LocomotionConstants.WALK_DECELERATION
                         : LocomotionConstants.WALK_ACCELERATION;
-                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
+                    newSpeed = accelerateToMovingTrack
+                        ? TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt)
+                        : Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
                     break;
                 }
 

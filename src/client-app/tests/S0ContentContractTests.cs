@@ -43,7 +43,7 @@ namespace TacticalDirector.ClientApp.Tests
                 if (!compiled.Contains(suffix))
                     mismatches.Add(suffix + ": approved but not compiled");
             Assert.That(mismatches, Is.Empty, string.Join(Environment.NewLine, mismatches));
-            Assert.AreEqual(151, compiled.Count, "The reviewed register has 151 roles.");
+            Assert.AreEqual(155, compiled.Count, "The reviewed register has 155 roles.");
         }
 
         [Test]

@@ -76,12 +76,13 @@ snapshot order** (Appendix B) once FR-TI-028 activates.
 | DismarkIntensity | `DismarkIntensity` | back-prop ERR-021-005 (#23 `APPROVED` July 10, 2026) — → #12 dismark offset stage + #8 FM-DM-03; `Off = 0` identity; contracts owned by #23 (FR-DM-*); appended after MarkingOrientation (Appendix B) |
 | BuildUpStructure | `BuildUpStructure` | back-prop ERR-021-006 (#24 `APPROVED` July 10, 2026) — → #12 build-up overlay stage; `None = 0` identity; contracts owned by #24 (FR-BU-*); appended after DismarkIntensity (Appendix B) |
 | RotationFreedom | `RotationFreedom` | back-prop ERR-021-007 (#25 `APPROVED` July 10, 2026) — → #12 `RotationController`; `Off = 0` identity; contracts owned by #25 (FR-RO-*); appended after BuildUpStructure (Appendix B) |
+| MarkingScheme | `MarkingScheme` | W13.2 — Mixed (default), Zonal, or ManOriented. Applies independently to each team. Appended after RotationFreedom in Appendix B. |
 
 `static TeamTactic Balanced` → Mentality.Balanced, Tempo.Standard (index 2), Width.Standard,
 Passing.Mixed, Pressing.Medium, LineOfEngagement.Standard, DefensiveLine 0.5, DefensiveWidth.Standard,
 both transitions = HoldShape/Regroup, OffsideTrap false, TriggerPressMask = None, FocusPlay.Mixed,
 GkDistribution.SlowDown, TimeWasting 0, MarkingOrientation.Balanced, DismarkIntensity.Off,
-BuildUpStructure.None, RotationFreedom.Off — reproduces today's `Stage0Default` (FR-TI-031; the
+BuildUpStructure.None, RotationFreedom.Off, MarkingScheme.Mixed — reproduces today's `Stage0Default` (FR-TI-031; the
 three July-10 back-prop fields are zero-value identities per their owning specs' KD-4 discipline,
 so `Balanced` needs no non-zero seeding for them).
 

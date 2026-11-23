@@ -331,7 +331,8 @@ namespace TacticalDirector.MatchEngine
         /// <para>v30 (W13-F5/F6/F7, Agent Movement #2 §3.5.3.1) appends, after the handling-law block, the tracking half
         /// of each of the 22 held MovementCommands (IsTracking bool, TargetVelocity 2 × f32, IssueTimeS f32). No RNG stream,
         /// domain tag, draw site or draw-order change; every digest moves (the payload grows by 22 × 13 bytes).</para>
-        public const uint SNAPSHOT_SCHEMA_VERSION = 30;
+        /// <para>v31 (W13.2) appends MarkingScheme (i32) to the active and pending TeamTactic records.</para>
+        public const uint SNAPSHOT_SCHEMA_VERSION = 31;
 
         /// <summary>[DERIVED] Bytes per rotation binding/cache row: int32 slot + two float32 coordinates.</summary>
         public const int ROTATION_AGENT_STATE_BYTES = sizeof(int) + sizeof(float) + sizeof(float);

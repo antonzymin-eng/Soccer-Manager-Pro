@@ -10,6 +10,14 @@
 
 namespace TacticalDirector.TacticalInstructions
 {
+    /// <summary>The defensive movement scheme selected by a team.</summary>
+    public enum MarkingScheme : byte
+    {
+        Mixed = 0,
+        Zonal = 1,
+        ManOriented = 2,
+    }
+
     /// <summary>
     /// One team's tactic (§2.2.1). Property order matches the Appendix B canonical snapshot order
     /// (digest-load-bearing once FR-TI-028 serializes it). <see cref="Balanced"/> reproduces the
@@ -106,6 +114,9 @@ namespace TacticalDirector.TacticalInstructions
         /// </summary>
         public RotationFreedom RotationFreedom { get; }
 
+        /// <summary>Defensive marking movement and assignment limits (W13.2).</summary>
+        public MarkingScheme MarkingScheme { get; }
+
         /// <summary>Constructs a <see cref="TeamTactic"/> in canonical field order (Appendix B).</summary>
         public TeamTactic(
             Mentality mentality,
@@ -127,7 +138,8 @@ namespace TacticalDirector.TacticalInstructions
             MarkingOrientation markingOrientation = MarkingOrientation.Balanced,
             DismarkIntensity dismarkIntensity = DismarkIntensity.Off,
             BuildUpStructure buildUpStructure = BuildUpStructure.None,
-            RotationFreedom rotationFreedom = RotationFreedom.Off)
+            RotationFreedom rotationFreedom = RotationFreedom.Off,
+            MarkingScheme markingScheme = MarkingScheme.Mixed)
         {
             Mentality = mentality;
             Formation = formation;
@@ -149,6 +161,10 @@ namespace TacticalDirector.TacticalInstructions
             DismarkIntensity = dismarkIntensity;
             BuildUpStructure = buildUpStructure;
             RotationFreedom = rotationFreedom;
+            if (markingScheme != MarkingScheme.Mixed && markingScheme != MarkingScheme.Zonal
+                && markingScheme != MarkingScheme.ManOriented)
+                throw new System.ArgumentOutOfRangeException(nameof(markingScheme));
+            MarkingScheme = markingScheme;
         }
 
         /// <summary>

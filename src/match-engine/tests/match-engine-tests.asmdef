@@ -22,6 +22,7 @@
         "TacticalDirector.PerformanceOptimization",
         "TacticalDirector.TacticalInstructions",
         "TacticalDirector.PlayerDatabase",
+        "TacticalDirector.ProjectConstants",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -125,6 +125,7 @@ namespace TacticalDirector.DefensiveAI
                 return;
             }
 
+            LastManMarkCapDemotions = 0;
             // Step 1: Read inputs (snapshot pre-populated by orchestrator).
             // Mirror defensive line depth into directive.
             _lastDirective = MarkDirective.Inactive(defensiveTeamId);
@@ -262,7 +263,8 @@ namespace TacticalDirector.DefensiveAI
 
             // Step 8: Anti-chaos enforcement (§3.10 / FR-DA-024).
             bool enforced = InvariantEnforcer.Enforce(
-                snapshot, _poolBuffer, _poolCount, currentTick, _assignments);
+                snapshot, _poolBuffer, _poolCount, currentTick, _assignments, out int capDemotions);
+            LastManMarkCapDemotions = capDemotions;
 
             if (!enforced)
             {
@@ -309,6 +311,13 @@ namespace TacticalDirector.DefensiveAI
             }
             _tackleCount = kept;
         }
+
+        /// <summary>Invariant 2 demotions during the latest defensive tick.</summary>
+        public int LastManMarkCapDemotions { get; private set; }
+
+        /// <summary>Checks committed assignments against the snapshot used for this tick.</summary>
+        public bool AssignmentInvariantsHold(DefensiveSnapshot snapshot) =>
+            InvariantEnforcer.AreAllSatisfied(snapshot, _poolBuffer, _poolCount, _assignments);
 
         /// <summary>
         /// Persists each pool slot's committed assignment + hysteresis back into the per-ENTITY

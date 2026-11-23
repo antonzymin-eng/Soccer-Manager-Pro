@@ -143,7 +143,8 @@ namespace TacticalDirector.MatchEngine
                 markingOrientation: ParseEnum(kv, "markingOrientation", d.MarkingOrientation),
                 dismarkIntensity:   ParseEnum(kv, "dismarkIntensity",   d.DismarkIntensity),
                 buildUpStructure:   ParseEnum(kv, "buildUpStructure",   d.BuildUpStructure),
-                rotationFreedom:    ParseEnum(kv, "rotationFreedom",    d.RotationFreedom));
+                rotationFreedom:    ParseEnum(kv, "rotationFreedom",    d.RotationFreedom),
+                markingScheme:      ParseEnum(kv, "markingScheme",      d.MarkingScheme));
         }
 
         private static float ParseFloatOrThrow(string raw, string key)

@@ -98,6 +98,10 @@ and is **not** independently serialized by this layer (§3.4), so restore cannot
 pre-tactics baseline; FR-TI-031 identity is asserted on the world-state subset (DET-002), not the full
 payload.
 
+W13.2 appends `MarkingScheme` (i32) after `RotationFreedom` in each active and pending
+team tactic. Ordinals are `Mixed = 0`, `Zonal = 1` and `ManOriented = 2`. The default is
+Mixed. Match-engine world schema v31 carries the new field.
+
 ## Appendix C — Worked example (full tactic → behaviour)
 
 Team set **Attacking / Wide / High press / High line**, an `InsideForward` (Attack duty) in the
