@@ -1,5 +1,7 @@
 // File:     src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs
 // Created:  2026-10-10
+// Modified: 2026-11-20 (ERR-010-005 / PR #559 review: the neutrality window extends until #10 evaluates,
+//           so the stricter header trigger cannot leave it vacuous on the Unity Mono runtime)
 // Modified: 2026-10-20 (#441 arrival census: include deferred jump starts during possession)
 // Modified: 2026-10-18 (#441 arrival census: trigger-independent feasible-head passages, launch attribution,
 //           and correlation with the shipped trigger's actual commits; measurement only)
@@ -28,7 +30,12 @@ namespace TacticalDirector.MatchEngine
     internal sealed class HeaderReachabilityDiagnosticTests
     {
         private const int TicksPerSeed = 324000;
-        private const int NeutralityFrames = 18000;
+        // Neutrality window: at least NeutralityMinFrames, then NeutralityTailFrames past the first #10
+        // evaluation, never more than NeutralityMaxFrames. A fixed 18,000-frame window held an evaluation
+        // under .NET but none under Unity 6000.4.9f1 Mono once ERR-010-005 dropped passer self-commits.
+        private const int NeutralityMinFrames = 18000;
+        private const int NeutralityTailFrames = 600;
+        private const int NeutralityMaxFrames = 108000;
         private const int ForecastExtraFrames = 60;
 
         private static readonly ulong[] Seeds =
@@ -147,12 +154,23 @@ namespace TacticalDirector.MatchEngine
             };
             observed.TestOnly_W8StageAObserver = arrivalCensus.ObserveWorldEvent;
             observed.TestOnly_HeaderArrivalObserver = arrivalCensus.ObserveFrame;
-            var digests = new byte[NeutralityFrames][];
-            for (int frame = 0; frame < NeutralityFrames; frame++)
+            var digests = new List<byte[]>(NeutralityMinFrames);
+            int stopFrame = NeutralityMaxFrames;
+            int firstEvaluationFrame = -1;
+            for (int frame = 0; frame < stopFrame; frame++)
             {
                 observed.RunTick();
-                digests[frame] = observed.CurrentSnapshotDigest;
+                digests.Add(observed.CurrentSnapshotDigest);
+                if (evaluations > 0 && firstEvaluationFrame < 0)
+                {
+                    firstEvaluationFrame = frame + 1;
+                    stopFrame = Math.Min(NeutralityMaxFrames,
+                        Math.Max(NeutralityMinFrames, frame + 1 + NeutralityTailFrames));
+                }
             }
+            int windowFrames = digests.Count;
+            TestContext.WriteLine("neutrality window: " + windowFrames.ToString(CultureInfo.InvariantCulture)
+                + " frames, first #10 evaluation at frame " + firstEvaluationFrame.ToString(CultureInfo.InvariantCulture));
             observed.TestOnly_Heading.TestOnly_ReachabilityObserver = null;
             observed.TestOnly_W8StageAObserver = null;
             observed.TestOnly_HeaderArrivalObserver = null;
@@ -160,14 +178,16 @@ namespace TacticalDirector.MatchEngine
 
             // Non-vacuity: the window must contain real header evaluations, or identity proves nothing.
             Assert.That(evaluations, Is.GreaterThan(0),
-                "no #10 evaluation was observed in the neutrality window; lengthen it");
+                "no #10 evaluation was observed in " + windowFrames.ToString(CultureInfo.InvariantCulture)
+                + " frames; raise NeutralityMaxFrames");
             Assert.That(arrivalCensus.Counters.PotentialWindows, Is.GreaterThan(0),
-                "no trigger-independent jump windows were observed in the neutrality window; lengthen it");
+                "no trigger-independent jump windows were observed in " + windowFrames.ToString(CultureInfo.InvariantCulture)
+                + " frames; raise NeutralityMaxFrames");
 
             // EventBus is process-global: run the second engine only after the first has finished.
             var plain = new MatchEngine(seed);
             plain.EnableGkHeading();
-            for (int frame = 0; frame < NeutralityFrames; frame++)
+            for (int frame = 0; frame < windowFrames; frame++)
             {
                 plain.RunTick();
                 CollectionAssert.AreEqual(digests[frame], plain.CurrentSnapshotDigest,

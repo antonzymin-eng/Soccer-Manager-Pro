@@ -1,5 +1,6 @@
 // File:     src/match-engine/tests/GkHeadingIntentSourceTests.cs
 // Created:  2026-07-22
+// Modified: 2026-11-20 (ERR-010-005: §4.2 approach-condition locks, both attack directions)
 // Modified: 2026-08-09 (AR over the ERR-010-002 landing: §4.2a HeaderAimTarget locks — mirror,
 //           opponent-goal-line, advancement ordering, nearer-touchline)
 // Author:   —
@@ -124,7 +125,7 @@ namespace TacticalDirector.MatchEngine
             var gk = new[] { false, false, false };
             var off = new[] { false, false, false };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                new Vector3(50f, 34f, 1.0f), airborneLoose: true, agents, gk, off, agents.Length);
+                new Vector3(50f, 34f, 1.0f), Vector3.zero, airborneLoose: true, agents, gk, off, agents.Length);
             Assert.AreEqual(0, nearest, "Agent 0 (0.0 m) is nearer than agent 1 (0.5 m).");
         }
 
@@ -133,7 +134,7 @@ namespace TacticalDirector.MatchEngine
         {
             var agents = new[] { AgentAt(50f, 34f) };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                new Vector3(50f, 34f, 1.0f), airborneLoose: false,
+                new Vector3(50f, 34f, 1.0f), Vector3.zero, airborneLoose: false,
                 agents, new[] { false }, new[] { false }, agents.Length);
             Assert.AreEqual(-1, nearest);
         }
@@ -146,7 +147,7 @@ namespace TacticalDirector.MatchEngine
             var gk = new[] { true, false, false };
             var off = new[] { false, true, false };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                new Vector3(50f, 34f, 1.0f), airborneLoose: true, agents, gk, off, agents.Length);
+                new Vector3(50f, 34f, 1.0f), Vector3.zero, airborneLoose: true, agents, gk, off, agents.Length);
             Assert.AreEqual(2, nearest, "GK (0) and sent-off (1) are excluded; 2 is the nearest eligible.");
         }
 
@@ -161,7 +162,7 @@ namespace TacticalDirector.MatchEngine
             var gk = new[] { false, false };
             var off = new[] { false, false };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                new Vector3(50f, 34f, 1.0f), airborneLoose: true, agents, gk, off, agents.Length);
+                new Vector3(50f, 34f, 1.0f), Vector3.zero, airborneLoose: true, agents, gk, off, agents.Length);
             Assert.AreEqual(1, nearest, "On an exact distance tie the later index wins (the <= compare).");
         }
 
@@ -171,9 +172,61 @@ namespace TacticalDirector.MatchEngine
             float far = MatchEngineConstants.HeaderTriggerRangeM + 5f;
             var agents = new[] { AgentAt(50f + far, 34f) };
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                new Vector3(50f, 34f, 1.0f), airborneLoose: true,
+                new Vector3(50f, 34f, 1.0f), Vector3.zero, airborneLoose: true,
                 agents, new[] { false }, new[] { false }, agents.Length);
             Assert.AreEqual(-1, nearest, "Beyond head range must not select a candidate.");
+        }
+
+        // ── §4.2 approach condition (ERR-010-005) ─────────────────────────────────────
+        //
+        // An agent qualifies only when v_xy · (agent − ball)_xy ≥ 0. Worked example: passer at x = 50,
+        // ball at x = 50.4 moving +15 m/s → 15 · (50 − 50.4) = −6 m²/s < 0, excluded. Each case runs in
+        // both x directions so a sign error on one attack direction cannot pass.
+
+        [TestCase(1f)]
+        [TestCase(-1f)]
+        public void NearestHeaderCandidate_BallMovingAway_SkipsThatAgent(float dir)
+        {
+            var agents = new[] { AgentAt(50f, 34f) };
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                new Vector3(50f + 0.4f * dir, 34f, 0.8f), new Vector3(15f * dir, 0f, 3f), airborneLoose: true,
+                agents, new[] { false }, new[] { false }, agents.Length);
+            Assert.AreEqual(-1, nearest, "A ball moving away from the only in-range agent selects nobody.");
+        }
+
+        [TestCase(1f)]
+        [TestCase(-1f)]
+        public void NearestHeaderCandidate_BallApproaching_SelectsThatAgent(float dir)
+        {
+            var agents = new[] { AgentAt(50f, 34f) };
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                new Vector3(50f + 0.4f * dir, 34f, 0.8f), new Vector3(-15f * dir, 0f, 3f), airborneLoose: true,
+                agents, new[] { false }, new[] { false }, agents.Length);
+            Assert.AreEqual(0, nearest, "A ball arriving at the agent keeps the existing selection.");
+        }
+
+        [TestCase(1f)]
+        [TestCase(-1f)]
+        public void NearestHeaderCandidate_NearerPasser_LosesToApproachedAgent(float dir)
+        {
+            // Passer 0.5 m behind the ball, receiver 1.0 m ahead of it; the ball travels toward the receiver.
+            var agents = new[] { AgentAt(50f, 34f), AgentAt(50f + 1.5f * dir, 34f) };
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                new Vector3(50f + 0.5f * dir, 34f, 1.0f), new Vector3(10f * dir, 0f, 0f), airborneLoose: true,
+                agents, new[] { false, false }, new[] { false, false }, agents.Length);
+            Assert.AreEqual(1, nearest, "The approached agent is selected even though the passer is nearer.");
+        }
+
+        [Test]
+        public void NearestHeaderCandidate_PerpendicularFlight_StaysEligible()
+        {
+            // Closing exactly 0 (ball crossing the agent's line at right angles) is the boundary and is
+            // eligible, like a ball with no horizontal motion (the existing zero-velocity cases above).
+            var agents = new[] { AgentAt(50f, 34f) };
+            int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
+                new Vector3(50.5f, 34f, 1.0f), new Vector3(0f, 12f, 0f), airborneLoose: true,
+                agents, new[] { false }, new[] { false }, agents.Length);
+            Assert.AreEqual(0, nearest);
         }
 
         // ── §4.2a HeaderAimTarget (ERR-010-002) ───────────────────────────────────────
