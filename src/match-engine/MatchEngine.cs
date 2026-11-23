@@ -115,6 +115,8 @@
 // Modified: 2026-08-06 (#29 T2 match-boot fatigue seam: a four-argument ConfigureSquads overload taking each squad's per-local-index match-entry fatigue (#29 §3.3 / KD-1), seeded onto each starter's AerobicPool as 1 − fatigue. The reservoir is already the engine's live-fatigue quantity and already serialized, so no schema change; null ⇒ rested ⇒ byte-identical to the two-argument form.)
 // Modified: 2026-08-09 (ERR-010-002: TryCommitHeaderIntents' HeaderIntent.TargetIntent now sourced from GkHeadingIntentSource.HeaderAimTarget — the situational aim — instead of a fixed opponent-goal-centre point. No new engine state, no schema change. See docs/tracking/gk-heading-engine-integration-design.md §4.2a)
 // Modified: 2026-08-13 (#44 T2: + _slotPlayerIds / _benchPlayerIds + PlayerIdsByAgentId() — the identity half of the per-slot record, written beside _canonicalAttrs at all four sites; boot-constant exclusion, no schema change)
+// Modified: 2026-11-20 (ERR-010-005: TryCommitHeaderIntents passes the ball velocity to NearestHeaderCandidate, which applies §4.2's approach condition; no state, schema or RNG change)
+// Modified: 2026-11-20 (ERR-010-005 review P2: KD-7 latch cleared only on possession, landing or leaving the agent's head range)
 // Author:   —
 // Spec:     Match Engine design note (docs/tracking/match-engine-design.md) §2–§5, Code Standards #20
 // Purpose:  Composition root that owns match world state and drives the deterministic-sim
@@ -5481,13 +5483,26 @@ namespace TacticalDirector.MatchEngine
                                  && _possessingAgentId == MatchEngineConstants.NO_POSSESSION;
 
             // §4.2 candidate selection (pure): nearest active outfielder to a loose airborne ball, or −1.
+            // ERR-010-005: the ball velocity feeds §4.2's approach condition (no commit on a ball moving away).
+            Vector3 bv = _ball.Velocity;
             int nearest = GkHeadingIntentSource.NearestHeaderCandidate(
-                in bp, airborneLoose, _agents, _isGoalkeeper, _isSentOff, MatchEngineConstants.SQUAD_SIZE);
+                in bp, in bv, airborneLoose, _agents, _isGoalkeeper, _isSentOff, MatchEngineConstants.SQUAD_SIZE);
 
-            // Clear the per-agent episode latch for every agent that is not the current nearest candidate.
+            // KD-7 episode latch: clear an agent's latch only when its episode ends — the ball is possessed or
+            // no longer airborne, or it has left that agent's head range. Direction and nearest-candidate
+            // changes do not end it (ERR-010-005 review: the approach filter returning −1 while the ball moved
+            // away used to clear the latch, so a ball turning back in range re-committed the same agent).
+            float rangeSq = MatchEngineConstants.HeaderTriggerRangeM * MatchEngineConstants.HeaderTriggerRangeM;
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
-                if (i != nearest)
+                if (!airborneLoose)
+                {
+                    _headerCommittedThisEpisode[i] = false;
+                    continue;
+                }
+                float dx = _agents[i].Position.x - bp.x;
+                float dy = _agents[i].Position.y - bp.y;
+                if (dx * dx + dy * dy > rangeSq)
                 {
                     _headerCommittedThisEpisode[i] = false;
                 }
@@ -11501,4 +11516,6 @@ namespace TacticalDirector.MatchEngine
 // | 2.17 (branch-local #440) | 2026-11-10 | — | #440 Stage A development-only observer at tackle/ownership/censor boundaries. No gameplay, snapshot, RNG or tuning change. |
 // | 2.23 | 2026-11-18 | — | Merge main 4cdb4823 into #440 Stage A (PR #544): both version histories kept; no code hunk conflicted. No behaviour, schema or RNG change. |
 // | 2.24 | 2026-11-18 | — | A′ / ERR-014-011 (#14 §3.6.5.8, owner decision D1): BallLoose releases the ball with the geometry knock and fences the carrier out of first touch, loose pickup and keeper hand contact for the tackle frame. Fence is frame-local (cleared at Input, restart and Events), never serialized; no schema, RNG or draw change. |
+// | 2.25 | 2026-11-20 | — | ERR-010-005 (#441): TryCommitHeaderIntents passes _ball.Velocity to GkHeadingIntentSource.NearestHeaderCandidate, which now skips an agent the ball is moving away from (design §4.2 "moving toward them"). Ends the passer's commit on their own pass (#441 §6.7: 1,600 of 1,702 pass-attributed commits). No new constant, cross-tick state, schema, RNG stream, domain tag or draw site; snapshot digests change via the serialized Heading attempt state; ball/agent trajectories bit-identical on the six frozen seeds (#441 §6.8). |
+// | 2.26 | 2026-11-20 | — | ERR-010-005 PR #559 review P2: TryCommitHeaderIntents clears an agent's KD-7 episode latch only when the ball is possessed or below HeaderTriggerMinBallHeightM, or the agent is outside HeaderTriggerRangeM of it. It no longer clears every non-nearest agent, so a ball reversing in range (or a nearer agent interrupting) cannot re-commit the same agent. Same serialized bool[]; no schema, RNG or constant change. |
 #endregion

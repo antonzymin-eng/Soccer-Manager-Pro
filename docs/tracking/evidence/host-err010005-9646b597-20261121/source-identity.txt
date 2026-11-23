@@ -1,0 +1,27 @@
+# Source identity — pinned-host Unity run at 9646b597 (PR #559 head)
+# `git status --short` was recorded in the worktree after `git worktree add` (before the junction and Library copy,
+# both of which .gitignore covers) and again after the EditMode run. The ignored-inclusive count below was taken after
+# the run with `git status --porcelain=v1 --untracked-files=all --ignored -- src Packages ProjectSettings`.
+
+commit: 9646b5974f96df16979e31cd8bdf340620876d93 (merge of main c7861ed3 into PR #559)
+parents: 3feab44c9b8102abd9c2dd432e1ded243d4dd2ab (3feab44c, the neutrality-window fix), c7861ed302874253c9ede7b50bc2fc81ad8ef67b (main, PR #560)
+tree src: f88ea3669c95b99dbadd065af6d0c4ddf2383d01 (equal to 3feab44c's src tree)
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 070170334b81ce03dfccc4f26025f1cbfd7a0f63
+worktree: new detached worktree at the PR head (git worktree add --detach), confirmed equal to the PR's headRefOid
+Library present before compile: yes — copied from the owner's main checkout to skip the full import; the commit that
+  Library was last compiled against is not recorded. The compile log shows MatchEngine and MatchEngine.Tests
+  recompiled from this tree (compile.txt)
+git status --short before compile: 0 lines
+compile start: 2026-11-21T04:59:50Z
+compile exit: 0 end: 2026-11-21T05:00:30Z
+single-test run (-testFilter HeaderReachabilityObserver_DoesNotChangeSnapshotDigests): exit 0, NUnit 2026-11-21 05:00:51Z–05:01:07Z
+tests start: 2026-11-21T05:01:15Z (NUnit start 2026-11-21 05:01:26Z)
+tests exit: 2 end: 2026-11-21T05:33:50Z (NUnit end 2026-11-21 05:33:45Z)
+git status --short after tests: 0 lines
+porcelain lines after tests, src/Packages/ProjectSettings including ignored: 0
+HEAD after tests: 9646b5974f96df16979e31cd8bdf340620876d93
+unity: m_EditorVersionWithRevision: 6000.4.9f1 (f7258d6eebbe); Editor file version 6000.4.9.16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+Assets/Scripts: directory junction -> <worktree>/src
