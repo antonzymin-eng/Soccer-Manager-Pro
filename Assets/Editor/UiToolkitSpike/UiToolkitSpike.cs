@@ -1,6 +1,6 @@
 // File:     Assets/Editor/UiToolkitSpike/UiToolkitSpike.cs
 // Created:  2026-11-20
-// Modified: 2026-11-20 (focus handoff diagnostics)
+// Modified: 2026-11-23 (EventSystem alias inside the namespace; CS0118 on the pinned host)
 // Author:   —
 // Spec:     UI Toolkit presentation design §4, T0a (PR #560)
 // Purpose:  Attach a temporary comparison rail to the running client and record host observations.
@@ -16,12 +16,13 @@ using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 using TacticalDirector.MatchClientUnity;
-using EventSystem = UnityEngine.EventSystems.EventSystem;
 using Object = UnityEngine.Object;
 using UguiSelectable = UnityEngine.UI.Selectable;
 
 namespace TacticalDirector.UiToolkitSpike
 {
+    using EventSystem = UnityEngine.EventSystems.EventSystem;
+
     internal sealed class UiToolkitSpike
     {
         private const string ASSET_DIRECTORY = "Assets/Editor/UiToolkitSpike/";
