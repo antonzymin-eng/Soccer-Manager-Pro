@@ -1,0 +1,22 @@
+# Unity compile at 9646b597 (PR #559 head)
+# Excerpt of the batch-mode Editor log; the full redacted log is compile-editor-log.txt.xz.
+command: Unity.exe -batchmode -quit -nographics -projectPath <worktree> -logFile <log>
+Library before compile: copied from the owner's main checkout, not empty; see README.
+
+Built from '6000.4/staging' branch; Version is '6000.4.9f1 (f7258d6eebbe) revision 16197005'; Using compiler version '194234433'; Build Type 'Release'
+[ScriptCompilation] Requested script compilation because: Assembly Definition File(s) changed
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+*** Tundra build success (13.07 seconds), 403 items updated, 1203 evaluated
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0
+
+MatchEngine compiler invocations:
+[1029/1203  2s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.MatchEngine.dll (+2 others)
+[1059/1203  2s] Csc Library/Bee/artifacts/1900b0aE.dag/TacticalDirector.MatchEngine.Tests.dll (+2 others)
+
+distinct warnings:
+Assets\Scripts\ball-physics\tests\BallIntegrationTests.cs(330,19): warning CS0219: The variable 'radius' is assigned but its value is never used
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(172,34): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+Assets\Scripts\match-client-unity\ClientShellBehaviour.cs(180,17): warning CS0618: 'Object.GetInstanceID()' is obsolete: 'GetInstanceID is deprecated. Use GetEntityId instead. This will be removed in a future version.'
+
+counts: error CS = 0; distinct warnings = 3; Csc invocations = 75
