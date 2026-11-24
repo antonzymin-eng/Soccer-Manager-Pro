@@ -1,0 +1,3 @@
+seed,case,arm,ticks,goals0,goals1,shots0,shots1,passes0,passes1,poss0,poss1,tackleWon,tackleLoose,tackleFoul,tackleMissed,yellows,sentOff,markAgentStrides,groundedAgentTicks,guardLockEntries,nonFinite,wallSeconds,digest,groundedEntries,groundedCollision,groundedSlide,groundedOther,groundedMarker,groundedDefending,groundedAttacking,groundedLoose
+0123456789ABCDEF,0,off,324000,7,2,19,5,627,684,13243,15555,2,8,1,17,4,0,0,210908,60221,0,39.6,5345F491F75FF55378E83E3DEDC22A67060267E2A3EC084B20035735D6ED9D61,1851,1851,0,0,0,81,72,1698
+0123456789ABCDEF,0,on,324000,3,4,24,14,588,631,14419,18198,0,5,1,24,3,0,188722,329698,48899,0,36.4,FC133B5ED2C4BB6635845EC89B9DB56B9411057F4A627AAC18462C2EBE968A1B,2941,2941,0,0,500,161,157,2623
