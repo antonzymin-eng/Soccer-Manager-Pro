@@ -1,6 +1,6 @@
 // File:     src/match-engine/tests/MarkingProtocolTests.cs
 // Created:  2026-11-23
-// Modified: 2026-11-23
+// Modified: 2026-11-23 (Unity digest formatting and compression enum)
 // Author:   —
 // Spec:     W13 wiring plan §3 and §10
 // Purpose:  Opt-in full-match capture for the marking measurement protocol.
@@ -88,7 +88,7 @@ namespace TacticalDirector.MatchEngine
 
         private static BinaryWriter ProtocolStream(string directory, string name) =>
             new BinaryWriter(new GZipStream(new FileStream(Path.Combine(directory, name + ".bin.gz"),
-                FileMode.CreateNew), CompressionLevel.Fastest));
+                FileMode.CreateNew), System.IO.Compression.CompressionLevel.Fastest));
 
         private static void CaptureProtocol(string root, ulong seed, int c, int ticks, bool armed, MarkingScheme scheme, bool tight)
         {
@@ -235,7 +235,7 @@ namespace TacticalDirector.MatchEngine
             Assert.That(shots[0] + shots[1], Is.EqualTo(engine.TestOnly_ShotContacts),
                 "The ledger must account for every engine-observed shot contact.");
             byte[] allTicks = digests.GetHashAndReset();
-            string terminal = Convert.ToHexString(engine.CurrentSnapshotDigest);
+            string terminal = DigestHex(engine.CurrentSnapshotDigest);
             Assert.That(RunDigests(ProtocolEngine(seed, c, scheme, tight), ticks), Is.EqualTo(allTicks),
                 "A second run from kickoff must reproduce every capture digest.");
             File.WriteAllLines(Path.Combine(directory, "summary.txt"), new[]
@@ -264,7 +264,7 @@ namespace TacticalDirector.MatchEngine
                 $"markerPresses={markerPresses}",
                 $"nonCarrierPresses={nonCarrierPresses}",
                 $"terminal={terminal}",
-                $"allTicks={Convert.ToHexString(allTicks)}",
+                $"allTicks={DigestHex(allTicks)}",
                 "determinism=passed",
                 $"restore={(checkpointHeader == null ? "not-run" : "passed")}",
             });
@@ -365,4 +365,5 @@ namespace TacticalDirector.MatchEngine
 #region VersionHistory
 // | Version | Date       | Author | Notes |
 // | 1.0     | 2026-11-23 | —      | Add §10 capture, determinism and restore receipts, and classify GROUNDED entries by cause. |
+// | 1.1     | 2026-11-23 | —      | Use Unity-compatible digest formatting and select the GZip compression enum explicitly. |
 #endregion

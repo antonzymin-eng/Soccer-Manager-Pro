@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MarkingFlipMeasurementTests.cs
 // Created:  2026-11-21
-// Modified: 2026-11-21
+// Modified: 2026-11-23 (Unity digest formatting)
+// Modified (prior): 2026-11-21
 // Author:   —
 // Spec:     W13 plan §10 (post-wiring measurement, reduced), Defensive AI #14 §3.13.1, Agent Movement #2 §3.5.3.1, Code Standards #20
 // Purpose:  Env-gated, descriptive full-match measurement of the W13 default flip: the same seed / case played with mark
@@ -139,7 +140,7 @@ namespace TacticalDirector.MatchEngine
             (int won, int loose, int foul, int missed) = e.TestOnly_TackleOutcomeCounts;
             int yellows = 0, sentOff = 0;
             for (int a = 0; a < n; a++) { yellows += e.TestOnly_YellowCards(a); if (e.AgentIsSentOff(a)) sentOff++; }
-            string digest = Convert.ToHexString(e.CurrentSnapshotDigest);
+            string digest = DigestHex(e.CurrentSnapshotDigest);
             Assert.AreEqual(0, nonFinite, $"hard stop: non-finite agent state (seed {seed:X16} case {c} armed {armed})");
             return string.Join(",",
                 seed.ToString("X16", CultureInfo.InvariantCulture), c.ToString(CultureInfo.InvariantCulture), armed ? "on" : "off",
@@ -190,6 +191,9 @@ namespace TacticalDirector.MatchEngine
             return r;
         }
 
+        // Both instruments emit the same uppercase hex on Unity and on the .NET shim.
+        private static string DigestHex(byte[] digest) => BitConverter.ToString(digest).Replace("-", string.Empty);
+
         private static int[] ParseInts(string s, int[] dflt)
         {
             if (string.IsNullOrEmpty(s)) return dflt;
@@ -205,4 +209,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-11-21 | —      | W13 default-flip measurement instrument (env-gated, descriptive; off vs on per seed / #434 case). |
 // | 1.1     | 2026-11-21 | —      | Knockdown anatomy columns: GROUNDED entries by reason, marker / defending / attacking / loose. |
+// | 1.2     | 2026-11-23 | —      | Format digest text with APIs available in Unity. |
 #endregion
