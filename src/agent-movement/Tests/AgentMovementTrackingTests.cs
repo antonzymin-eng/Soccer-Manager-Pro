@@ -203,6 +203,37 @@ namespace TacticalDirector.AgentMovement.Tests
             Assert.IsFalse(sim.EverLocked, "OscillationGuard locked");
         }
 
+        /// <summary>
+        /// ERR-002-001 review amendment (PR #562): a tracking agent that braked in DECELERATING onto a steady point — on it,
+        /// at its speed — must leave DECELERATING for the band of that speed: SPRINTING above SprintEnter (draining the
+        /// sprint reservoir), JOGGING below it. Before the amendment it stayed DECELERATING for good: the brake floor holds
+        /// speed at the tracked speed, the lag stays inside the settle tolerance, so commandSpeed never exceeded
+        /// speed + CommandSpeedHysteresis, and the agent took jogging fatigue at sprint speed.
+        /// </summary>
+        [TestCase(6.5f, AgentMovementState.SPRINTING)]
+        [TestCase(4.0f, AgentMovementState.JOGGING)]
+        public void DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand(float pointSpeed, AgentMovementState band)
+        {
+            Vector2 v = new Vector2(pointSpeed, 0.0f);
+            Vector2 p0 = new Vector2(20.0f, 34.0f);
+            AgentState s = AgentState.CreateAtPosition(p0, Vector2.right);
+            s.Velocity = v; s.Speed = pointSpeed;
+            s.CurrentState = AgentMovementState.DECELERATING;
+
+            Sim at1s = Run(s, t => p0 + v * t, _ => v, 60);
+            Assert.AreEqual(band, at1s.State.CurrentState, "1 s in");
+            Assert.AreEqual(pointSpeed, at1s.State.Speed, 0.05f, "speed stays on the point's");
+
+            Sim at3s = Run(s, t => p0 + v * t, _ => v, 180);
+            Assert.AreEqual(band, at3s.State.CurrentState, "3 s in");
+            Assert.LessOrEqual(at3s.StateChanges, 1, "one exit, no churn");
+            Assert.IsFalse(at3s.EverLocked, "OscillationGuard locked");
+            float err = Vector2.Distance(at3s.State.Position, p0 + v * (180 * Dt));
+            Assert.Less(err, 0.25f, $"following error {err:F3} m");
+            if (band == AgentMovementState.SPRINTING)
+                Assert.Less(at3s.State.SprintReservoir, at1s.State.SprintReservoir, "sprint speed drains the sprint reservoir");
+        }
+
         /// <summary>Two runs of the same closed-loop scenario are bit-identical (no hidden state, no RNG).</summary>
         [Test]
         public void ClosedLoop_IsDeterministic()
@@ -222,4 +253,5 @@ namespace TacticalDirector.AgentMovement.Tests
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-11-21 | —      | W13-F5/F6/F7: tracking-command law, settle, follow, staleness, determinism tests. |
 // | 1.1     | 2026-11-23 | —      | ERR-002-002: ordinary and accelerated low-speed tracking use distinct rates. |
+// | 1.2     | 2026-11-24 | —      | ERR-002-001 review amendment (PR #562): DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand (6.5 m/s ⇒ SPRINTING, 4.0 m/s ⇒ JOGGING); fails on the pre-amendment source (stays DECELERATING). |
 #endregion

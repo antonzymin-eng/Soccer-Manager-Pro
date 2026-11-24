@@ -152,7 +152,8 @@ namespace TacticalDirector.AgentMovement
                 // isCollisionKnockdown before reaching EvaluateFromGrounded, so the
                 // pre-cache-write value is unused.
                 state.CollisionForce,
-                state.GroundedReason);
+                state.GroundedReason,
+                command.IsTracking);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
             // Collision-driven GROUNDED transitions bypass the guard: an external knockdown
@@ -308,7 +309,8 @@ namespace TacticalDirector.AgentMovement
                         command.DecelerationMode, effectivePace);
                     newSpeed = AgentLocomotion.ApplyDeceleration(state.Speed, stopDist, dt);
                     // §3.5.3.1: a tracking agent brakes to the tracked speed, not to rest, and never accelerates while
-                    // DECELERATING (the state machine re-enters JOGGING once the command exceeds speed + hysteresis).
+                    // DECELERATING. The state machine re-enters JOGGING / SPRINTING (by speed) once the command no longer
+                    // demands braking (ERR-002-001 review amendment), or once it exceeds speed + hysteresis.
                     if (command.IsTracking)
                         newSpeed = Mathf.Max(newSpeed, Mathf.Min(state.Speed, topSpeed));
                     break;
@@ -784,4 +786,6 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | speed and brake at MinDecelerationFloor above it; DECELERATING brakes to the tracked speed, not  |
 // |         |            |        | to rest. Non-tracking commands take exactly the prior path.                                     |
 // | 1.18    | 2026-11-23 | —      | ERR-002-002: tight markers tracking fresh moving targets use the capped physical curve in IDLE and WALKING. |
+// | 1.19    | 2026-11-24 | —      | ERR-002-001 review amendment (PR #562): Step 2 passes command.IsTracking to EvaluateState so a   |
+// |         |            |        | tracking agent leaves DECELERATING once braking to the tracked speed is done.                     |
 #endregion

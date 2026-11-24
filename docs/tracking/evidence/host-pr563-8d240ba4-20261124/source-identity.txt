@@ -1,0 +1,34 @@
+# Source identity — pinned-host Unity run of PR #563 (claude/w13-decel-exit-amendment)
+
+full run commit: 8d240ba47ddd48bbefe592db914616527c57a6b9 ("Merge main (#564, ERR-002-002) into PR #563")
+parents: cc10b6dc7384ecd2ccfbe926bcff7e7a8a1cabc6 (PR #563 head before the merge)
+         2d89e45a9b34343f55086b2ab02e9f2d4468515c (main with PR #564 merged)
+tree (root): d1931420ec8329f3878ac808ba286344b70d70a3
+tree src: 1e2effb4e1b1d48c156633188995110d67a8df1a
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 070170334b81ce03dfccc4f26025f1cbfd7a0f63
+tree docs/design: 8a4f312496175a4571f3853642c45eb147d0ac3d
+
+side run commit: b87ba024874af8543099bad2ce3f7f37133f31cf ("Loosen close-chance and keeper-contact bounds ...")
+  parent: 8d240ba4; tree src: edd98278ffeab17849c0a3218a2f35f19ca6770a; only the two scenario files under src change
+
+worktree: detached git worktree, sparse checkout of /Assets/ /Packages/ /ProjectSettings/ /src/ /docs/design/
+Assets/Scripts: directory junction -> <worktree>/src
+Library before compile: absent (new worktree; the compile rebuilt 1,150 of 1,203 build items)
+git status --short after all runs: 0 lines
+
+compile start: 2026-11-24T16:25:42Z
+compile end: 2026-11-24T16:27:19Z, exit 0
+full EditMode start: 2026-11-24T16:27:29Z (NUnit start 2026-11-24 16:27:43Z)
+full EditMode end: 2026-11-24T17:28:25Z (NUnit end 2026-11-24 17:28:19Z, 3,636 s), exit 2
+
+side run at b87ba024, separate batch process:
+  -runTests -testPlatform EditMode -assemblyNames TacticalDirector.MatchEngine.Tests
+  -testFilter "sim_match_engine_close_chance|sim_match_engine_keeper_contact"
+  start 2026-11-24T17:47:54Z; recompiled 3 build items, 0 error CS; NUnit 2026-11-24 17:48:14Z to 17:53:52Z;
+  2 passed / 0 failed; exit 0
+
+unity: 6000.4.9f1 (f7258d6eebbe), revision 16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+owner's Editor: open on the main checkout throughout; not attached to this worktree
