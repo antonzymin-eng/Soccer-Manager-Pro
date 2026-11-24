@@ -1,6 +1,8 @@
 # Open Issues
 
-**Last Updated:** November 23, 2026 — recorded the general launch and walking acceleration follow-up. 45 active / 85 archived.
+**Last Updated:** November 24, 2026 — W13: record the pinned-host Unity run of PR #564 at `e6fe2224` ([receipt](evidence/host-w13fu-e6fe2224-20261124/README.md)); clean compile and no failure caused by the branch, so the pinned-host check is closed. New entry `event-system-tier-c-heartbeat-size-unity` for seven EventSystem failures that predate PR #562. 46 active / 85 archived.
+
+**Last Updated (prior):** November 23, 2026 — recorded the general launch and walking acceleration follow-up. 45 active / 85 archived.
 
 **Last Updated (prior):** November 23, 2026 — archived the tight goalward contact fix and recorded the W13.2 implementation and §10 evidence. 44 active / 85 archived.
 
@@ -50,6 +52,10 @@ history by the original convention; they were not merged.
 
 ---
 
+<a id="event-system-tier-c-heartbeat-size-unity"></a>
+
+- **Seven EventSystem cases fail under Unity Mono: `TickHeartbeatEvent` reports struct size 0, so ordinal 0x09 is unregistered — OPEN.** *Opened November 24, 2026 (PR #564 pinned-host run).* Five `CosmeticChannelTests` Tier C cases throw `ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09`, and `EventRegistrySchemaTests.AllSeededTierCRows_StructSizesAboveZero` and `IsRegistered_ReturnsTrue_ForFullySeededRows` find `TickHeartbeatEvent` with size 0 and not registered. The cases fail when the assembly runs alone, and identically at `0dce35ee` (main before PR #562), so they predate the W13 work. The non-certifying Linux gate passes them. Earlier pinned-host runs used a four-assembly set that excludes EventSystem, so the failures were not seen. The open work is to find why the registry computes size 0 for this event on Mono and fix it, with the spec if the size rule is specified there. [Receipt](evidence/host-w13fu-e6fe2224-20261124/README.md#the-eventsystem-failures-they-predate-this-branch).
+
 <a id="w13-tight-goalward-contact"></a>
 
 The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-contact) is archived.
@@ -81,7 +87,6 @@ The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-co
 >
 > **Still open:**
 >
-> - pinned Unity 6000.4.9f1 compile and EditMode;
 > - completion of the 66-match current-schema §10 capture;
 > - calibration of the 2.0 m / 1.0 m stand-offs, deferred under KD-W1;
 > - the loose-ball knockdown finding.
@@ -95,6 +100,14 @@ The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-co
 > uses `BitConverter`, and the capture selects the GZip compression enum explicitly. The flip
 > instrument's digest formatter also affects the #562 build. Repeat the pinned-host compile and
 > EditMode run at the corrected branch head to close this check.
+>
+> **November 24, 2026 — pinned-host check closed.** At `e6fe2224` (PR #564) Unity 6000.4.9f1
+> compiled from an empty `Library` with 0 `error CS`. The full EditMode suite gave 4,898 passed /
+> 8 failed / 3 inconclusive / 247 skipped; MatchEngine had 0 failures and the schema-v31 snapshot
+> fixtures pass. None of the 8 failures is caused by the branch: one was the sparse test worktree
+> lacking `docs/` (passes 2/2 with `docs/design/`), and seven are the EventSystem failures in
+> [`event-system-tier-c-heartbeat-size-unity`](#event-system-tier-c-heartbeat-size-unity). Main at
+> `2f513fbc` does not compile in Unity until this PR merges. [Receipt](evidence/host-w13fu-e6fe2224-20261124/README.md).
 >
 > Formation / Duty player controls stay blocked: the flip does not discharge [`formation-duty-player-control-blocker`](#formation-duty-player-control-blocker) (see its update).
 
