@@ -51,7 +51,11 @@ python3 tools/round-resolution-fit.py s1.csv s2.csv s3.csv s4.csv \
 - **Held, not fitted.** The mean bar keeps `dof = cells − 3` as KD-8 pins it. With nothing fitted
   to this corpus the statistically correct dof would be 22; 19 is the stricter reading.
 
-## 0.b Verdict — mean bar FAILS; a refit cannot pass either; owner decision required
+## 0.b Verdict — mean bar FAILS; a refit cannot pass either; owner decision D-17
+
+> **✅ OWNER DECISION, November 24, 2026 (roadmap D-17):** keep the current constants. The
+> engine/quick-sim scale mismatch is a known PM-2 limitation, there is no refit before PM-2, and
+> the governed recapture stays in the depth phase.
 
 | Check | Result |
 |---|---|
@@ -444,3 +448,4 @@ dSquad,homeGoals,awayGoals
 | Version | Date | Author | Notes |
 |---|---|---|---|
 | 1.0 | 2026-11-24 | — | Initial record: PM-2 quick-sim check (roadmap engine lane item 4). |
+| 1.1 | 2026-11-24 | — | Owner decision D-17 recorded in §0.b: keep the current constants; known PM-2 limitation. |
