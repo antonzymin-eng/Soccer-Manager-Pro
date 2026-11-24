@@ -1,6 +1,12 @@
 # Open Issues
 
-**Last Updated:** November 21, 2026 — W13 blockers pass: W13-F5..F10 resolved and archived; mark movement switched on by default (OD-2); new `w13-tight-goalward-contact` residual and `w13-loose-ball-knockdowns` finding; W13 and #434 entries updated with the 120-match off/on measurement. 45 active / 84 archived.
+**Last Updated:** November 24, 2026 — W13: record the pinned-host Unity run of PR #564 at `e6fe2224` ([receipt](evidence/host-w13fu-e6fe2224-20261124/README.md)); clean compile and no failure caused by the branch, so the pinned-host check is closed. New entry `event-system-tier-c-heartbeat-size-unity` for seven EventSystem failures that predate PR #562. 46 active / 85 archived.
+
+**Last Updated (prior):** November 23, 2026 — recorded the general launch and walking acceleration follow-up. 45 active / 85 archived.
+
+**Last Updated (prior):** November 23, 2026 — archived the tight goalward contact fix and recorded the W13.2 implementation and §10 evidence. 44 active / 85 archived.
+
+**Last Updated (prior):** November 21, 2026 — W13 blockers pass: W13-F5..F10 resolved and archived; mark movement switched on by default (OD-2); new `w13-tight-goalward-contact` residual and `w13-loose-ball-knockdowns` finding; W13 and #434 entries updated with the 120-match off/on measurement. 45 active / 84 archived.
 
 **Last Updated (prior):** November 21, 2026 — #441: record the pinned-host Unity rerun of PR #559 at `9646b597` ([receipt](evidence/host-err010005-9646b597-20261121/README.md)); 0 failures, so the PR is host-cleared. 49 active / 78 archived.
 
@@ -46,9 +52,17 @@ history by the original convention; they were not merged.
 
 ---
 
+<a id="event-system-tier-c-heartbeat-size-unity"></a>
+
+- **Seven EventSystem cases fail under Unity Mono: `TickHeartbeatEvent` reports struct size 0, so ordinal 0x09 is unregistered — OPEN.** *Opened November 24, 2026 (PR #564 pinned-host run).* Five `CosmeticChannelTests` Tier C cases throw `ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09`, and `EventRegistrySchemaTests.AllSeededTierCRows_StructSizesAboveZero` and `IsRegistered_ReturnsTrue_ForFullySeededRows` find `TickHeartbeatEvent` with size 0 and not registered. The cases fail when the assembly runs alone, and identically at `0dce35ee` (main before PR #562), so they predate the W13 work. The non-certifying Linux gate passes them. Earlier pinned-host runs used a four-assembly set that excludes EventSystem, so the failures were not seen. The open work is to find why the registry computes size 0 for this event on Mono and fix it, with the spec if the size rule is specified there. [Receipt](evidence/host-w13fu-e6fe2224-20261124/README.md#the-eventsystem-failures-they-predate-this-branch).
+
 <a id="w13-tight-goalward-contact"></a>
 
-- **TightMarking vs a man accelerating from rest toward goal: 0.02 m transient body overlap, and the contact's collision response differs home vs away — OPEN, residual; does not block the default flip.** *Opened November 21, 2026 (W13 blockers pass; split from W13-F5 / F8 / F10).* On the corrected rig the man accelerates at 2 m/s² from rest straight at a goal-side TightMarking marker (1.0 m stand-off). The marker's minimum gap is 0.82 m at stride 8, against 0.84 m for two Strength-10 hitbox radii. He is never GROUNDED and is goal-side every stride. Cause: Agent Movement #2's IDLE-launch / WALKING acceleration (2.0 m/s², §3.2.4) equals the man's, so the up-to-one-heartbeat-old feed-forward of the §3.5.3.1 tracking command is not recovered until the marker jogs. The resulting contact's collision response differs between the mirrored runs: up to 1.06 m late in the 3 m/s case, 0.06 m at 5 m/s. Recorded in `GoalwardRunner_*` (overlap not asserted for the tight cases) and excluded from `Mirror_*`, both with this reason. Candidate fixes are owner decisions: a #2 walking/launch acceleration change, or calibrating `MARK_STANDOFF_TIGHT_M` (KD-W1). Neither is attempted. *Owning records: `ERR-002-001` / `ERR-014-012` residual notes; #2 §3.5.3.1; #14 §3.13.1.*
+The [tight goalward contact issue](open-issues-resolved.md#w13-tight-goalward-contact) is archived.
+
+<a id="agent-launch-walk-acceleration"></a>
+
+- **General launch and walking acceleration under tracking — OPEN.** *Opened November 23, 2026 (W13 review).* In the goalward runner rig, the 2.0 m/s² launch and walking rate (§3.2.4) matches the runner's acceleration and cannot recover the lag in the sampled tracking command before the jog band. ERR-002-002 addresses tight marking by opting into the physical acceleration curve. In the §3.5.3.1 worked example, the initial slope of that curve is `(8 − 0.3) × 2 = 15.4 m/s²`. Applying the same rule to ordinary markers failed the shot-distance acceptance check at 24.38 m against its 24.00 m ceiling. The open work is to characterize launch and walking across movement consumers and evaluate a shared movement response against the tracking, shot-distance and collision evidence. [Acceleration experiment](evidence/w13-follow-ups-20261123/README.md#unrestricted-acceleration-experiment).
 
 <a id="w13-loose-ball-knockdowns"></a>
 
@@ -59,6 +73,8 @@ history by the original convention; they were not merged.
   - Knockdowns of an agent holding a mark target: 470 (on arm only).
 
   Mechanism, verified in `MatchEngine.RunMechanicsAI` / `TeamPossessionAgent`: with no carrier and no pass in flight, neither team is "in possession". Under W13.1's rule (no target only for the team in possession), both teams' #14 pools then compose goal-side mark points, so attackers also chase points beside defenders during a loose ball. **The baseline rate is itself extreme and predates W13.** About 1,900 collision knockdowns per match, ~21 per minute, mean ~1.9 s grounded each; that baseline is not addressed here. Candidate directions (owner decisions, none taken): compose mark targets on a loose ball only for the team that last lost possession, or not at all; or treat the baseline collision-knockdown rate first. *Owning records: W13 plan §4.4 (no-target cases); wiring backlog W13; [`w13-defender-marking`](#w13-defender-marking).*
+
+  **November 23, 2026 measurement.** Three paired C0 opening minutes on the final build measured 50–56 collision-tagged grounded entries per team with marking off and 54–60 with it on (321 → 342 pooled). In full C0 seed `99887766`, both #562 and the final follow-up measured 2,104 off and 2,855 on (+35.7%). Applying the new walking acceleration to all markers during review had raised the on arm to 2,981. The isolated acceleration comparison reproduced 2,855 on, and the final change extends the acceleration only to tight markers. In the unrestricted experiment, 574 of the 576 additional entries over three seeds occurred without an individual ball holder. The `groundedLoose` column includes passes in flight, so it cannot isolate loose-ball scrambles. A contact-pair trace is still needed to determine how often the grounded player and the collision counterpart were in a marking assignment. The pre-existing baseline and the marking-on increase remain open. [Pinned-toolchain evidence](evidence/w13-follow-ups-20261123/README.md#tight-marker-follow-up-build).
 
 <a id="w13-defender-marking"></a>
 
@@ -71,13 +87,27 @@ history by the original convention; they were not merged.
 >
 > **Still open:**
 >
-> - pinned Unity 6000.4.9f1 compile and EditMode;
-> - the frozen-lane (SDK 8.0.426 / CLR 8.0.32) characterization;
-> - the plan's full §10 protocol (`marking.bin`, M1–M8 strata);
-> - calibration of the 2.0 m / 1.0 m stand-offs (KD-W1);
-> - the tight-marking residual [`w13-tight-goalward-contact`](#w13-tight-goalward-contact);
-> - the loose-ball knockdown finding;
-> - W13.2 per-team scheme.
+> - completion of the 66-match current-schema §10 capture;
+> - calibration of the 2.0 m / 1.0 m stand-offs, deferred under KD-W1;
+> - the loose-ball knockdown finding.
+>
+> **November 23 follow-up.** Tight goalward contact is resolved and W13.2 per-team schemes are
+> wired. The frozen same-schema comparison passed all six switch-off seeds. The current §10
+> instrument captures `marking.bin` and M1–M8 strata. See the [validation notes](w13-follow-up-validation.md).
+>
+> **Pinned-host compile report.** Unity 6000.4.9f1 reported four distinct compile errors in the
+> W13 test instruments at `a0d6504d`, so EditMode did not start. The shared digest formatter now
+> uses `BitConverter`, and the capture selects the GZip compression enum explicitly. The flip
+> instrument's digest formatter also affects the #562 build. Repeat the pinned-host compile and
+> EditMode run at the corrected branch head to close this check.
+>
+> **November 24, 2026 — pinned-host check closed.** At `e6fe2224` (PR #564) Unity 6000.4.9f1
+> compiled from an empty `Library` with 0 `error CS`. The full EditMode suite gave 4,898 passed /
+> 8 failed / 3 inconclusive / 247 skipped; MatchEngine had 0 failures and the schema-v31 snapshot
+> fixtures pass. None of the 8 failures is caused by the branch: one was the sparse test worktree
+> lacking `docs/` (passes 2/2 with `docs/design/`), and seven are the EventSystem failures in
+> [`event-system-tier-c-heartbeat-size-unity`](#event-system-tier-c-heartbeat-size-unity). Main at
+> `2f513fbc` does not compile in Unity until this PR merges. [Receipt](evidence/host-w13fu-e6fe2224-20261124/README.md).
 >
 > Formation / Duty player controls stay blocked: the flip does not discharge [`formation-duty-player-control-blocker`](#formation-duty-player-control-blocker) (see its update).
 
@@ -224,7 +254,7 @@ history by the original convention; they were not merged.
 
 **UPDATE October 28, 2026 — J-04 STATISTICS RAIL FIXED AFTER THE OWNER'S SCREENSHOT REVIEW.** Reviewing the J-04 screenshots, the owner asked for two fixes before accepting the visuals: at 1920×1080 the open statistics table ran off the bottom of the screen, and “Match statistics” appeared twice in the panel. `S0ScreensBehaviour.cs` v1.9 shows the rail caption only for a partial cutoff, lets the rail rows abut (33 px instead of 41 px), and scrolls the page just far enough to show the whole panel when statistics open. On the pinned host the changed tree compiles with 0 `error CS`, and both 1920×1080 captures (right after kick-off, and after one substitution) show the whole panel and one title ([`p5b-real-client-acceptance.md`](p5b-real-client-acceptance.md) v0.5 §9 (since advanced to v0.16), evidence `docs/tracking/evidence/p5b-j04-statsfix-20261028/`). The I-Q16 matrix was not re-run on this change. **Still due:** the owner's visual acceptance, the B8/B10 re-capture, one uninterrupted I-Q15 pass and J-05. Count unchanged.
 
-**UPDATE October 28, 2026 — OWNER APPROVED THE GATE J WORDING.** Anton Zymin replied “approve all” to the list of the nine new strings: the three greyed-out goalkeeper reasons (`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way`) and the six typed Refused rows (`feedback.substitution_refused_*`). They are approved exactly as drafted in `docs/design/ux-s0-binding-contracts.md` v0.7 (since advanced to v0.10) and shipped at `e4a0dec9`; four optional rewordings offered with the list were not adopted, so no string, test or content hash changes ([`p5b-real-client-acceptance.md`](p5b-real-client-acceptance.md) v0.4 §6 (since advanced to v0.16); contract v0.8). Gate J stays CONDITIONAL PASS. **Still due:** the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, the owner's visual acceptance (J-04) and J-05 (PR #520). Count unchanged.
+**UPDATE October 28, 2026 — OWNER APPROVED THE GATE J WORDING.** Anton Zymin replied “approve all” to the list of the nine new strings: the three greyed-out goalkeeper reasons (`reason.keeper_out`, `reason.keeper_in`, `reason.keeper_on_way`) and the six typed Refused rows (`feedback.substitution_refused_*`). They are approved exactly as drafted in `docs/design/ux-s0-binding-contracts.md` v0.7 (since advanced to v0.11) and shipped at `e4a0dec9`; four optional rewordings offered with the list were not adopted, so no string, test or content hash changes ([`p5b-real-client-acceptance.md`](p5b-real-client-acceptance.md) v0.4 §6 (since advanced to v0.16); contract v0.8). Gate J stays CONDITIONAL PASS. **Still due:** the B8/B10 re-capture on the new skin, one uninterrupted I-Q15 pass, the owner's visual acceptance (J-04) and J-05 (PR #520). Count unchanged.
 
 **UPDATE October 28, 2026 — PR #518 HEAD COMPILES IN UNITY WITH #519 MERGED.** Head `963f48ee` merges main, which brought in #519's C3/C4 career shell, and #519 had landed without a Unity compile. On the pinned host, a full import from a fresh worktree gave `Tundra build success` with 0 `error CS` and all 75 assemblies. The EditMode run of ClientApp, UiFramework and MatchClientCore passed 423/423 ([`p5b-real-client-acceptance.md`](p5b-real-client-acceptance.md) v0.3 §8 (since advanced to v0.16), evidence `docs/tracking/evidence/host-963f48ee-20261028/`). The Unity-compile condition for merging is met. Gate J stays CONDITIONAL PASS, with the same items still due. Count unchanged.
 
@@ -288,7 +318,7 @@ No schema change, no new RNG stream / domain tag / draw site, and no gameplay ch
 
 **UPDATE October 3, 2026 — PR #478 REVIEW CORRECTIONS.** Binding contracts v0.2, journey v0.30 and protocol v0.32 flatten substitution feedback to seven typed arguments (eight for Applied), with matching planned I-Q16 reorder/negative build fixtures. The shell consumes lifecycle methods; Attach is explicitly a TO BUILD pitch-renderer binding. S0 uses one invariant numeric provider with no culture/provider fallback; later locale mapping stays deferred. The proposed 36-name list still requires explicit owner acceptance at final review. I IN PROGRESS, #470 blocked, all P5b QA planned; previous approvals/assets/history preserved and 33 active / 60 archived unchanged.
 
-**UPDATE October 3, 2026 — S0 GATE-I CONTRACT-COMPLETION DRAFT.** `ux-s0-binding-contracts.md` v0.1, since advanced to **v0.10**, defines the concrete proposed S0-I-001 fixture/frame/bench/history, S0-I-002 fixed 100–200% configuration/reflow and S0-I-003 typed copy/provider/content-validation/L2 consumption against main `3429fafd` after #477. Journey v0.29, detailed plan v1.27, protocol v0.31 and high-level plan v1.19 route final mapping/reference review next. G/H reference notes distinguish historical shirt-only/unallocated-maximum evidence from the current target; approved sources/images/walkthroughs and actual decisions remain unchanged. Contract authoring supplies no new image approval or final I verdict: I stays IN PROGRESS, #470 blocked, all P5b QA planned. #49 L2 retains full ERR-049-005 discharge, and exact-head pinned Unity compile remains required before client landings. No issue is archived; counts remain 33 active / 60 archived.
+**UPDATE October 3, 2026 — S0 GATE-I CONTRACT-COMPLETION DRAFT.** `ux-s0-binding-contracts.md` v0.1, since advanced to **v0.11**, defines the concrete proposed S0-I-001 fixture/frame/bench/history, S0-I-002 fixed 100–200% configuration/reflow and S0-I-003 typed copy/provider/content-validation/L2 consumption against main `3429fafd` after #477. Journey v0.29, detailed plan v1.27, protocol v0.31 and high-level plan v1.19 route final mapping/reference review next. G/H reference notes distinguish historical shirt-only/unallocated-maximum evidence from the current target; approved sources/images/walkthroughs and actual decisions remain unchanged. Contract authoring supplies no new image approval or final I verdict: I stays IN PROGRESS, #470 blocked, all P5b QA planned. #49 L2 retains full ERR-049-005 discharge, and exact-head pinned Unity compile remains required before client landings. No issue is archived; counts remain 33 active / 60 archived.
 
 **UPDATE October 3, 2026 — PR #477 REVIEW CORRECTIONS.** Journey packet v0.28 records the owner decision against the main baseline, specifies the layout binding contract before I rather than implementation, and limits alternate formatter-route wording to a later owner reversal. The selected scale target is 100–200%. Product choices remain settled; identity/frame/reference, scaling application and formatter/L2 contracts remain open. Gate I stays IN PROGRESS and #470 blocked; planned QA, prior approvals/assets and 33 active / 60 archived counts are unchanged. Prior head 9695b4a CI run 37158595654 passed ten jobs with Unity skipped; fresh CI is required for the correction head.
 

@@ -1,0 +1,7 @@
+variant,case,seed,frames,runtime,buildHash,schema,scheme,tight,standoffs,goals,shots,delta_goals,delta_shots,tackleIntents,tackleResolutions,knockdowns,capDemotions,determinism,restore
+man-oriented,C0,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,ManOriented,False,"2,1","0,0","0,0","[0,0]","[0,0]","137,196","0,0","62,62","0,0",passed,passed
+man-oriented,C3,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,ManOriented,False,"2,1","0,0","0,0","[0,0]","[0,0]","78,273","1,0","50,52","0,1",passed,passed
+man-oriented,C7,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,ManOriented,False,"2,1","0,0","0,0","[0,0]","[0,0]","257,90","0,0","63,61","0,0",passed,passed
+mixed,C0,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,Mixed,False,"2,1","0,0","1,0","[0,0]","[0,0]","155,174","0,0","59,59","3,0",passed,passed
+mixed,C3,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,Mixed,False,"2,1","0,0","0,0","[0,0]","[-1,0]","190,249","0,1","54,51","0,1",passed,passed
+mixed,C7,0000000000000001,3600,8.0.32,a5c0ce0e35d5d481d1f7778c7ff75de6f6185ad2da9fde7ad9b818e5df3b366b,31,Mixed,False,"2,1","0,0","0,0","[0,0]","[-1,0]","217,107","0,0","62,67","2,2",passed,passed

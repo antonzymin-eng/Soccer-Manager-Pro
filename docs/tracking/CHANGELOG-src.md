@@ -14,7 +14,11 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 23, 2026 — **v2.248 — ERR-002-001 review amendment (follow-up to PR #562).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.18 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.1 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`.
+> **Last Updated:** November 24, 2026 — **v2.250 — ERR-002-001 review amendment (PR #563, merged with main `2d89e45a`).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.19 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.2 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`. These labels follow main's v1.18 / v1.1 (ERR-002-002, PR #564); the branch first used v1.18 / v1.1 and v2.248.
+
+> **Last Updated (prior):** November 23, 2026 — **v2.249 — W13 client review.** Browser intents carry marking scheme retention through the dispatcher, command queue and replay. `MatchEngine` v2.29 stages the tactic with the pending scheme when requested, and `ManagerAdaptation` v1.3 uses the same staging path. S0 validates the selector argument and tests both non-default schemes through the first tactical stride. The goalward run logs the minimum gap across physics ticks.
+
+> **Last Updated (prior):** November 23, 2026 — **v2.248 — W13 follow-up and review corrections.** `AgentMovementSystem` v1.18 fixes tight goalward contact (ERR-002-002). `TeamTactic` v1.4 and `MatchEngine` v2.28 persist team schemes in v31 (ERR-021-011). `ManagerAdaptation` v1.2 retains the configured scheme at kickoff and at preset changes. `InvariantEnforcer` v1.6 and `DefensiveAIConstants` v1.8 apply per-scheme limits and count cap demotions. The §10 capture records grounded entry causes and repeat-run/restore receipts.
 
 > **Last Updated (prior):** November 21, 2026 — **v2.247 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.27:
 - `SelectMarkTargetVelocity` replaces `SelectMarkTargetSpeed`;
@@ -2988,7 +2992,9 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.248 | 2026-11-23 | — | ERR-002-001 review amendment (follow-up to PR #562): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`). |
+| 2.250 | 2026-11-24 | — | ERR-002-001 review amendment (PR #563): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`). |
+| 2.249 | 2026-11-23 | — | W13: preserve browser marking schemes at stage time, test S0 kickoff and report per-frame goalward clearance. |
+| 2.248 | 2026-11-23 | — | W13: tracking acceleration, v31 marking schemes and preset retention, per-scheme invariants, §10 capture and cause-specific grounded counts. |
 | 2.247 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
 | 2.246 | 2026-11-20 | — | ERR-010-005 Codex review: the #441 neutrality test's window extends until #10 evaluates (min 18,000, max 108,000 frames). |
 | 2.245 | 2026-11-20 | — | ERR-010-005 review: KD-7 header latch cleared only on possession, landing or leaving the agent's range. |

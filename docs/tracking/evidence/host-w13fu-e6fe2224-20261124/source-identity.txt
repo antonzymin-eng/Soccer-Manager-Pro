@@ -1,0 +1,35 @@
+# Source identity — pinned-host Unity run at e6fe2224 (codex/w13-follow-ups, PR #564 head)
+
+commit: e6fe22242813430dcdaf4c1dcf94a4fe835288cb ("Fix Unity compilation of W13 measurement tests")
+parent: a0d6504d55fd1a25cbcf7822cddf5d354bf5a575 (the head at which Unity reported four compile errors)
+tree (root): cc73c789e60783d46acd607f835ccdb56512b20f
+tree src: 2544adb0cbdbeec9b7c17804a43d907707f47339
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 070170334b81ce03dfccc4f26025f1cbfd7a0f63
+tree docs/design: 8a4f312496175a4571f3853642c45eb147d0ac3d (checked out only for the S0 contract rerun; see README)
+worktree: detached git worktree, sparse checkout of /Assets/ /Packages/ /ProjectSettings/ /src/ for the compile and the
+  full EditMode run; /docs/design/ added for the S0 contract rerun only
+Assets/Scripts: directory junction -> <worktree>/src
+Library before compile: deleted (the compile rebuilt 1,150 of 1,203 build items)
+git status --short before compile: not recorded
+git status --short after all runs (back at e6fe2224): 0 lines
+
+compile start: 2026-11-24T02:23:45Z
+compile exit: 0
+full EditMode start: 2026-11-24T02:25:06Z (NUnit start 2026-11-24 02:25:16Z)
+full EditMode exit: 2 (NUnit end 2026-11-24 03:20:13Z, 3,297 s)
+
+side runs, in order, each a separate batch process with -runTests -testPlatform EditMode:
+  1. e6fe2224, -assemblyNames TacticalDirector.EventSystem.Tests: exit 2; NUnit 2026-11-24 03:21:02Z; 0 build items
+     updated (same build as the full run)
+  2. 2f513fbc (main, PR #562 merged), -assemblyNames TacticalDirector.EventSystem.Tests;TacticalDirector.ClientApp.Tests
+     -testFilter "EventSystem|S0ContentContractTests": compile failed (CS0117), exit 1, no tests ran
+  3. 0dce35ee (main before PR #562), -assemblyNames TacticalDirector.EventSystem.Tests: exit 2; NUnit
+     2026-11-24 03:22:21Z; 122 build items updated
+  4. e6fe2224 with /docs/design/ checked out, -assemblyNames TacticalDirector.ClientApp.Tests -testFilter
+     S0ContentContractTests: exit 0; NUnit 2026-11-24 03:23:36Z; 0 build items updated
+
+unity: 6000.4.9f1 (f7258d6eebbe), Editor file version 6000.4.9.16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+owner's Editor: open on the main checkout throughout; not attached to this worktree

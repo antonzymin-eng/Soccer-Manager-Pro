@@ -115,6 +115,41 @@ namespace TacticalDirector.MatchEngine
         }
 
         [Test]
+        public void RoundTrip_ActiveAndPendingMarkingSchemes()
+        {
+            const ulong seed = 123;
+            var engine = new MatchEngine(seed);
+            TeamTacticConfig config = TeamTacticFileLoader.Parse(
+                "[home]\nmarkingScheme = Zonal\n[away]\nmarkingScheme = ManOriented");
+            engine.SetTeamTactic(0, config.ForTeam(0));
+            for (int i = 0; i < DeterministicSimConstants.AI_PHASE_STRIDE; i++)
+                engine.RunTick();
+            Assert.That(engine.TestOnly_ActiveMarkingScheme(0), Is.EqualTo(TacticalInstructions.MarkingScheme.Zonal));
+
+            // Stage the away change at the same committed snapshot as the pending copy.
+            engine.SetTeamTactic(1, config.ForTeam(1));
+            engine.RunTick();
+            var header = engine.CaptureCommittedSnapshotHeader();
+            var payload = engine.CaptureCommittedSnapshotPayload();
+            byte[][] continuation = new byte[24][];
+            for (int i = 0; i < continuation.Length; i++)
+            {
+                engine.RunTick();
+                continuation[i] = engine.CurrentSnapshotDigest;
+            }
+
+            MatchEngine restored = MatchEngine.RestoreFromSnapshot(header, payload, seed);
+            Assert.That(restored.TestOnly_ActiveMarkingScheme(0), Is.EqualTo(TacticalInstructions.MarkingScheme.Zonal));
+            Assert.That(restored.TestOnly_ActiveMarkingScheme(1), Is.EqualTo(TacticalInstructions.MarkingScheme.Mixed));
+            foreach (byte[] expected in continuation)
+            {
+                restored.RunTick();
+                Assert.That(restored.CurrentSnapshotDigest, Is.EqualTo(expected));
+            }
+            Assert.That(restored.TestOnly_ActiveMarkingScheme(1), Is.EqualTo(TacticalInstructions.MarkingScheme.ManOriented));
+        }
+
+        [Test]
         public void RoundTrip_NeutralKickoff_IsDeterministic()
         {
             // The bulk-of-value case: every match that never calls ConfigureSquads (the Phase 1 scope).

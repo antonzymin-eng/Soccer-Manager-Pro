@@ -1,6 +1,7 @@
 // File:     src/match-engine/tests/MarkingFlipMeasurementTests.cs
 // Created:  2026-11-21
-// Modified: 2026-11-21
+// Modified: 2026-11-23 (Unity digest formatting)
+// Modified (prior): 2026-11-21
 // Author:   —
 // Spec:     W13 plan §10 (post-wiring measurement, reduced), Defensive AI #14 §3.13.1, Agent Movement #2 §3.5.3.1, Code Standards #20
 // Purpose:  Env-gated, descriptive full-match measurement of the W13 default flip: the same seed / case played with mark
@@ -29,7 +30,7 @@ namespace TacticalDirector.MatchEngine
     /// C5 / C6 all-Defend home / away; C7 / C8 all-Attack home / away; C9 both F4231. GK heading is enabled, as in that harness.
     /// </summary>
     [TestFixture]
-    internal sealed class MarkingFlipMeasurementTests
+    internal sealed partial class MarkingFlipMeasurementTests
     {
         private static readonly ulong[] DefaultSeeds =
         {
@@ -37,10 +38,10 @@ namespace TacticalDirector.MatchEngine
             0x3333333333333333UL, 0xDEADBEEFCAFEBABEUL, 0x0F0F0F0F0F0F0F0FUL,
         };
 
-        private static TeamTactic Tactic(TacticFormation f) => new TeamTactic(
+        private static TeamTactic Tactic(TacticFormation f, MarkingScheme scheme) => new TeamTactic(
             Mentality.Balanced, f, Tempo.Standard, TacticWidth.Standard, TacticPassing.Mixed, TacticPressing.Medium,
             LineOfEngagement.Standard, 0.5f, TacticDefWidth.Standard, TransitionPlan.HoldShape, TransitionPlan.Regroup, false,
-            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0);
+            TacticTriggerMask.None, FocusPlay.Mixed, GkDistributionPolicy.SlowDown, 0, markingScheme: scheme);
 
         [Test]
         [Category("Calibration")]
@@ -82,15 +83,7 @@ namespace TacticalDirector.MatchEngine
             var e = new MatchEngine(seed);
             e.EnableGkHeading();
             e.TestOnly_ArmMarkMovement(armed);
-            int[] families = { c == 1 ? 1 : c == 3 || c == 9 ? 2 : 0, c == 2 ? 1 : c == 4 || c == 9 ? 2 : 0 };
-            for (int t = 0; t < 2; t++) e.SetTeamTactic(t, Tactic((TacticFormation)families[t]));
-            if (c >= 5 && c <= 8)
-            {
-                int t = c == 5 || c == 7 ? 0 : 1;
-                Duty duty = c <= 6 ? Duty.Defend : Duty.Attack;
-                for (int i = 1; i < 11; i++)
-                    e.SetPlayerTactic(t * 11 + i, new PlayerTactic(PlayerRole.Default, duty, PlayerInstructions.Default));
-            }
+            SetCase(e, c);
 
             int n = MatchEngineConstants.SQUAD_SIZE;
             int[] shots = new int[2], passes = new int[2], poss = new int[2];
@@ -147,7 +140,7 @@ namespace TacticalDirector.MatchEngine
             (int won, int loose, int foul, int missed) = e.TestOnly_TackleOutcomeCounts;
             int yellows = 0, sentOff = 0;
             for (int a = 0; a < n; a++) { yellows += e.TestOnly_YellowCards(a); if (e.AgentIsSentOff(a)) sentOff++; }
-            string digest = Convert.ToHexString(e.CurrentSnapshotDigest);
+            string digest = DigestHex(e.CurrentSnapshotDigest);
             Assert.AreEqual(0, nonFinite, $"hard stop: non-finite agent state (seed {seed:X16} case {c} armed {armed})");
             return string.Join(",",
                 seed.ToString("X16", CultureInfo.InvariantCulture), c.ToString(CultureInfo.InvariantCulture), armed ? "on" : "off",
@@ -168,6 +161,27 @@ namespace TacticalDirector.MatchEngine
                 gAtt.ToString(CultureInfo.InvariantCulture), gLoose.ToString(CultureInfo.InvariantCulture));
         }
 
+        private static void SetCase(MatchEngine e, int c, MarkingScheme scheme = MarkingScheme.Mixed, bool tight = false)
+        {
+            int[] families = { c == 1 ? 1 : c == 3 || c == 9 ? 2 : 0, c == 2 ? 1 : c == 4 || c == 9 ? 2 : 0 };
+            for (int t = 0; t < 2; t++)
+                e.SetTeamTactic(t, Tactic((TacticFormation)families[t], scheme));
+
+            int dutyTeam = c is >= 5 and <= 8 ? (c == 5 || c == 7 ? 0 : 1) : -1;
+            var instructions = tight
+                ? new PlayerInstructions(InstrBias.Default, InstrBias.Default, InstrBias.Default,
+                    InstrBias.Default, InstrBias.Default, InstrBias.Default, true, -1, SetPieceDutyFlags.None)
+                : PlayerInstructions.Default;
+            for (int t = 0; t < 2; t++)
+            {
+                if (!tight && t != dutyTeam)
+                    continue;
+                Duty duty = t == dutyTeam ? (c <= 6 ? Duty.Defend : Duty.Attack) : Duty.Support;
+                for (int slot = 1; slot < 11; slot++)
+                    e.SetPlayerTactic(t * 11 + slot, new PlayerTactic(PlayerRole.Default, duty, instructions));
+            }
+        }
+
         private static ulong[] ParseSeeds(string s)
         {
             if (string.IsNullOrEmpty(s)) return DefaultSeeds;
@@ -176,6 +190,9 @@ namespace TacticalDirector.MatchEngine
             for (int i = 0; i < parts.Length; i++) r[i] = ulong.Parse(parts[i].Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
             return r;
         }
+
+        // Both instruments emit the same uppercase hex on Unity and on the .NET shim.
+        private static string DigestHex(byte[] digest) => BitConverter.ToString(digest).Replace("-", string.Empty);
 
         private static int[] ParseInts(string s, int[] dflt)
         {
@@ -192,4 +209,5 @@ namespace TacticalDirector.MatchEngine
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-11-21 | —      | W13 default-flip measurement instrument (env-gated, descriptive; off vs on per seed / #434 case). |
 // | 1.1     | 2026-11-21 | —      | Knockdown anatomy columns: GROUNDED entries by reason, marker / defending / attacking / loose. |
+// | 1.2     | 2026-11-23 | —      | Format digest text with APIs available in Unity. |
 #endregion

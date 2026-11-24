@@ -966,11 +966,11 @@ namespace TacticalDirector.MatchEngine
         /// <summary>One stride of the envelope run.</summary>
         private readonly struct EnvelopeRow
         {
-            public readonly int Stride; public readonly float Gap; public readonly bool GoalSide;
+            public readonly int Stride; public readonly float Gap, MinPhysicsGap; public readonly bool GoalSide;
             public readonly float MarkerSpeed, ManSpeed, SlotToMan; public readonly AgentMovementState State;
             public readonly AgentMovementState Command; public readonly bool GuardLocked;
-            public EnvelopeRow(int stride, float gap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state, AgentMovementState command, bool guardLocked)
-            { Stride = stride; Gap = gap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; Command = command; GuardLocked = guardLocked; }
+            public EnvelopeRow(int stride, float gap, float minPhysicsGap, bool goalSide, float markerSpeed, float manSpeed, float slotToMan, AgentMovementState state, AgentMovementState command, bool guardLocked)
+            { Stride = stride; Gap = gap; MinPhysicsGap = minPhysicsGap; GoalSide = goalSide; MarkerSpeed = markerSpeed; ManSpeed = manSpeed; SlotToMan = slotToMan; State = state; Command = command; GuardLocked = guardLocked; }
         }
 
         /// <summary>
@@ -980,7 +980,7 @@ namespace TacticalDirector.MatchEngine
         /// MaxMarkDisplacementM (Invariant 3 releases the mark beyond 20 m); that is asserted per stride as a PRECONDITION
         /// of the scenario, not a result. Returns one row per stride of the run.
         /// </summary>
-        private static List<EnvelopeRow> RunEnvelope(int def, float topSpeed, bool tight, int strides, out int marker, float startX = 19.5f, float dirX = 1.0f)
+        private static List<EnvelopeRow> RunEnvelope(int def, float topSpeed, bool tight, int strides, out int marker, float startX = 19.5f, float dirX = 1.0f, bool assertClearEachTick = false)
         {
             var e = new MatchEngine(Seed);
             e.TestOnly_ArmMarkMovement(true);
@@ -1009,6 +1009,7 @@ namespace TacticalDirector.MatchEngine
             var rows = new List<EnvelopeRow>();
             for (int st = 0; st < strides; st++)
             {
+                float minPhysicsGap = float.PositiveInfinity;
                 for (int t = 0; t < Stride; t++)
                 {
                     float time = (st * Stride + t + 1) / 60.0f;
@@ -1016,10 +1017,14 @@ namespace TacticalDirector.MatchEngine
                     rig.AttackerVelocity = new Vector2(dirX * Mathf.Min(topSpeed, Accel * time), 0.0f);
                     rig.AttackerCanonical = start + new Vector2(dirX * along, 0.0f);
                     rig.Tick();
+                    float gap = Vector2.Distance(Pos(e, marker), Pos(e, rig.Attacker));
+                    minPhysicsGap = Mathf.Min(minPhysicsGap, gap);
+                    if (assertClearEachTick)
+                        Assert.Greater(gap, DefaultPairRadiiM, $"stride {st}, frame {t}: body gap {gap:F3} m");
                 }
                 Vector2 m = Pos(rig.E, marker), man = Pos(rig.E, rig.Attacker);
                 AgentState ms = rig.E.TestOnly_AgentSnapshot(marker);
-                rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
+                rows.Add(new EnvelopeRow(st, Vector2.Distance(m, man), minPhysicsGap, Vector2.Distance(m, goal) < Vector2.Distance(man, goal),
                     ms.Velocity.magnitude, rig.E.TestOnly_MarkTargetVelocity(marker).magnitude,   // the speed the engine WROTE for the marked man (his physics speed is perturbed by contact)
                     Vector2.Distance(rig.E.TestOnly_FormationSlot(marker), man), ms.CurrentState,
                     rig.E.TestOnly_Command(marker).DesiredState, ms.OscillationGuard.GetState().IsLocked));
@@ -1249,15 +1254,8 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>
-        /// W13-F5: a man running TOWARD the defended goal at his goal-side marker (3 and 5 m/s caps, ordinary and tight stand-off).
-        /// The marker retreats with him: he is never GROUNDED, never guard-locked, and goal-side on every stride from 2 on; with
-        /// the ordinary stand-off the bodies never overlap. Before the fix: GROUNDED 19 / 40 strides, minimum gap 0.68 / 0.50 m,
-        /// ends 6-10 m behind. MEASURED after: 0 GROUNDED strides, minimum gap 1.76 m (ordinary). RESIDUAL (recorded, not
-        /// asserted): with the 1.0 m TightMarking stand-off the minimum gap is 0.82 m at stride 8 — 0.02 m inside the two
-        /// Strength-10 hitbox radii (0.84 m) — while the man accelerates from rest at 2 m/s²: the marker's IDLE-launch / WALKING
-        /// acceleration (#2 §3.2.4, 2.0 m/s²) equals the man's, so the 10 Hz feed-forward latency is not recovered until he
-        /// jogs. The resulting contact is not a knockdown, but its collision response differs between the home and away runs
-        /// (see the mirror test).
+        /// A marker retreating from a goalward runner must clear both player radii at every physics tick,
+        /// remain goal-side and avoid getting grounded or entering an oscillation lock.
         /// </summary>
         [TestCase(0, 3.0f, false)]
         [TestCase(1, 3.0f, false)]
@@ -1265,13 +1263,18 @@ namespace TacticalDirector.MatchEngine
         [TestCase(1, 5.0f, false)]
         [TestCase(0, 3.0f, true)]
         [TestCase(1, 3.0f, true)]
+        [TestCase(0, 5.0f, true)]
+        [TestCase(1, 5.0f, true)]
         public void GoalwardRunner_MarkerRetreats_NeverGrounded_NoOverlap_GoalSide(int def, float topSpeed, bool tight)
         {
-            var sum = Summarise(RunEnvelope(def, topSpeed, tight, 40, out _, startX: 26.0f, dirX: -1.0f));
+            var sum = Summarise(RunEnvelope(def, topSpeed, tight, 40, out _, startX: 26.0f, dirX: -1.0f, assertClearEachTick: true));
+            float minPhysicsGap = float.PositiveInfinity;
+            foreach (EnvelopeRow row in sum.Rows)
+                minPhysicsGap = Mathf.Min(minPhysicsGap, row.MinPhysicsGap);
+            TestContext.Progress.WriteLine(FormattableString.Invariant(
+                $"GOALWARD def={def} v={topSpeed:F1} tight={tight} minGap={minPhysicsGap:F6} m clearance={minPhysicsGap - DefaultPairRadiiM:F6} m"));
             string trace = DescribeEnvelope(sum.Rows);
             Assert.AreEqual(0, sum.Grounded, $"GROUNDED strides. {trace}");
-            if (!tight)
-                Assert.Greater(sum.MinGap, DefaultPairRadiiM, $"bodies overlapped (min gap {sum.MinGap:F2} m). {trace}");
             Assert.AreEqual(0, sum.NotGoalSide, $"strides not goal-side. {trace}");
             Assert.AreEqual(0, sum.LockEntries, $"OscillationGuard lock entries. {trace}");
         }
@@ -1315,6 +1318,31 @@ namespace TacticalDirector.MatchEngine
             }
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        public void ZonalDisablesOnlyTheSelectedTeamsMarkMovement(int zonalTeam)
+        {
+            var engine = new MatchEngine(Seed);
+            engine.TestOnly_ArmMarkMovement(true);
+            TeamTacticConfig config = TeamTacticFileLoader.Parse(
+                zonalTeam == 0 ? "[home]\nmarkingScheme = Zonal" : "[away]\nmarkingScheme = Zonal");
+            engine.SetTeamTactic(zonalTeam, config.ForTeam(zonalTeam));
+
+            var zonal = new Rig(engine, zonalTeam) { LockOwn = true };
+            zonal.Strides(6);
+            zonal.AttackerCanonical = new Vector2(19.5f, 34f);
+            zonal.Strides(DefensiveAIConstants.MarkDwellTicks + 2);
+            Assert.That(zonal.MarkingCb(), Is.GreaterThanOrEqualTo(0), "Zonal keeps tackle assignments.");
+            Assert.That(engine.TestOnly_MarkTarget(zonal.MarkingCb()).HasTarget, Is.False);
+
+            var mixed = new Rig(engine, 1 - zonalTeam) { LockOwn = true };
+            mixed.Strides(6);
+            mixed.AttackerCanonical = zonal.AttackerCanonical;
+            mixed.Strides(DefensiveAIConstants.MarkDwellTicks + 2);
+            Assert.That(mixed.MarkingCb(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(engine.TestOnly_MarkTarget(mixed.MarkingCb()).HasTarget, Is.True);
+        }
+
         private static void SetTightMarking(MatchEngine e, Rig rig)
         {
             TacticalInstructions.PlayerInstructions ins = new TacticalInstructions.PlayerInstructions(
@@ -1335,8 +1363,7 @@ namespace TacticalDirector.MatchEngine
         /// goal-side 12 vs 4 / 15; goalward minimum gap 0.68 vs 0.50 m): the same rounding difference amplified by the
         /// stride-by-stride WALK / JOG flip (strict speed &gt; JogEnter one frame apart), the stationary orbit and body
         /// contact; with one tracking command and arrival settling there is nothing chaotic left to amplify it, except
-        /// contact. RESIDUAL: the TightMarking goalward run touches (see the goalward test) and then diverges by up to 1.06 m
-        /// (3 m/s) / 0.06 m (5 m/s) between the teams — collision response is the remaining amplifier, so it is excluded here.
+        /// contact. The tight goalward cases have their own per-physics-tick clearance checks on both teams.
         /// </summary>
         [TestCase(2.6f, false, 19.5f, 1.0f, 60)]
         [TestCase(5.0f, false, 19.5f, 1.0f, 60)]

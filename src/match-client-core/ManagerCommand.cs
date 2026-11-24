@@ -36,6 +36,9 @@ namespace TacticalDirector.MatchClientCore
         /// <summary>The team tactic to stage (<see cref="ManagerCommandKind.SetTeamTactic"/>).</summary>
         public readonly TeamTactic NewTeamTactic;
 
+        /// <summary>Whether to carry forward the pending marking scheme when the command is applied.</summary>
+        public readonly bool PreserveMarkingScheme;
+
         /// <summary>The player tactic to stage (<see cref="ManagerCommandKind.SetPlayerTactic"/>).</summary>
         public readonly PlayerTactic NewPlayerTactic;
 
@@ -56,12 +59,14 @@ namespace TacticalDirector.MatchClientCore
             in PlayerTactic newPlayerTactic,
             int outSlotIndex,
             int benchIndex,
-            SubstitutionReason reason)
+            SubstitutionReason reason,
+            bool preserveMarkingScheme = false)
         {
             Kind            = kind;
             TeamId          = teamId;
             AgentId         = agentId;
             NewTeamTactic   = newTeamTactic;
+            PreserveMarkingScheme = preserveMarkingScheme;
             NewPlayerTactic = newPlayerTactic;
             OutSlotIndex    = outSlotIndex;
             BenchIndex      = benchIndex;
@@ -69,8 +74,8 @@ namespace TacticalDirector.MatchClientCore
         }
 
         /// <summary>A command to stage a team-level tactic change for <paramref name="teamId"/>.</summary>
-        public static ManagerCommand SetTeamTactic(int teamId, in TeamTactic tactic) =>
-            new ManagerCommand(ManagerCommandKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default);
+        public static ManagerCommand SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false) =>
+            new ManagerCommand(ManagerCommandKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default, preserveMarkingScheme);
 
         /// <summary>A command to stage a per-agent tactic change for <paramref name="agentId"/>.</summary>
         public static ManagerCommand SetPlayerTactic(int agentId, in PlayerTactic tactic) =>
@@ -106,7 +111,7 @@ namespace TacticalDirector.MatchClientCore
                 case ManagerCommandKind.SetTeamTactic:
                 {
                     TeamTactic tactic = NewTeamTactic;
-                    mutations.SetTeamTactic(TeamId, in tactic);
+                    mutations.SetTeamTactic(TeamId, in tactic, PreserveMarkingScheme);
                     return true;
                 }
                 case ManagerCommandKind.SetPlayerTactic:
@@ -136,4 +141,5 @@ namespace TacticalDirector.MatchClientCore
 // |         |            |        | instead of falling through to a malformed mutator payload.     |
 // | 1.2     | 2026-10-15 | —      | Match Flow §6.4: Apply returns bool; a Substitute command reports whether the engine accepted the request (rule refusals are typed results, not exceptions). |
 // | 1.3     | 2026-10-21 | —      | Gate J J-02: Apply overload reports the engine's typed SubstitutionRequestStatus so the driver can record why a substitution was refused. |
+// | 1.4     | 2026-11-23 | —      | ERR-021-011: record and replay the marking scheme retention choice. |
 #endregion

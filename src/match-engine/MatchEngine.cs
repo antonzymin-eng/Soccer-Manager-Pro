@@ -1626,10 +1626,16 @@ namespace TacticalDirector.MatchEngine
         /// ERR-021-002), so a change made MID-match is restore-deterministic. The default is
         /// <see cref="TeamTactic.Balanced"/> (behaviour-neutral).
         /// </summary>
-        public void SetTeamTactic(int teamId, in TeamTactic tactic)
+        public void SetTeamTactic(int teamId, in TeamTactic tactic) =>
+            SetTeamTactic(teamId, in tactic, preserveMarkingScheme: false);
+
+        /// <summary>Stages a tactic, optionally carrying forward the team's pending marking scheme.</summary>
+        public void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme)
         {
             GuardTeamId(teamId);
-            _pendingTeamTactics[teamId] = tactic;
+            _pendingTeamTactics[teamId] = preserveMarkingScheme
+                ? tactic.WithMarkingScheme(_pendingTeamTactics[teamId].MarkingScheme)
+                : tactic;
         }
 
         /// <summary>
@@ -2808,6 +2814,16 @@ namespace TacticalDirector.MatchEngine
         /// the last AI stride — exactly the span the engine's tackle consumers read. Allocates; never on a production path.</summary>
         internal TackleIntentRequest[] TestOnly_TackleIntents(int teamId) => _defensive[teamId].GetTackleIntentRequests().ToArray();
 
+        internal int TestOnly_ManMarkCapDemotions(int team) => _defensive[team].LastManMarkCapDemotions;
+
+        internal bool TestOnly_MarkInvariantsHold(int team) =>
+            _defensive[team].AssignmentInvariantsHold(_defSnapshots[team]);
+
+        internal (bool Possession, int Carrier) TestOnly_MarkPossession(int team) =>
+            (_posSnapshots[team].TeamPossessionIsOwnTeam, _defSnapshots[team].PossessionOwnerEntityId);
+
+        internal MarkingScheme TestOnly_ActiveMarkingScheme(int team) => _activeTeamTactics[team].MarkingScheme;
+
         /// <summary>Test-only (W13.1c): the movement command currently held for <paramref name="agentId"/> (commands persist
         /// between 10 Hz AI strides), so a test can count walk / jog command flips. Read-only.</summary>
         internal MovementCommand TestOnly_Command(int agentId) => _commands[agentId];
@@ -3919,7 +3935,10 @@ namespace TacticalDirector.MatchEngine
                 _pressing[t].Tick(_pressSnapshots[t]);
 
                 // Defensive (#14) — team-level MarkDirective; OffensiveLineDepth is the DecisionContext carrier.
-                FillDefensiveSnapshot(t, tacticalTick, markMovementOn);
+                MarkingScheme scheme = _activeTeamTactics[t].MarkingScheme;
+                bool teamMarkMovement = markMovementOn && scheme != MarkingScheme.Zonal;
+                FillDefensiveSnapshot(t, tacticalTick, teamMarkMovement);
+                _defSnapshots[t].MarkingScheme = teamMarkMovement ? scheme : MarkingScheme.Mixed;
                 _defensive[t].Tick(_defSnapshots[t]);
                 MarkDirective mark = _defensive[t].GetMarkDirective();
                 CensusTackleIntents(t);
@@ -3998,7 +4017,7 @@ namespace TacticalDirector.MatchEngine
                     // composed (canonical frame) from the agent's committed #14 assignment and mapped back to
                     // world space. NO target for a team in possession (carrier or pass in flight): its agents
                     // attack. Pressers, the GK and sent-off agents are outside #14's pool and get none.
-                    if (markMovementOn
+                    if (teamMarkMovement
                         && !(teamPossessor >= 0 && _teamIds[teamPossessor] == t))
                     {
                         MarkAssignment markAssignment = _defensive[t].GetAssignment(i);
@@ -5611,8 +5630,11 @@ namespace TacticalDirector.MatchEngine
             // Match-flow completion (design note §3): a sent-off agent is frozen — forced to a stop
             // command every tick, overriding whatever the last AI dispatch left held (they will never
             // receive a new one, per the RunAiPhase skip above). Decelerates to rest and stays there.
+            // ERR-002-002: derive the per-agent acceleration opt-in from snapshotted active tactics.
+            Span<bool> accelerateMovingTracks = stackalloc bool[MatchEngineConstants.SQUAD_SIZE];
             for (int i = 0; i < MatchEngineConstants.SQUAD_SIZE; i++)
             {
+                accelerateMovingTracks[i] = _activePlayerTactics[i].Instructions.TightMarking;
                 if (_isSentOff[i])
                 {
                     _commands[i] = MovementCommand.Stop(_agents[i].Position);
@@ -5624,7 +5646,8 @@ namespace TacticalDirector.MatchEngine
             // elapsed transition times against WindowSeconds.
             _movement.UpdateAllAgents(
                 _agents, _attrs, _perfs, _commands, _isGoalkeeper,
-                _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds);
+                _isCollisionKnockdown, _collisionForces, dt, _clock.CurrentMatchTimeSeconds,
+                accelerateMovingTracks);
 
             // GK LOCOMOTION (§5.Z.15). The batch seam above skips goalkeepers, and until now nothing
             // moved them: boot placement WAS the keeper's position for the whole ninety minutes
@@ -8537,11 +8560,14 @@ namespace TacticalDirector.MatchEngine
             DismarkIntensity dismark = (DismarkIntensity)CanonicalSerializer.ReadI32(buf, ref o);
             BuildUpStructure buildUp = (BuildUpStructure)CanonicalSerializer.ReadI32(buf, ref o);
             RotationFreedom rotation = (RotationFreedom)CanonicalSerializer.ReadI32(buf, ref o);
+            int scheme = CanonicalSerializer.ReadI32(buf, ref o);
+            if (scheme < (int)MarkingScheme.Mixed || scheme > (int)MarkingScheme.ManOriented)
+                throw new InvalidOperationException($"Invalid snapshot marking scheme ordinal {scheme}.");
 
             return new TeamTactic(
                 mentality, formation, tempo, width, passing, pressing, line, defensiveLine, defWidth,
                 transitionWon, transitionLost, offsideTrap, triggerMask, focusPlay, gkDist, timeWasting,
-                marking, dismark, buildUp, rotation);
+                marking, dismark, buildUp, rotation, (MarkingScheme)scheme);
         }
 
         /// <summary>Reads a <see cref="PlayerTactic"/> in the <see cref="WritePlayerTactic"/> (Appendix B) field order.</summary>
@@ -8615,6 +8641,7 @@ namespace TacticalDirector.MatchEngine
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.DismarkIntensity);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.BuildUpStructure);
             CanonicalSerializer.WriteI32(buf, ref o, (int)t.RotationFreedom);
+            CanonicalSerializer.WriteI32(buf, ref o, (int)t.MarkingScheme);
         }
 
         /// <summary>Serializes the full <see cref="BallState"/> field set in canonical order.
@@ -11578,4 +11605,6 @@ namespace TacticalDirector.MatchEngine
 // | 2.25 | 2026-11-20 | — | ERR-010-005 (#441): TryCommitHeaderIntents passes _ball.Velocity to GkHeadingIntentSource.NearestHeaderCandidate, which now skips an agent the ball is moving away from (design §4.2 "moving toward them"). Ends the passer's commit on their own pass (#441 §6.7: 1,600 of 1,702 pass-attributed commits). No new constant, cross-tick state, schema, RNG stream, domain tag or draw site; snapshot digests change via the serialized Heading attempt state; ball/agent trajectories bit-identical on the six frozen seeds (#441 §6.8). |
 // | 2.26 | 2026-11-20 | — | ERR-010-005 PR #559 review P2: TryCommitHeaderIntents clears an agent's KD-7 episode latch only when the ball is possessed or below HeaderTriggerMinBallHeightM, or the agent is outside HeaderTriggerRangeM of it. It no longer clears every non-nearest agent, so a ball reversing in range (or a nearer agent interrupting) cannot re-commit the same agent. Same serialized bool[]; no schema, RNG or constant change. |
 // | 2.27 | 2026-11-21 | — | W13 blockers (F5-F10) and default flip: RunMechanicsAI writes TacticalContext.MarkTargetVelocity (pure SelectMarkTargetVelocity replaces SelectMarkTargetSpeed; ERR-008-029) and floors the mark stand-off at the two #2 hitbox radii + MinStoppingDistanceM (MarkContactFloorM; ERR-014-012); Serialize/DeserializeWorldState append the v30 tracking half of each held MovementCommand (ERR-002-001); TestOnly_MarkTargetSpeed replaced by TestOnly_MarkTargetVelocity; + TestOnly_TackleIntents. No RNG stream / domain tag / draw-order change. |
+// | 2.28    | 2026-11-23 | —      | W13.2: stage and serialize per-team schemes in v31; expose the pending scheme to AI preset decisions. |
+// | 2.29    | 2026-11-23 | —      | ERR-021-011: optionally carry the pending scheme into a team tactic update. |
 #endregion

@@ -33,6 +33,7 @@ namespace TacticalDirector.MatchEngine
                 "focusPlay = LeftFlank\n" +
                 "timeWasting = 2\n" +
                 "markingOrientation = ManOriented\n" +
+                "markingScheme = Zonal\n" +
                 "\n" +
                 "[away]\n" +
                 "mentality = Defensive\n" +
@@ -49,6 +50,7 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(FocusPlay.LeftFlank, home.FocusPlay);
             Assert.AreEqual((byte)2, home.TimeWasting);
             Assert.AreEqual(MarkingOrientation.ManOriented, home.MarkingOrientation);
+            Assert.AreEqual(MarkingScheme.Zonal, home.MarkingScheme);
             // An omitted key inherits the Balanced identity value.
             Assert.AreEqual(TeamTactic.Balanced.Passing, home.Passing);
 
@@ -59,6 +61,7 @@ namespace TacticalDirector.MatchEngine
             Assert.AreEqual(TeamTactic.Balanced.Tempo, away.Tempo);
             Assert.AreEqual(TeamTactic.Balanced.Width, away.Width);
             Assert.AreEqual(TeamTactic.Balanced.MarkingOrientation, away.MarkingOrientation);
+            Assert.AreEqual(MarkingScheme.Mixed, away.MarkingScheme);
         }
 
         [Test]
