@@ -14,7 +14,39 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 20, 2026 — **v2.245 — #44 T3 quick-sim card synthesis (PR #561).** `SeasonLoop` validates the quick-sim probabilities before applying round writes. `RoundResolutionModel` uses the existing fixture key to select cards for both XIs. `CardLedgerFold` accepts those summaries through an internal entry point and preserves the serving-before-commit order. Tests cover preflight, summary validation, attribution, save continuation and fixture-order independence. Pinned Unity validation is pending.
+> **Last Updated:** November 24, 2026 (authored November 20) — **v2.251 — #44 T3 quick-sim card synthesis (PR #561; first recorded as v2.245, renumbered at the merge of main `4e3c9605`).** `SeasonLoop` validates the quick-sim probabilities before applying round writes. `RoundResolutionModel` uses the existing fixture key to select cards for both XIs. `CardLedgerFold` accepts those summaries through an internal entry point and preserves the serving-before-commit order. Tests cover preflight, summary validation, attribution, save continuation and fixture-order independence. Pinned Unity validation is pending.
+
+
+> **Last Updated (prior):** November 24, 2026 — **v2.250 — ERR-002-001 review amendment (PR #563, merged with main `2d89e45a`).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.19 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.2 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`. Owner call under KD-W1 (November 24, 2026): `MatchEngineCloseChanceScenarios.cs` v1.3 loosens the cosine bound −0.16 → −0.26 and the share bound 0.42 → 0.37, and `MatchEngineKeeperContactScenarios.cs` v1.2 relaxes contacts > crossings to ≥; each still refuses its pre-fix world. These labels follow main's v1.18 / v1.1 (ERR-002-002, PR #564); the branch first used v1.18 / v1.1 and v2.248.
+
+> **Last Updated (prior):** November 23, 2026 — **v2.249 — W13 client review.** Browser intents carry marking scheme retention through the dispatcher, command queue and replay. `MatchEngine` v2.29 stages the tactic with the pending scheme when requested, and `ManagerAdaptation` v1.3 uses the same staging path. S0 validates the selector argument and tests both non-default schemes through the first tactical stride. The goalward run logs the minimum gap across physics ticks.
+
+> **Last Updated (prior):** November 23, 2026 — **v2.248 — W13 follow-up and review corrections.** `AgentMovementSystem` v1.18 fixes tight goalward contact (ERR-002-002). `TeamTactic` v1.4 and `MatchEngine` v2.28 persist team schemes in v31 (ERR-021-011). `ManagerAdaptation` v1.2 retains the configured scheme at kickoff and at preset changes. `InvariantEnforcer` v1.6 and `DefensiveAIConstants` v1.8 apply per-scheme limits and count cap demotions. The §10 capture records grounded entry causes and repeat-run/restore receipts.
+
+> **Last Updated (prior):** November 21, 2026 — **v2.247 — W13 marking blockers F5–F10 fixed; mark movement ON by default.** `src/agent-movement/MovementCommand.cs` v1.6: `IsTracking` / `TargetVelocity` / `IssueTimeS`, the `Track(target, targetVelocity, issueTimeS)` factory, and a full-field `ReconstructFromSnapshot` overload. `AgentMovementSystem.cs` v1.17: §3.5.3.1 tracking law — `internal static CalculateTrackDesiredVelocity`, private `TrackRunningSpeed`; DECELERATING brakes to the tracked speed. `AgentMovementConstants.cs` v1.10: `[FIXED] LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S = 0.2f`. `src/decision-tree/ActionDispatcher.cs` v1.5: a mark-point MOVE dispatches `Track(...)`, and `SelectMoveTier(dist)` is distance-only. `TacticalContext.cs` v1.12: `MarkTargetSpeed` → `Vector2 MarkTargetVelocity`. `src/defensive-ai/DefensiveAITick.cs` v1.5: Step 8a `ReconcileTackleRequests`. `DefensiveAIConstants.cs` v1.7: doc only. `src/match-engine/MatchEngine.cs` v2.27:
+- `SelectMarkTargetVelocity` replaces `SelectMarkTargetSpeed`;
+- `MarkContactFloorM` (instance and pure static) floors the stand-off;
+- the v30 trailing tracking block is written and read;
+- `TestOnly_MarkTargetVelocity` replaces `TestOnly_MarkTargetSpeed`, and `TestOnly_TackleIntents` is new.
+
+`MatchEngineConstants.cs` v1.49: `SNAPSHOT_SCHEMA_VERSION` 29 → 30 and `MarkMovementEnabled` default `true`. New tests:
+- `src/agent-movement/Tests/AgentMovementTrackingTests.cs` v1.0;
+- `src/defensive-ai/Tests/TackleRequestReconciliationTests.cs` v1.0;
+- `src/match-engine/tests/MarkingFlipMeasurementTests.cs` v1.1 (env-gated, descriptive).
+
+Changed tests:
+- `MatchEngineMarkingTests.cs` v1.6: asserted F5–F10 regressions, v30 restore, and the default-ON switch test;
+- `MatchEngineSnapshotSchemaTests.cs` v1.28: pin 30 and a digest probe;
+- `DispatcherTests.cs` v1.4;
+- `PassInFlightPossessionTests.cs` v1.1: fixture pinned to marking off.
+
+No new assembly, `.asmdef` or RNG stream / domain tag / draw site. Full account: `docs/tracking/CHANGELOG.md`.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.246 — ERR-010-005 Codex review: neutrality window.** `src/match-engine/tests/HeaderReachabilityDiagnosticTests.cs`: `HeaderReachabilityObserver_DoesNotChangeSnapshotDigests` no longer uses a fixed 18,000-frame window. It runs at least `NeutralityMinFrames` (18,000), stops `NeutralityTailFrames` (600) after the first #10 evaluation, and never exceeds `NeutralityMaxFrames` (108,000); the plain engine replays the same frame count, and the test logs the window. Its non-vacuity assertions are unchanged. On Linux .NET the window stays 18,000 frames (first evaluation at frame 3,775). Test-only; no production, schema, RNG or constant change.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.245 — ERR-010-005 review: KD-7 latch.** `src/match-engine/MatchEngine.cs` v2.25 → **v2.26**: `TryCommitHeaderIntents` clears `_headerCommittedThisEpisode[i]` only when the ball is not airborne-loose or agent *i* is outside `HeaderTriggerRangeM`; it no longer clears every non-nearest agent. `src/match-engine/tests/MatchEngineGkHeadingTests.cs` v1.10 → **v1.11**: three home/away KD-7 latch locks. Same serialized `bool[]`; no schema, RNG or constant change.
+
+> **Last Updated (prior):** November 20, 2026 — **v2.244 — ERR-010-005 header-trigger approach condition.** `src/match-engine/GkHeadingIntentSource.cs` v1.6 → **v1.7**: `NearestHeaderCandidate(in Vector3 ballPosition, in Vector3 ballVelocity, bool airborneLoose, …)` gains the ball velocity and skips an agent when `v_xy · (agent − ball)_xy < 0`. `src/match-engine/MatchEngine.cs` v2.24 → **v2.25**: `TryCommitHeaderIntents` passes `_ball.Velocity`. Tests: `GkHeadingIntentSourceTests.cs` v1.5 → v1.6 (existing cases pass a zero velocity; new approach-condition locks in both attack directions) and `MatchEngineGkHeadingTests.cs` v1.9 → v1.10 (composed home/away regressions through `TestOnly_DriveGkHeadingTactical` and #10's Commit sample). No new constant, state, schema or RNG change.
 
 > **Last Updated (prior):** November 20, 2026 — **v2.244 — Career Home standings paged.** New `src/client-app/CareerStandingsPage.cs` v1.0 (+ `.meta`): a fixed-size page of the league table by row index, `[FIXED] ROWS_PER_PAGE = 8`, `Current` (page holding the managed club) and `At` (clamped, page-aligned), with `HasPrevious` / `HasNext`. `CareerScreenText` v1.10: `StandingsHeading(in home, in page)` (*Positions {first} to {last} of {total}*); new roles `table.page`, `table.page.previous` (*Higher positions*), `table.page.current` (*Your position*), `table.page.next` (*Lower positions*). `S0ScreensBehaviour.Career.cs` v1.10: rows move into a *Standings rows* column under the heading; only the page's rows are active; the three controls follow the rows and reuse `RefreshSchedulePaging`'s boundary-focus rule; the page resets with the season. `src/match-client-unity/README.md` P7b item 7 adds the standings keyboard check. Tests: `CareerScreensTests` v1.7 (+3), `CareerScreenTextTests` v1.5 (+1). Unity EditMode ClientApp + UiFramework 350 / 0 / 3. **PR #557 review fixes:** `S0FocusNavigation` v1.2 adds `Role.Region`, a read-only content block that is a Tab stop. `S0ScreensBehaviour.cs` v1.15: a `_revealGroups` map lets `Focus` show a control's whole group first when it fits, and `Reveal(..., alignTopWhenTall)` shows the top of a focused item taller than the viewport. A new `ScrollRegion` lets `ChoiceArrow` scroll a focused Region by `S0UiConstants.REGION_SCROLL_SHARE` (v1.2, `[FIXED] 0.5` of the viewport), never past its edges. `S0ScreensBehaviour.Career.cs` v1.11 wraps the page heading and rows in a *Standings page* Region. The three paging controls reveal the whole standings block, and a page change reveals the focused control again after the new rows are laid out. `S0FocusNavigationTests` v1.2 (+1). Unity EditMode 351 / 0 / 3.
 
@@ -2963,7 +2995,14 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.245 | 2026-11-20 | — | #44 T3 quick-sim card summaries, probability preflight and regression coverage. |
+| 2.251 | 2026-11-20 | — | #44 T3 quick-sim card summaries, probability preflight and regression coverage. |
+| 2.250 | 2026-11-24 | — | ERR-002-001 review amendment (PR #563): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`); close-chance and keeper-contact bounds loosened (owner call, KD-W1). |
+| 2.249 | 2026-11-23 | — | W13: preserve browser marking schemes at stage time, test S0 kickoff and report per-frame goalward clearance. |
+| 2.248 | 2026-11-23 | — | W13: tracking acceleration, v31 marking schemes and preset retention, per-scheme invariants, §10 capture and cause-specific grounded counts. |
+| 2.247 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
+| 2.246 | 2026-11-20 | — | ERR-010-005 Codex review: the #441 neutrality test's window extends until #10 evaluates (min 18,000, max 108,000 frames). |
+| 2.245 | 2026-11-20 | — | ERR-010-005 review: KD-7 header latch cleared only on possession, landing or leaving the agent's range. |
+| 2.244 | 2026-11-20 | — | ERR-010-005: `NearestHeaderCandidate` takes the ball velocity and skips an agent the ball is moving away from; `TryCommitHeaderIntents` passes `_ball.Velocity`. |
 | 2.244 | 2026-11-20 | — | Page the Career Home standings (`CareerStandingsPage`) for keyboard reach at 200% text scale. |
 | 2.243 | 2026-11-20 | — | Career on at startup in the tracked scene; P7b README records the pinned-host checks. |
 | 2.242 | 2026-11-19 | — | Show completed-round scores and aligned standings with goal difference. |

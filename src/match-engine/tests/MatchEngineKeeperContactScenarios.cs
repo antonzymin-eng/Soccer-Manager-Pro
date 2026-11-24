@@ -106,8 +106,12 @@ namespace TacticalDirector.MatchEngine
 
             // The contact rate: contacted episodes outnumber un-contacted goal-plane crossings.
             // Post-fix full-match corpus measured 26 vs 7; pre-fix 8 vs 15 (inverted).
+            // Relaxed from > to >= (owner call under KD-W1, November 24, 2026) for the ERR-002-001
+            // review amendment (PR #563), which measured 11 vs 11 on the .NET gate (Unity passed the
+            // strict form on the same commit). The predicate id is kept; >= still refuses the
+            // inverted pre-fix world.
             context.Envelope.CheckTrue("contacts-outnumber-uncontacted-crossings",
-                contacts > crossedUncontacted,
+                contacts >= crossedUncontacted,
                 "contacts=" + inv(contacts) + " crossedUncontacted=" + inv(crossedUncontacted));
 
             // The dive-early miss class stays extinguished AS A CLASS: pre-fix it was 9 of 15
@@ -277,4 +281,7 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | crossed episode measured 616.7 ms early (inside the pre-fix        |
 // |         |            |        | 456-2000 ms class, so the ms bound was left alone). Recurrence     |
 // |         |            |        | queued for the KD-W1 calibration pass.                             |
+// | 1.2     | 2026-11-24 | —      | contacts-outnumber-uncontacted-crossings relaxed > -> >= (owner    |
+// |         |            |        | call under KD-W1) for the ERR-002-001 review amendment (PR #563):  |
+// |         |            |        | .NET gate 11 vs 11. Still refuses the inverted pre-fix world.      |
 #endregion

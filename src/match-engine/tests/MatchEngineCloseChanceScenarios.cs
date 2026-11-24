@@ -136,9 +136,14 @@ namespace TacticalDirector.MatchEngine
             // Widening this scenario to the full six-seed corpus would add four 90-minute matches
             // to a suite already running ~23 minutes. Left at two by owner call, with the limit
             // stated here instead.
+            //
+            // Bound −0.16 → −0.26 (owner call under KD-W1, November 24, 2026) for the ERR-002-001 review
+            // amendment (PR #563): tracking markers now leave DECELERATING and re-accelerate, so marking
+            // is tighter and this pair pooled −0.233 on the .NET gate (Unity passed the old bound on the
+            // same commit). −0.26 still refuses the pre-fix ERR-008-018 world (≈ −0.29).
             context.Envelope.CheckTrue("final-third-dribbles-are-not-goal-averse",
-                meanCosine > -0.16f,
-                "meanCosine=" + f3(meanCosine) + " (bound −0.16; pre-fix these seeds ≈ −0.29)");
+                meanCosine > -0.26f,
+                "meanCosine=" + f3(meanCosine) + " (bound −0.26; pre-fix these seeds ≈ −0.29)");
 
             // The same fact as a share rather than a mean, so a handful of extreme samples cannot
             // carry it. Pre-fix corpus 26–36% per seed; post-fix 40–54%. Bound UNCHANGED at the
@@ -146,9 +151,12 @@ namespace TacticalDirector.MatchEngine
             // 0.385 — the regressed seed is below the bound alone and the pooled figure carries
             // it). If this predicate trips next, that is the cosine regression deepening, not a
             // new fact. The same floor-not-estimator caveat above applies to this bound too.
+            // Bound 0.42 → 0.37 (owner call under KD-W1, November 24, 2026), with the cosine bound above:
+            // the ERR-002-001 review amendment measured 0.391 on the .NET gate. 0.37 still refuses the
+            // pre-fix world (≈ 0.31).
             context.Envelope.CheckTrue("goalward-dribbles-are-not-a-minority-of-one-in-three",
-                goalwardShare > 0.42f,
-                "goalwardShare=" + f3(goalwardShare) + " (bound 0.42; pre-fix these seeds ≈ 0.31)");
+                goalwardShare > 0.37f,
+                "goalwardShare=" + f3(goalwardShare) + " (bound 0.37; pre-fix these seeds ≈ 0.31)");
         }
 
         private static void PlayOne(
@@ -251,4 +259,8 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | sit below -0.16 with none of the chain applied. The seed      |
 // |         |            |        | count stays at 2 (owner call); the limit is stated in the     |
 // |         |            |        | predicate comment instead of being widened away.              |
+// | 1.3     | 2026-11-24 | —      | Cosine bound −0.16 -> −0.26 and share bound 0.42 -> 0.37      |
+// |         |            |        | (owner call under KD-W1) for the ERR-002-001 review amendment |
+// |         |            |        | (PR #563): .NET gate −0.233 / 0.391. Both still refuse the    |
+// |         |            |        | pre-fix world (≈ −0.29 / 0.31).                               |
 #endregion

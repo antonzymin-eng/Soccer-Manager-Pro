@@ -1,10 +1,12 @@
 // File:     src/agent-movement/AgentMovementSystem.cs
 // Created:  2026-05-22
-// Modified: 2026-06-12
+// Modified: 2026-11-21 (W13-F5/F6/F7 / ERR-002-001: §3.5.3.1 tracking command — arrival braking + target-velocity feed-forward)
+// Modified (prior): 2026-06-12
 // Author:   —
-// Spec:     Agent Movement #2 §4.4, Code Standards #20
+// Spec:     Agent Movement #2 §4.4, §3.5.3.1, ERR-002-001, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
 
+using System;
 using UnityEngine;
 using Unity.Profiling;
 
@@ -53,7 +55,8 @@ namespace TacticalDirector.AgentMovement
             float dt,
             float currentTime,
             bool isCollisionKnockdown,
-            float collisionForce)
+            float collisionForce,
+            bool accelerateMovingTrack = false)
         {
             using var _ = s_updateMarker.Auto();
 
@@ -77,6 +80,16 @@ namespace TacticalDirector.AgentMovement
             // agent's current speed directly (§3.1.4).
             float commandSpeed = CommandSpeedFromDesiredState(command.DesiredState);
 
+            // §3.5.3.1 tracking command (W13-F5/F6/F7): the desired velocity is the tracked point's velocity plus an
+            // arrival term that can always brake to the (extrapolated) point; its magnitude lowers the band ceiling.
+            // Every non-tracking command skips this block, so its behaviour is the prior behaviour exactly.
+            Vector2 trackDesiredVelocity = Vector2.zero;
+            if (command.IsTracking)
+            {
+                trackDesiredVelocity = CalculateTrackDesiredVelocity(in command, state.Position, currentTime);
+                commandSpeed = Mathf.Min(commandSpeed, trackDesiredVelocity.magnitude);
+            }
+
             // Aerobic exhaustion degrades command intent (AR-13 M-1). Below AerobicJogFloor
             // the state machine refuses JOGGING/SPRINTING, so an above-walking commandSpeed
             // would push speed through JogEnter and flap WALKING→JOGGING→DECELERATING at
@@ -99,7 +112,11 @@ namespace TacticalDirector.AgentMovement
                 movementDir,
                 state.FacingDirection);
 
-            Vector2 commandOffset = command.TargetPosition - state.Position;
+            // A tracking command steers along its desired velocity (which may point away from a point the agent has passed),
+            // not at the stored destination.
+            Vector2 commandOffset = command.IsTracking
+                ? trackDesiredVelocity
+                : command.TargetPosition - state.Position;
 
             // Movement intent requires BOTH a moving commandSpeed and a non-degenerate target
             // offset (AR-13 M-2). The Decision Tree's HOLD action issues StrafeWhileWatching
@@ -135,7 +152,8 @@ namespace TacticalDirector.AgentMovement
                 // isCollisionKnockdown before reaching EvaluateFromGrounded, so the
                 // pre-cache-write value is unused.
                 state.CollisionForce,
-                state.GroundedReason);
+                state.GroundedReason,
+                command.IsTracking);
 
             // Step 3 — Apply transition if changed. Gate through oscillation guard (§3.1.7).
             // Collision-driven GROUNDED transitions bypass the guard: an external knockdown
@@ -233,11 +251,19 @@ namespace TacticalDirector.AgentMovement
             // indefinitely. The exponential/linear approaches never exceed topSpeed (see
             // ApplyAcceleration asymptote ceiling), so the strict band-promotion comparisons
             // (speed > JogEnter / SprintEnter) stay false unless the AI requested the band.
+            float physicalTopSpeed = topSpeed;
             topSpeed = Mathf.Min(topSpeed, commandSpeed);
 
             float kBase = AgentLocomotion.CalculateBaseAccelK(effectiveAccel);
             float kDir = AgentDirectionalMovement.ApplyDirectionalToAccelK(kBase, directionalMult);
 
+            // Tight markers need to catch the sampled velocity before entering the jogging band.
+            // Ordinary tracking and stationary-target arrivals use the linear walk rate.
+            float minTrackSpeed = MovementThresholds.MIN_VELOCITY_MAGNITUDE;
+            bool accelerateToMovingTrack = accelerateMovingTrack && command.IsTracking
+                && currentTime - command.IssueTimeS <= LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S
+                && command.TargetVelocity.sqrMagnitude > minTrackSpeed * minTrackSpeed
+                && topSpeed > state.Speed;
             float newSpeed = state.Speed;
 
             switch (state.CurrentState)
@@ -250,24 +276,31 @@ namespace TacticalDirector.AgentMovement
                     // fired). With movement intent (moving commandSpeed AND a non-degenerate
                     // target offset — AR-13 M-2), accelerate at the walking rate until the
                     // IDLE→WALKING transition takes over; otherwise decay as before.
-                    newSpeed = hasMovementIntent
-                        ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
-                        : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
+                    if (hasMovementIntent && accelerateToMovingTrack)
+                        newSpeed = TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt);
+                    else
+                        newSpeed = hasMovementIntent
+                            ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
+                            : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
                     break;
 
                 case AgentMovementState.WALKING:
                 {
-                    // §3.1.6 / §3.2.4: WALKING uses linear accel/decel (separate rates), not the exponential curve.
+                    // §3.5.3.1 supplies the moving-track acceleration exception to the linear walk rates.
                     float walkRate = state.Speed > topSpeed
                         ? LocomotionConstants.WALK_DECELERATION
                         : LocomotionConstants.WALK_ACCELERATION;
-                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
+                    newSpeed = accelerateToMovingTrack
+                        ? TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt)
+                        : Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
                     break;
                 }
 
                 case AgentMovementState.JOGGING:
                 case AgentMovementState.SPRINTING:
-                    newSpeed = AgentLocomotion.ApplyAcceleration(state.Speed, topSpeed, kDir, dt);
+                    newSpeed = command.IsTracking
+                        ? TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt)
+                        : AgentLocomotion.ApplyAcceleration(state.Speed, topSpeed, kDir, dt);
                     break;
 
                 case AgentMovementState.DECELERATING:
@@ -275,6 +308,11 @@ namespace TacticalDirector.AgentMovement
                     float stopDist = AgentLocomotion.CalculateStoppingDistance(
                         command.DecelerationMode, effectivePace);
                     newSpeed = AgentLocomotion.ApplyDeceleration(state.Speed, stopDist, dt);
+                    // §3.5.3.1: a tracking agent brakes to the tracked speed, not to rest, and never accelerates while
+                    // DECELERATING. The state machine re-enters JOGGING / SPRINTING (by speed) once the command no longer
+                    // demands braking (ERR-002-001 review amendment), or once it exceeds speed + hysteresis.
+                    if (command.IsTracking)
+                        newSpeed = Mathf.Max(newSpeed, Mathf.Min(state.Speed, topSpeed));
                     break;
                 }
 
@@ -317,7 +355,7 @@ namespace TacticalDirector.AgentMovement
             // current velocity direction so momentum is preserved instead of teleported.
             bool voluntarySteering = IsVoluntarySteeringActive(state.CurrentState, command.DesiredState);
             Vector2 velocityTarget = voluntarySteering
-                ? command.TargetPosition - state.Position
+                ? commandOffset
                 : state.Velocity;
             float velocityMaxTurnDeg = voluntarySteering ? maxTurnRate * dt : 0.0f;
 
@@ -399,7 +437,8 @@ namespace TacticalDirector.AgentMovement
             bool[] isCollisionKnockdown,
             float[] collisionForces,
             float dt,
-            float currentTime)
+            float currentTime,
+            ReadOnlySpan<bool> accelerateMovingTracks = default)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
 
@@ -415,7 +454,8 @@ namespace TacticalDirector.AgentMovement
             // Debug.Assert compiles out in release builds (zero hot-path cost).
             Debug.Assert(attrs.Length == states.Length && perfs.Length == states.Length
                 && commands.Length == states.Length && isGoalkeeper.Length == states.Length
-                && isCollisionKnockdown.Length == states.Length && collisionForces.Length == states.Length,
+                && isCollisionKnockdown.Length == states.Length && collisionForces.Length == states.Length
+                && (accelerateMovingTracks.IsEmpty || accelerateMovingTracks.Length == states.Length),
                 "UpdateAllAgents: all arrays must have the same length as states.");
 
             for (int i = 0; i < states.Length; i++)
@@ -426,7 +466,8 @@ namespace TacticalDirector.AgentMovement
                 }
 
                 Update(ref states[i], attrs[i], perfs[i], commands[i], dt, currentTime,
-                       isCollisionKnockdown[i], collisionForces[i]);
+                       isCollisionKnockdown[i], collisionForces[i],
+                       !accelerateMovingTracks.IsEmpty && accelerateMovingTracks[i]);
             }
         }
 
@@ -474,6 +515,49 @@ namespace TacticalDirector.AgentMovement
         //   - JOGGING desired → commandSpeed=SprintEnter: agent in JOGGING range never triggers decel.
         //   - WALKING desired → commandSpeed=JogEnter: jogging agent (>JogEnter) triggers decel.
         //   - IDLE/DECELERATING desired → 0: always triggers decel from any locomotion state.
+        /// <summary>
+        /// §3.5.3.1 tracking law. The point is extrapolated by its velocity over the command's age
+        /// τ = clamp(currentTime − IssueTimeS, 0, <see cref="LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S"/>):
+        /// p* = TargetPosition + TargetVelocity·τ. With e = p* − position and d = |e|, the arrival speed is
+        /// v_arr = √(2·a·max(0, d − d_tol)) — the largest speed from which braking at a = <see cref="LocomotionConstants.MinDecelerationFloor"/>
+        /// (2.5 m/s², the controlled floor) still stops within the remaining distance — with the settle tolerance
+        /// d_tol = <see cref="LocomotionConstants.MinStoppingDistanceM"/> (0.1 m). Desired velocity = v_ff + v_arr·e/d, where the
+        /// feed-forward v_ff is TargetVelocity while τ is within the limit and zero after it (an unrefreshed command freezes).
+        /// Worked example: stationary point 1.0 m ahead ⇒ v_arr = √(2·2.5·0.9) = 2.12 m/s toward it; a point 0.5 m ahead
+        /// moving at 3 m/s along the same line ⇒ 3 + √(2·2.5·0.4) = 4.41 m/s. Pure; zero allocation.
+        /// </summary>
+        internal static Vector2 CalculateTrackDesiredVelocity(in MovementCommand command, Vector2 position, float currentTime)
+        {
+            float age = currentTime - command.IssueTimeS;
+            bool fresh = age <= LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S;
+            float tau = Mathf.Clamp(age, 0.0f, LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S);
+            Vector2 point = command.TargetPosition + command.TargetVelocity * tau;
+            Vector2 feedForward = fresh ? command.TargetVelocity : Vector2.zero;
+
+            Vector2 e = point - position;
+            float d = e.magnitude;
+            float slack = d - LocomotionConstants.MinStoppingDistanceM;
+            if (slack <= 0.0f || d <= MovementThresholds.MIN_VELOCITY_MAGNITUDE)
+                return feedForward;
+
+            float arrive = Mathf.Sqrt(LocomotionConstants.KINEMATIC_HALF * LocomotionConstants.MinDecelerationFloor * slack);
+            return feedForward + e * (arrive / d);
+        }
+
+        /// <summary>
+        /// §3.5.3.1: speed update in JOGGING / SPRINTING for a tracking command. Below the tracked speed the agent accelerates on
+        /// his PHYSICAL curve (toward <paramref name="physicalTopSpeed"/>, the pace / directional / aerobic ceiling) and is clamped
+        /// at the tracked speed — a requested speed limits the speed reached, not the acceleration available to reach it. Above
+        /// it he brakes at the controlled floor (<see cref="LocomotionConstants.MinDecelerationFloor"/>), the rate the arrival
+        /// term assumes, down to the tracked speed.
+        /// </summary>
+        private static float TrackRunningSpeed(float speed, float physicalTopSpeed, float trackedSpeed, float k, float dt)
+        {
+            if (speed <= trackedSpeed)
+                return Mathf.Min(AgentLocomotion.ApplyAcceleration(speed, physicalTopSpeed, k, dt), trackedSpeed);
+            return Mathf.Max(speed - LocomotionConstants.MinDecelerationFloor * dt, trackedSpeed);
+        }
+
         private static float CommandSpeedFromDesiredState(AgentMovementState desiredState)
         {
             switch (desiredState)
@@ -696,4 +780,12 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | ProfilerMarker's actual namespace is Unity.Profiling; the old using was CS0246 under Unity  |
 // |         |            |        | and the Linux compile gate alike, so this assembly could not have compiled in-engine. No    |
 // |         |            |        | functional change.                                                                          |
+// | 1.17    | 2026-11-21 | —      | W13-F5/F6/F7 (ERR-002-001): tracking commands (MovementCommand.IsTracking) — Step 2 lowers the |
+// |         |            |        | band ceiling to |v_ff + v_arr| (CalculateTrackDesiredVelocity, §3.5.3.1) and steers along that  |
+// |         |            |        | desired velocity; JOGGING / SPRINTING accelerate on the physical curve clamped at the tracked    |
+// |         |            |        | speed and brake at MinDecelerationFloor above it; DECELERATING brakes to the tracked speed, not  |
+// |         |            |        | to rest. Non-tracking commands take exactly the prior path.                                     |
+// | 1.18    | 2026-11-23 | —      | ERR-002-002: tight markers tracking fresh moving targets use the capped physical curve in IDLE and WALKING. |
+// | 1.19    | 2026-11-24 | —      | ERR-002-001 review amendment (PR #562): Step 2 passes command.IsTracking to EvaluateState so a   |
+// |         |            |        | tracking agent leaves DECELERATING once braking to the tracked speed is done.                     |
 #endregion

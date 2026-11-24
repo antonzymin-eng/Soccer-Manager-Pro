@@ -45,6 +45,9 @@ namespace TacticalDirector.MatchClientUnity
         private Selectable[] _matchTabOrder;
         private int _pitchEntryIndex = -1;
         private readonly Button[] _setupChoices = new Button[7];
+        private readonly Button[] _markingChoices = new Button[3];
+        private static readonly MarkingScheme[] SetupMarkingSchemes =
+            { MarkingScheme.Mixed, MarkingScheme.Zonal, MarkingScheme.ManOriented };
         private readonly Button[] _mentalityChoices = new Button[7];
         private readonly Text[] _comparisonCurrent = new Text[7];
         private readonly Text[] _comparisonRequested = new Text[7];
@@ -149,6 +152,19 @@ namespace TacticalDirector.MatchClientUnity
             {
                 Mentality value = S0ScreenPresenter.Mentalities[i];
                 _setupChoices[i] = Control(s, _view.MentalityChoice(value), () => _view.SelectSetupMentality(value), _setupScroll);
+            }
+
+            _ui.Label(s, L("context.marking_scheme"), S0UiFactory.TextStyle.Strong);
+            for (int i = 0; i < SetupMarkingSchemes.Length; i++)
+            {
+                MarkingScheme scheme = SetupMarkingSchemes[i];
+                string label = L(scheme switch
+                {
+                    MarkingScheme.Mixed => "marking.mixed",
+                    MarkingScheme.Zonal => "marking.zonal",
+                    _ => "marking.man_oriented",
+                });
+                _markingChoices[i] = Control(s, label, () => _view.SelectSetupMarkingScheme(scheme), _setupScroll);
             }
 
             _setupReady = _ui.Label(s, "");
@@ -646,6 +662,8 @@ namespace TacticalDirector.MatchClientUnity
                 MarkChoice(_mentalityChoices[i], value == _view.RequestedMentality, L("tag.requested"));
             }
 
+            for (int i = 0; i < SetupMarkingSchemes.Length; i++)
+                MarkChoice(_markingChoices[i], SetupMarkingSchemes[i] == _view.SetupMarkingScheme, L("tag.current"));
             S0UiFactory.Set(_setupReady, _view.Text.Format("setup.ready", "setup.ready", _view.MentalityLabel(_view.CurrentMentality)));
             S0UiFactory.Set(_matchScore, _view.Score);
             S0UiFactory.Set(_matchClock, _view.Clock);
@@ -1281,6 +1299,9 @@ namespace TacticalDirector.MatchClientUnity
                 return;
             }
             IReadOnlyList<Button> group = null;
+            foreach (Button b in _markingChoices)
+                if (b.gameObject == selected)
+                    group = _markingChoices;
             foreach (Button b in _setupChoices)
                 if (b.gameObject == selected)
                     group = _setupChoices;

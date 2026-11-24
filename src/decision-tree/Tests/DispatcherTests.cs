@@ -1,6 +1,7 @@
 // File:     src/decision-tree/Tests/DispatcherTests.cs
 // Created:  2026-05-29
-// Modified: 2026-11-12
+// Modified: 2026-11-21 (W13-F5/F6/F7 / ERR-008-029: tracking-command dispatch tests replace the pace-tier tests)
+// Modified (prior): 2026-11-12
 // Author:   —
 // Spec:     Decision Tree #8 §3.5, Code Standards #20
 // Purpose:  Unit tests for ActionDispatcher movement routing. Verifies that HOLD,
@@ -228,100 +229,55 @@ namespace TacticalDirector.DecisionTree.Tests
                 "Dispatcher must pass action.AgentId to SubmitCommand");
         }
 
-        // ── W13.1c (ERR-008-028): the mark-MOVE pace tier ────────────────────
+        // ── W13-F5/F6/F7 (ERR-008-029): the mark-point MOVE is a tracking command ──
 
-        private const float EpsSpeed = 0.01f;
-
-        /// <summary>Tier selection at the JogEnter / SprintEnter boundaries (strict, as the Agent Movement state machine) for a marker standing still, and distance still wins when larger.</summary>
-        [TestCase(0.0f,  3.0f, ActionDispatcher.MoveTier.Walk)]
-        [TestCase(2.2f,  3.0f, ActionDispatcher.MoveTier.Walk)]    // exactly JogEnter: still walking band
-        [TestCase(2.21f, 3.0f, ActionDispatcher.MoveTier.Jog)]     // just above JogEnter
-        [TestCase(5.8f,  3.0f, ActionDispatcher.MoveTier.Jog)]     // exactly SprintEnter: still the jog band
-        [TestCase(5.81f, 3.0f, ActionDispatcher.MoveTier.Sprint)]  // just above SprintEnter
-        [TestCase(9.0f,  3.0f, ActionDispatcher.MoveTier.Sprint)]
-        [TestCase(0.0f,  10.0f, ActionDispatcher.MoveTier.Jog)]    // distance tier larger than the (walking) man
-        [TestCase(0.0f,  20.0f, ActionDispatcher.MoveTier.Sprint)]
-        [TestCase(5.0f,  20.0f, ActionDispatcher.MoveTier.Sprint)] // distance sprint beats a jogging man
-        [TestCase(9.0f,  10.0f, ActionDispatcher.MoveTier.Sprint)] // speed sprint beats a jog distance
-        public void SelectMoveTier_MarkTarget_IsTheLargerOfDistanceAndSpeedTier(float speed, float dist, ActionDispatcher.MoveTier expected)
+        /// <summary>The §3.5.6 distance tier for a non-marking MOVE: Walk below 6 m, Jog from 6 m, Sprint from 15 m (boundaries inclusive).</summary>
+        [TestCase(0.0f, ActionDispatcher.MoveTier.Walk)]
+        [TestCase(5.99f, ActionDispatcher.MoveTier.Walk)]
+        [TestCase(6.0f, ActionDispatcher.MoveTier.Jog)]
+        [TestCase(14.99f, ActionDispatcher.MoveTier.Jog)]
+        [TestCase(15.0f, ActionDispatcher.MoveTier.Sprint)]
+        public void SelectMoveTier_IsTheDistanceTier(float dist, ActionDispatcher.MoveTier expected)
         {
-            Assert.AreEqual(2.2f, MovementThresholds.JogEnter, "precondition: the [CROSS #2] default");
-            Assert.AreEqual(5.8f, MovementThresholds.SprintEnter, "precondition: the [CROSS #2] default");
-            Assert.AreEqual(expected, ActionDispatcher.SelectMoveTier(dist, hasMarkTarget: true, markTargetSpeed: speed, agentSpeed: 0.0f));
+            Assert.AreEqual(expected, ActionDispatcher.SelectMoveTier(dist));
         }
 
         /// <summary>
-        /// ERR-008-028 amendment: the speed tier applies only while the marker is SLOWER than his man. A marker already
-        /// at (or above) his man's speed falls back to the distance tier, whose walk ceiling brakes him; the comparison
-        /// is strict, so equal speeds fall back too. (No hysteresis: a marker at exactly the man's speed alternates
-        /// between the two tiers stride by stride — a recorded limitation.)
+        /// A mark-point MOVE is dispatched as one Agent Movement #2 §3.5.3.1 tracking command — to the action's target, with
+        /// the context's mark-point velocity as feed-forward and the context's match time as the issue time — whatever the
+        /// distance or the man's speed (no walk / jog band is selected here, so nothing can flip stride by stride).
         /// </summary>
-        [TestCase(3.5f, 0.0f, 3.0f, ActionDispatcher.MoveTier.Jog)]     // slower than his man: jog to catch up
-        [TestCase(3.5f, 3.49f, 3.0f, ActionDispatcher.MoveTier.Jog)]
-        [TestCase(3.5f, 3.5f, 3.0f, ActionDispatcher.MoveTier.Walk)]    // exactly as fast: distance tier (walk, 3 m)
-        [TestCase(3.5f, 5.6f, 3.0f, ActionDispatcher.MoveTier.Walk)]    // faster than his man: brake
-        [TestCase(9.0f, 5.0f, 3.0f, ActionDispatcher.MoveTier.Sprint)]  // slower than a sprinting man: sprint
-        [TestCase(9.0f, 9.0f, 3.0f, ActionDispatcher.MoveTier.Walk)]
-        [TestCase(3.5f, 6.0f, 10.0f, ActionDispatcher.MoveTier.Jog)]    // faster than his man but 10 m away: distance jog
-        public void SelectMoveTier_SpeedTierOnlyWhileTheMarkerIsSlowerThanHisMan(float manSpeed, float markerSpeed, float dist, ActionDispatcher.MoveTier expected)
-        {
-            Assert.AreEqual(expected, ActionDispatcher.SelectMoveTier(dist, true, manSpeed, markerSpeed));
-        }
-
-        /// <summary>Off-identity at the tier level: without a mark target neither speed matters and the tier is the distance tier alone.</summary>
-        [TestCase(0.0f, 0.0f)]
         [TestCase(3.0f, 0.0f)]
-        [TestCase(9.0f, 0.0f)]
-        [TestCase(9.0f, 5.0f)]
-        public void SelectMoveTier_NoMarkTarget_IgnoresSpeeds(float manSpeed, float markerSpeed)
-        {
-            Assert.AreEqual(ActionDispatcher.MoveTier.Walk, ActionDispatcher.SelectMoveTier(3.0f, false, manSpeed, markerSpeed));
-            Assert.AreEqual(ActionDispatcher.MoveTier.Walk, ActionDispatcher.SelectMoveTier(5.99f, false, manSpeed, markerSpeed));
-            Assert.AreEqual(ActionDispatcher.MoveTier.Jog, ActionDispatcher.SelectMoveTier(6.0f, false, manSpeed, markerSpeed));
-            Assert.AreEqual(ActionDispatcher.MoveTier.Jog, ActionDispatcher.SelectMoveTier(14.99f, false, manSpeed, markerSpeed));
-            Assert.AreEqual(ActionDispatcher.MoveTier.Sprint, ActionDispatcher.SelectMoveTier(15.0f, false, manSpeed, markerSpeed));
-        }
-
-        /// <summary>Dispatcher level: a near mark point with a 5 m/s man jogs (not walks); with a 9 m/s man it sprints; with a 1 m/s man it walks.</summary>
-        [TestCase(1.0f, AgentMovementState.WALKING)]
-        [TestCase(5.0f, AgentMovementState.JOGGING)]
-        [TestCase(9.0f, AgentMovementState.SPRINTING)]
-        public void Move_MarkPointNear_PacesToTheMarkedMansSpeed(float manSpeed, AgentMovementState expected)
+        [TestCase(3.0f, 2.6f)]
+        [TestCase(10.0f, 5.0f)]
+        [TestCase(20.0f, 9.0f)]
+        public void Move_MarkPoint_IsOneTrackingCommandWithTheMarkVelocity(float distance, float manSpeed)
         {
             RecordingController mc = new RecordingController();
             DecisionContext ctx = BuildContext(agentPos: new Vector2(50f, 34f), ballPos: new Vector2(55f, 34f));
+            Vector2 point = new Vector2(50f + distance, 34f);
             ctx.TacticalContext.HasMarkTarget = true;
-            ctx.TacticalContext.MarkTarget = new Vector2(53f, 34f);
-            ctx.TacticalContext.MarkTargetSpeed = manSpeed;
-            AgentAction action = new AgentAction(0, ActionType.MOVE_TO_POSITION, -1, new Vector2(53f, 34f), default, default, 0.4f, 1);
+            ctx.TacticalContext.MarkTarget = point;
+            ctx.TacticalContext.MarkTargetVelocity = new Vector2(manSpeed, 0.5f);
+            ctx.MatchContext.MatchTimeSeconds = 123.4f;
+            AgentAction action = new AgentAction(0, ActionType.MOVE_TO_POSITION, -1, point, default, default, 0.4f, 1);
 
             ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
 
-            Assert.AreEqual(expected, mc.LastCommand.DesiredState);
+            Assert.IsTrue(mc.LastCommand.IsTracking);
+            Assert.AreEqual(point, mc.LastCommand.TargetPosition);
+            Assert.AreEqual(new Vector2(manSpeed, 0.5f), mc.LastCommand.TargetVelocity);
+            Assert.AreEqual(123.4f, mc.LastCommand.IssueTimeS);
+            Assert.AreEqual(AgentMovementState.SPRINTING, mc.LastCommand.DesiredState, "the band ceiling only; the tracking law sets the speed");
+            Assert.AreEqual(DecelerationMode.CONTROLLED, mc.LastCommand.DecelerationMode);
+            Assert.AreEqual(FacingMode.AUTO_ALIGN, mc.LastCommand.FacingMode);
         }
 
-        /// <summary>ERR-008-028 amendment at the dispatcher: a marker already as fast as his 5 m/s man is commanded the distance tier (WALKING near the point), not JOGGING.</summary>
-        [Test]
-        public void Move_MarkPointNear_MarkerAsFastAsHisMan_FallsBackToTheDistanceTier()
-        {
-            RecordingController mc = new RecordingController();
-            DecisionContext ctx = BuildContext(agentPos: new Vector2(50f, 34f), ballPos: new Vector2(55f, 34f));
-            ctx.TacticalContext.HasMarkTarget = true;
-            ctx.TacticalContext.MarkTarget = new Vector2(53f, 34f);
-            ctx.TacticalContext.MarkTargetSpeed = 5.0f;
-            ctx.AgentState.Velocity = new Vector2(5.0f, 0.0f);
-            AgentAction action = new AgentAction(0, ActionType.MOVE_TO_POSITION, -1, new Vector2(53f, 34f), default, default, 0.4f, 1);
-
-            ActionDispatcher.Dispatch(action, in ctx, mc, null, null);
-
-            Assert.AreEqual(AgentMovementState.WALKING, mc.LastCommand.DesiredState);
-        }
-
-        /// <summary>Dispatcher-level off-identity: with HasMarkTarget false a stale MarkTargetSpeed changes nothing — the commands equal those of a default context for near, mid and far targets.</summary>
-        [TestCase(3f)]
-        [TestCase(10f)]
-        [TestCase(30f)]
-        public void Move_NoMarkTarget_IsUnaffectedByMarkTargetSpeed(float distance)
+        /// <summary>Dispatcher-level off-identity: with HasMarkTarget false a stale MarkTargetVelocity changes nothing — the command is the non-tracking distance-tier command of a default context.</summary>
+        [TestCase(3f, AgentMovementState.WALKING)]
+        [TestCase(10f, AgentMovementState.JOGGING)]
+        [TestCase(30f, AgentMovementState.SPRINTING)]
+        public void Move_NoMarkTarget_IsUnaffectedByMarkTargetVelocity(float distance, AgentMovementState expected)
         {
             Vector2 target = new Vector2(50f + distance, 34f);
             AgentAction action = new AgentAction(0, ActionType.MOVE_TO_POSITION, -1, target, default, default, 0.4f, 1);
@@ -332,9 +288,11 @@ namespace TacticalDirector.DecisionTree.Tests
 
             RecordingController stale = new RecordingController();
             DecisionContext c1 = BuildContext(agentPos: new Vector2(50f, 34f), ballPos: new Vector2(55f, 34f));
-            c1.TacticalContext.MarkTargetSpeed = 9.0f;   // HasMarkTarget stays false
+            c1.TacticalContext.MarkTargetVelocity = new Vector2(9.0f, 0.0f);   // HasMarkTarget stays false
             ActionDispatcher.Dispatch(action, in c1, stale, null, null);
 
+            Assert.AreEqual(expected, stale.LastCommand.DesiredState);
+            Assert.IsFalse(stale.LastCommand.IsTracking);
             Assert.AreEqual(plain.LastCommand.DesiredState, stale.LastCommand.DesiredState);
             Assert.AreEqual(plain.LastCommand.TargetPosition, stale.LastCommand.TargetPosition);
             Assert.AreEqual(plain.LastCommand.FacingMode, stale.LastCommand.FacingMode);
@@ -342,10 +300,10 @@ namespace TacticalDirector.DecisionTree.Tests
         }
 
         [Test]
-        public void MarkTargetSpeed_DefaultsToZero()
+        public void MarkTargetVelocity_DefaultsToZero()
         {
-            Assert.AreEqual(0f, TacticalContext.Stage0Default(new Vector2(50f, 34f)).MarkTargetSpeed);
-            Assert.AreEqual(0f, default(TacticalContext).MarkTargetSpeed);
+            Assert.AreEqual(Vector2.zero, TacticalContext.Stage0Default(new Vector2(50f, 34f)).MarkTargetVelocity);
+            Assert.AreEqual(Vector2.zero, default(TacticalContext).MarkTargetVelocity);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -420,4 +378,5 @@ namespace TacticalDirector.DecisionTree.Tests
 // | 1.2     | 2026-11-12 | —      | W13.1c (ERR-008-028): mark-MOVE pace tier locks — boundary table at JogEnter / SprintEnter, no-mark-target     |
 // |         |            |        |   identity at tier and dispatcher level, dispatcher paces a near mark point to the man's speed.                  |
 // | 1.3     | 2026-11-12 | —      | ERR-008-028 amendment: speed tier only while the marker is slower than his man (strict; equal speeds fall back) — tier table, MoveTier enum, dispatcher brake case; new block moved above the Helpers banner (review L7). |
+// | 1.4     | 2026-11-21 | —      | W13-F5/F6/F7 (ERR-008-029): the pace-tier block replaced — SelectMoveTier is distance-only; a mark-point MOVE is one #2 §3.5.3.1 tracking command (target, MarkTargetVelocity, match time); off-identity with a stale MarkTargetVelocity. |
 #endregion

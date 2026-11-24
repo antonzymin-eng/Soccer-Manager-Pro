@@ -51,6 +51,8 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "host-w8c-fdbbff5a-20261106": ("manifest", FULL_MANIFEST),
     "w13-switch-off-neutrality-20261113": ("manifest", FULL_MANIFEST),
     "host-w13-6491de79-20261113": ("manifest", FULL_MANIFEST),
+    "w13-follow-ups-20261123": ("manifest", FULL_MANIFEST),
+    "w13-flip-measurement-20261121": ("manifest", FULL_MANIFEST),
     "host-w440-b6545169-20261112": ("manifest", FULL_MANIFEST),
     "ball-loose-a-prime-char-20261118": ("manifest", FULL_MANIFEST),
     "host-a-prime-e3029d1a-20261118": ("manifest", FULL_MANIFEST),
@@ -81,6 +83,11 @@ DIRECTORY_CONTRACTS: dict[str, tuple[str, str]] = {
     "header441-reachability-20261020": ("manifest", FULL_MANIFEST),
     "header441-delivery-pilot-20261022": ("manifest", FULL_MANIFEST),
     "header441-current-main-20261120": ("manifest", FULL_MANIFEST),
+    "header441-err010005-20261120": ("manifest", FULL_MANIFEST),
+    "host-err010005-199e5399-20261120": ("manifest", FULL_MANIFEST),
+    "host-err010005-9646b597-20261121": ("manifest", FULL_MANIFEST),
+    "host-w13fu-e6fe2224-20261124": ("manifest", FULL_MANIFEST),
+    "host-pr563-8d240ba4-20261124": ("manifest", FULL_MANIFEST),
 }
 
 # Standalone root metadata is outside a directory-manifest contract but must be

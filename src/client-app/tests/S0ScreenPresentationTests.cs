@@ -182,9 +182,11 @@ namespace TacticalDirector.ClientApp.Tests
         {
             _view.OpenSetup();
             _view.SelectSetupMentality(Mentality.Attacking);
+            _view.SelectSetupMarkingScheme(MarkingScheme.Zonal);
             _view.CancelSetup();
             _view.OpenSetup();
             Assert.AreEqual(Mentality.Balanced, _shell.DraftMentality);
+            Assert.AreEqual(MarkingScheme.Mixed, _view.SetupMarkingScheme);
             Assert.IsFalse(_shell.HasMatch);
             _shell.StartMatchForTests();
             Tick();
@@ -193,6 +195,33 @@ namespace TacticalDirector.ClientApp.Tests
             _view.CancelDialog();
             Assert.AreEqual(0, _shell.Session.Commands.Count);
             Assert.AreEqual(Mentality.Balanced, _view.CurrentMentality);
+        }
+
+        [Test]
+        public void SetupMarkingScheme_RejectsAnUndefinedValueAndKeepsTheDraft()
+        {
+            _view.OpenSetup();
+            _view.SelectSetupMarkingScheme(MarkingScheme.Zonal);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _view.SelectSetupMarkingScheme((MarkingScheme)99));
+            Assert.AreEqual(MarkingScheme.Zonal, _view.SetupMarkingScheme);
+        }
+
+        [TestCase(MarkingScheme.Zonal)]
+        [TestCase(MarkingScheme.ManOriented)]
+        public void SetupMarkingScheme_ReachesTheHomeEngineTactic(MarkingScheme scheme)
+        {
+            _view.OpenSetup();
+            Assert.AreEqual(MarkingScheme.Mixed, _view.SetupMarkingScheme);
+            _view.SelectSetupMarkingScheme(scheme);
+            Assert.AreEqual(scheme, _view.SetupMarkingScheme);
+
+            Assert.IsTrue(_shell.StartMatchForTests());
+            for (int tick = 0; tick < DeterministicSimConstants.AI_PHASE_STRIDE; tick++)
+                Tick();
+
+            Assert.AreEqual(scheme, _shell.Session.TestOnly_Engine.TestOnly_ActiveMarkingScheme(0));
+            Assert.AreEqual(MarkingScheme.Mixed, _shell.Session.TestOnly_Engine.TestOnly_ActiveMarkingScheme(1));
         }
 
         [Test]

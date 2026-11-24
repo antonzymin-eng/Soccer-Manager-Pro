@@ -33,7 +33,7 @@ namespace TacticalDirector.ClientApp.Tests
             var b = new S0TextFormatter();
             Assert.AreEqual(64, a.ContentSha256.Length);
             Assert.AreEqual(a.ContentSha256, b.ContentSha256);
-            Assert.AreEqual(151, S0ScreenContent.All.Count);
+            Assert.AreEqual(155, S0ScreenContent.All.Count);
             var localizer = new Localizer(S0ScreenContent.CreateBaseCatalogue(), null, S0ScreenContent.Coverage());
             foreach (S0TextRole role in S0ScreenContent.All)
             {

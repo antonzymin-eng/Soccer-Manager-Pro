@@ -36,7 +36,7 @@ namespace TacticalDirector.MatchClientCore.Tests
         public ulong CurrentTick => CurrentTickValue;
         public bool MatchEnded => MatchEndedValue;
 
-        public void SetTeamTactic(int teamId, in TeamTactic tactic)
+        public void SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false)
         {
             Calls.Add("team:" + teamId.ToString(CultureInfo.InvariantCulture));
         }

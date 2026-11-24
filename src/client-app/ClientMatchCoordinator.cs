@@ -34,6 +34,9 @@ namespace TacticalDirector.ClientApp
         public ClientScreenFlow Flow { get; }
         /// <summary>Current setup draft; reset on cancel/re-entry.</summary>
         public Mentality DraftMentality { get; private set; } = Mentality.Balanced;
+
+        /// <summary>The home team's marking scheme in the setup draft.</summary>
+        public MarkingScheme DraftMarkingScheme { get; private set; } = MarkingScheme.Mixed;
         /// <summary>Stable source/dispatcher registered for Match View.</summary>
         public ClientMatchScreenHandle MatchView { get; } = new ClientMatchScreenHandle();
         /// <summary>Stable frozen report source.</summary>
@@ -83,6 +86,7 @@ namespace TacticalDirector.ClientApp
             RequireReady();
             Flow.OpenTacticsSetup();
             DraftMentality = Mentality.Balanced;
+            DraftMarkingScheme = MarkingScheme.Mixed;
         }
         /// <summary>Validates a setup-only home Mentality selection.</summary>
         public void SelectMentality(Mentality mentality)
@@ -92,12 +96,24 @@ namespace TacticalDirector.ClientApp
                 throw new InvalidOperationException("Mentality selection requires a valid setup draft.");
             DraftMentality = mentality;
         }
+        /// <summary>Changes the home team's marking scheme before kickoff.</summary>
+        public void SelectMarkingScheme(MarkingScheme scheme)
+        {
+            RequireReady();
+            if (!Enum.IsDefined(typeof(MarkingScheme), scheme))
+                throw new ArgumentOutOfRangeException(nameof(scheme), scheme, "Unknown marking scheme.");
+            if (Flow.Current != ClientScreens.TacticsSetup)
+                throw new InvalidOperationException("Marking scheme selection requires Tactics Setup.");
+            DraftMarkingScheme = scheme;
+        }
+
         /// <summary>Discards setup without a match or observer.</summary>
         public void CancelTacticsSetup()
         {
             RequireReady();
             Flow.CancelTacticsSetup();
             DraftMentality = Mentality.Balanced;
+            DraftMarkingScheme = MarkingScheme.Mixed;
         }
 
         /// <summary>Attaches the real composition before navigating and starting playback exactly once.</summary>
@@ -117,7 +133,7 @@ namespace TacticalDirector.ClientApp
             long attachment = checked(++_attachmentId);
             try
             {
-                MatchSetup setup = _fixture.BuildSetup(DraftMentality);
+                MatchSetup setup = _fixture.BuildSetup(DraftMentality, DraftMarkingScheme);
                 MatchSession session = _lifecycle.CreateSession(setup);
                 MatchIdentityContext identity = _fixture.Bind(session);
                 SessionMatchAnalytics analytics = SessionMatchAnalytics.Attach(session);
@@ -181,6 +197,7 @@ namespace TacticalDirector.ClientApp
             catch { _rejected = true; throw; }
             Flow.ReturnToMainMenu();
             DraftMentality = Mentality.Balanced;
+            DraftMarkingScheme = MarkingScheme.Mixed;
         }
 
         private void RejectAttachment(long attachment)
@@ -226,4 +243,5 @@ namespace TacticalDirector.ClientApp
 // | 1.1     | 2026-10-08 | —      | Expose context only inside ClientApp; seed request state from actual setup. |
 // | 1.2     | 2026-11-03 | —      | Optional career composition, UI completion polling and busy guard. |
 // | 1.3     | 2026-11-05 | —      | §5-P8: compose the career's Transfers and Club Finances registrations (nine screens). |
+// | 1.4     | 2026-11-23 | —      | Reject undefined marking scheme selections with an argument error. |
 #endregion

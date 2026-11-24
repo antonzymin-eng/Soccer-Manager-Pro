@@ -1,6 +1,7 @@
 // File:     src/agent-movement/MovementCommand.cs
 // Created:  2026-05-22
-// Modified: 2026-07-20
+// Modified: 2026-11-21 (W13-F5/F6/F7 / ERR-002-001: Track factory — arrival braking + target-velocity feed-forward)
+// Modified (prior): 2026-07-20
 // Author:   —
 // Spec:     Agent Movement #2 §3.5.3, Code Standards #20
 // Purpose:  Command struct issued by the AI layer each tactical heartbeat (10 Hz).
@@ -40,6 +41,21 @@ namespace TacticalDirector.AgentMovement
         /// </summary>
         public readonly bool OverrideSafetyConstraints;
 
+        /// <summary>
+        /// When true the movement system TRACKS a (possibly moving) point instead of running to a fixed destination:
+        /// the destination is extrapolated at the physics rate from <see cref="TargetPosition"/> by
+        /// <see cref="TargetVelocity"/> since <see cref="IssueTimeS"/>, and the commanded speed is the magnitude of the
+        /// target's velocity plus an arrival term that can always brake to the point (Agent Movement #2 §3.5.3.1).
+        /// False for every other factory (the prior behaviour exactly).
+        /// </summary>
+        public readonly bool IsTracking;
+
+        /// <summary>World-space velocity (m/s, XY) of the tracked point; zero for a stationary point. Read only when <see cref="IsTracking"/>. Agent Movement #2 §3.5.3.1.</summary>
+        public readonly Vector2 TargetVelocity;
+
+        /// <summary>Match-clock time (s, the clock passed to <c>AgentMovementSystem.Update</c>) at which the command was issued; the extrapolation origin. Read only when <see cref="IsTracking"/>. Agent Movement #2 §3.5.3.1.</summary>
+        public readonly float IssueTimeS;
+
         private MovementCommand(
             Vector2 targetPosition,
             AgentMovementState desiredState,
@@ -47,6 +63,20 @@ namespace TacticalDirector.AgentMovement
             FacingMode facingMode,
             Vector2 facingTarget,
             bool overrideSafety)
+            : this(targetPosition, desiredState, decelerationMode, facingMode, facingTarget, overrideSafety, false, Vector2.zero, 0.0f)
+        {
+        }
+
+        private MovementCommand(
+            Vector2 targetPosition,
+            AgentMovementState desiredState,
+            DecelerationMode decelerationMode,
+            FacingMode facingMode,
+            Vector2 facingTarget,
+            bool overrideSafety,
+            bool isTracking,
+            Vector2 targetVelocity,
+            float issueTimeS)
         {
             TargetPosition = targetPosition;
             DesiredState = desiredState;
@@ -54,6 +84,35 @@ namespace TacticalDirector.AgentMovement
             FacingMode = facingMode;
             FacingTarget = facingTarget;
             OverrideSafetyConstraints = overrideSafety;
+            IsTracking = isTracking;
+            TargetVelocity = targetVelocity;
+            IssueTimeS = issueTimeS;
+        }
+
+        /// <summary>
+        /// Track a point that moves at <paramref name="targetVelocity"/> (Agent Movement #2 §3.5.3.1): arrive on it and stay
+        /// on it, braking within the controlled floor so a stationary point is settled on rather than orbited, and matching a
+        /// moving point's velocity rather than its speed band. DesiredState SPRINTING is the band CEILING only — the tracking
+        /// law sets the speed below it; CONTROLLED braking; AUTO_ALIGN facing. <paramref name="issueTimeS"/> is the match-clock
+        /// time of issue (the clock the movement system receives). Non-finite inputs are rejected by the caller's contract
+        /// (Debug.Assert) and neutralised by the integrator's safety step.
+        /// </summary>
+        public static MovementCommand Track(Vector2 target, Vector2 targetVelocity, float issueTimeS)
+        {
+            Debug.Assert(float.IsFinite(target.x) && float.IsFinite(target.y)
+                         && float.IsFinite(targetVelocity.x) && float.IsFinite(targetVelocity.y)
+                         && float.IsFinite(issueTimeS),
+                "MovementCommand.Track: target, targetVelocity and issueTimeS must be finite.");
+            return new MovementCommand(
+                target,
+                AgentMovementState.SPRINTING,
+                DecelerationMode.CONTROLLED,
+                FacingMode.AUTO_ALIGN,
+                target,
+                false,
+                true,
+                targetVelocity,
+                issueTimeS);
         }
 
         /// <summary>
@@ -95,6 +154,33 @@ namespace TacticalDirector.AgentMovement
                 facingMode,
                 facingTarget,
                 overrideSafetyConstraints);
+        }
+
+        /// <summary>
+        /// The full-field snapshot-restore factory, including the tracking fields (§3.5.3.1). Restore path only, like the
+        /// six-field overload above (which equals this with <paramref name="isTracking"/> false and zero tracking fields).
+        /// </summary>
+        public static MovementCommand ReconstructFromSnapshot(
+            Vector2 targetPosition,
+            AgentMovementState desiredState,
+            DecelerationMode decelerationMode,
+            FacingMode facingMode,
+            Vector2 facingTarget,
+            bool overrideSafetyConstraints,
+            bool isTracking,
+            Vector2 targetVelocity,
+            float issueTimeS)
+        {
+            return new MovementCommand(
+                targetPosition,
+                desiredState,
+                decelerationMode,
+                facingMode,
+                facingTarget,
+                overrideSafetyConstraints,
+                isTracking,
+                targetVelocity,
+                issueTimeS);
         }
 
         /// <summary>Move to position at whatever speed the state machine allows.</summary>
@@ -218,4 +304,7 @@ namespace TacticalDirector.AgentMovement
 // | 1.5     | 2026-07-20 | —      | Snapshot-deserialize Phase 1 (KD-2): ReconstructFromSnapshot factory — restores an  |
 // |         |            |        | arbitrary held command verbatim from its serialized field set (the intent factories |
 // |         |            |        | cannot express every combination). Snapshot-restore path only.                      |
+// | 1.6     | 2026-11-21 | —      | W13-F5/F6/F7: IsTracking / TargetVelocity / IssueTimeS fields, the Track factory    |
+// |         |            |        | (§3.5.3.1) and the full-field ReconstructFromSnapshot overload. Every pre-existing  |
+// |         |            |        | factory leaves the new fields false/zero, so its behaviour is unchanged.            |
 #endregion

@@ -1,6 +1,6 @@
 // File:     src/agent-movement/AgentStateMachine.cs
 // Created:  2026-05-22
-// Modified: 2026-06-07 (AR-11 fix pass)
+// Modified: 2026-11-21 (ERR-002-001 review amendment)
 // Author:   —
 // Spec:     Agent Movement #2 §3.1.4–§3.1.7, Code Standards #20
 // Purpose:  Pure state evaluation for movement state transitions. No side effects.
@@ -37,7 +37,8 @@ namespace TacticalDirector.AgentMovement
             float aerobicPool,
             bool isCollisionKnockdown,
             float collisionForce,
-            GroundedReason groundedReason)
+            GroundedReason groundedReason,
+            bool isTracking)
         {
             // Boundary assert mirroring PerformanceContext.EvaluateAttribute (AR-7 L-1):
             // raw player attributes are integers in [1, 20] per Spec #2 §3.5.1. `default(PlayerAttributes)`
@@ -81,7 +82,7 @@ namespace TacticalDirector.AgentMovement
                     return EvaluateFromSprinting(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir, aerobicPool);
 
                 case AgentMovementState.DECELERATING:
-                    return EvaluateFromDecelerating(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir, aerobicPool);
+                    return EvaluateFromDecelerating(speed, commandSpeed, turnAngle, balance, agility, sprintReservoir, aerobicPool, isTracking);
 
                 case AgentMovementState.STUMBLING:
                     return EvaluateFromStumbling(speed, dwellTimer, balance);
@@ -208,7 +209,7 @@ namespace TacticalDirector.AgentMovement
 
         private static AgentMovementState EvaluateFromDecelerating(
             float speed, float commandSpeed, float turnAngle,
-            int balance, int agility, float sprintReservoir, float aerobicPool)
+            int balance, int agility, float sprintReservoir, float aerobicPool, bool isTracking)
         {
             if (speed < MovementThresholds.IdleEnter)
             {
@@ -227,7 +228,13 @@ namespace TacticalDirector.AgentMovement
                 return AgentMovementState.WALKING;
             }
 
-            if (commandSpeed > speed + MovementThresholds.CommandSpeedHysteresis)
+            // §3.5.3.1 (ERR-002-001 review amendment): a tracking agent's braking ends at the tracked speed, where the
+            // DECELERATING brake floor holds it. Its command can then never exceed speed + hysteresis, so the agent
+            // re-enters the running band of its speed once braking is done (commandPermitsWalking: the command no longer
+            // demands it) instead of staying DECELERATING with jogging fatigue at any speed. Non-tracking agents keep the
+            // prior rule: they brake on toward the command and re-accelerate only on a renewed demand.
+            if (commandSpeed > speed + MovementThresholds.CommandSpeedHysteresis
+                || (isTracking && commandPermitsWalking))
             {
                 if (speed > MovementThresholds.SprintEnter
                     && sprintReservoir >= MovementThresholds.SprintReservoirReentry)
@@ -382,4 +389,7 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | AgentMovementSystem.Update is the only caller and always supplies the cached                 |
 // |         |            |        | state.CollisionForce + state.GroundedReason explicitly. Defaults were also misleading        |
 // |         |            |        | after the AR-9 M-1 contract change (cached entry-force, not this-frame impulse).             |
+// | 1.11    | 2026-11-21 | —      | ERR-002-001 review amendment (PR #562): EvaluateState takes isTracking (no default, per AR-11). |
+// |         |            |        | A tracking agent in DECELERATING whose command no longer demands braking re-enters JOGGING / |
+// |         |            |        | SPRINTING by its speed; the brake floor had held it DECELERATING at the tracked speed.       |
 #endregion

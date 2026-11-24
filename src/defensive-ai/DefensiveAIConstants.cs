@@ -1,6 +1,7 @@
 // File:     src/defensive-ai/DefensiveAIConstants.cs
 // Created:  2026-05-29
-// Modified: 2026-11-18 (A′ / ERR-014-011 — §3.6.5.8 BallLoose knock: 3 [GT] TackleLoosePokeK, TackleLoosePokeMinSpeedMS, TackleLooseCarryK + 1 [FIXED] TACKLE_LOOSE_COINCIDENT_M)
+// Modified: 2026-11-21 (W13-F8 / ERR-014-012: MarkStandoffTightM doc — contact floor applied by the composition root; W13 flip comment; no value change)
+// Modified (prior): 2026-11-18 (A′ / ERR-014-011 — §3.6.5.8 BallLoose knock: 3 [GT] TackleLoosePokeK, TackleLoosePokeMinSpeedMS, TackleLooseCarryK + 1 [FIXED] TACKLE_LOOSE_COINCIDENT_M)
 // Modified: 2026-11-12 (W13.1c final pass: MarkStandoffTightM doc records the body-contact limitation, W13-F8; no value change)
 // Modified: 2026-11-10 (W13.1 / ERR-014-010 — the §3.13.1 mark stand-off: 2 [GT] (MarkStandoffM, MarkStandoffTightM) + 1 [DERIVED] OwnGoalCenter)
 // Modified: 2026-08-12 (wiring backlog W2 / ERR-014-006 — the §3.6.5 tackle-outcome constants: 10 [GT] + 1 [FIXED])
@@ -13,6 +14,7 @@
 using UnityEngine;
 
 using TacticalDirector.PressingAI;
+using TacticalDirector.TacticalInstructions;
 using static TacticalDirector.ProjectConstants.GameplayConfigHolder;
 
 namespace TacticalDirector.DefensiveAI
@@ -339,6 +341,18 @@ namespace TacticalDirector.DefensiveAI
         /// </summary>
         public static readonly int MaxManMarkAssignments = Config.GetInt("defensive-ai", "MaxManMarkAssignments", 4);
 
+        // [GT] Invariant 1/2 limits by scheme ordinal. Zonal uses Mixed's legacy tackle assignments.
+        // The ManOriented row is uncalibrated.
+        private static readonly (int Backline, int ManMarks)[] MarkingLimits =
+        {
+            (MinBacklineAgents, MaxManMarkAssignments),
+            (MinBacklineAgents, MaxManMarkAssignments),
+            (Config.GetInt("defensive-ai", "ManOrientedMinBacklineAgents", 2),
+             Config.GetInt("defensive-ai", "ManOrientedMaxManMarkAssignments", 5)),
+        };
+
+        internal static (int Backline, int ManMarks) LimitsFor(MarkingScheme scheme) => MarkingLimits[(int)scheme];
+
         /// <summary>
         /// [GT] Maximum displacement (m) of a non-ZONAL assignment from the agent's #12
         /// baseline anchor. Invariant 3 in §3.10 (FR-DA-027). Defensive AI #14 §6.1.
@@ -351,7 +365,8 @@ namespace TacticalDirector.DefensiveAI
         // defender (the stand-off is the distance a marker holds goal-side of his man; nobody has ever
         // marked anyone in this engine). KD-W1 permits new dials on a not-yet-wired surface and forbids
         // tuning them there; they are the calibration pass's input, not its output. They are inert
-        // while MatchEngineConstants.MarkMovementEnabled is false (the shipped default).
+        // while MatchEngineConstants.MarkMovementEnabled is false (the shipped default until the W13 flip of
+        // November 21, 2026; now true, so they are live).
 
         /// <summary>
         /// [GT] Stand-off (m) a marking defender holds goal-side of his marked opponent: the §3.13.1
@@ -367,12 +382,11 @@ namespace TacticalDirector.DefensiveAI
         /// <summary>
         /// [GT] Stand-off (m) used instead of <see cref="MarkStandoffM"/> when the marking agent's #21
         /// <c>PlayerInstructions.TightMarking</c> is set (#21 §3.4, via <see cref="TacticTranslation.MarkStandoffM"/>).
-        /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. KNOWN LIMITATION (open issue
-        /// W13-F8, blocks the default flip): 1.0 m is at or below the body-contact separation of two players, so against a MOVING
-        /// (and a stationary) man the marker stops in contact beside him — measured 0.82-0.84 m, level with him, not goal-side on
-        /// 54 of 60 strides away / 1 home against a 2.6 m/s runner — rather than 1.0 m goal-side. Whether the constant, a
-        /// contact-aware stand-off floor or the goal-side criterion should change is a calibration / owner decision (KD-W1:
-        /// not tuned here). Config key [defensive-ai] MarkStandoffTightM. Defensive AI #14 §3.13.1 / §6.1.
+        /// UN-CALIBRATED. Range invariant: <c>0 &lt; MarkStandoffTightM &lt; MarkStandoffM</c>. The composition root applies a contact
+        /// floor of the two #2 hitbox radii + 0.1 m on top of it (ERR-014-012, W13-F8), so a settled marker is clear of his man's body:
+        /// with Strength 10 both, the floor (0.94 m) is below 1.0 m and this value governs.
+        /// Config key [defensive-ai] MarkStandoffTightM.
+        /// Defensive AI #14 §3.13.1 / §6.1.
         /// </summary>
         public static readonly float MarkStandoffTightM = Config.GetFloat("defensive-ai", "MarkStandoffTightM", 1.0f);
 
@@ -423,4 +437,6 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        | by test) and the first [DERIVED] region, OwnGoalCenter (0, PITCH_WIDTH_M / 2). |
 // | 1.5     | 2026-11-12 | —      | W13.1c final pass: MarkStandoffTightM documents the known body-contact limitation (W13-F8); doc only, value unchanged. |
 // | 1.6     | 2026-11-18 | —      | A′ / ERR-014-011: + §3.6.5.8 BallLoose knock — [GT] TackleLoosePokeK 0.6, TackleLoosePokeMinSpeedMS 2.0 m/s, TackleLooseCarryK 0.5 (UN-CALIBRATED; owner decision D1) and [FIXED] TACKLE_LOOSE_COINCIDENT_M 0.01 m (degenerate-direction guard). |
+// | 1.7     | 2026-11-21 | —      | W13-F8 / ERR-014-012: MarkStandoffTightM doc records the composition root's contact floor and the residual; flip comment. No value change. |
+// | 1.8     | 2026-11-23 | —      | W13.2: add the uncalibrated per-scheme Invariant 1 and 2 limits. |
 #endregion

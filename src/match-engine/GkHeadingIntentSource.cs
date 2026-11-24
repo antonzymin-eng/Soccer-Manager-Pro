@@ -1,5 +1,7 @@
 // File:     src/match-engine/GkHeadingIntentSource.cs
 // Created:  2026-07-22
+// Modified: 2026-11-20 (ERR-010-005: NearestHeaderCandidate takes the ball velocity and skips an agent the
+//           ball is moving away from — the §4.2 "moving toward them" condition the trigger had dropped)
 // Modified: 2026-09-22 (W3 comment sync: GkRushMaxBallHeightM is the W1 rush ceiling, not a claim-height contract; W3 is live)
 // Modified: 2026-08-04 (wiring backlog W1: + RushArmed / TrySolveRushIntercept — the keeper rush trigger geometry. See docs/tracking/gk-rush-trigger-design.md)
 // Modified: 2026-08-04 (ERR-011-010 + AR-1: goal-side cover replaces the rejected last-man test; + the minimum-run guard that stops a completed sweep re-arming. See docs/tracking/gk-rush-trigger-design.md)
@@ -411,11 +413,17 @@ namespace TacticalDirector.MatchEngine
         }
 
         /// <summary>§4.2: the single nearest active outfield agent within head range of a loose airborne
-        /// ball, or −1 when none qualifies. Deterministic tie-break: the LATER index wins (the <c>&lt;=</c>
-        /// compare), matching the engine's original scan. Pure — the caller owns the per-episode latch and
-        /// the airborne/loose gate result passed in as <paramref name="airborneLoose"/>.</summary>
+        /// ball that is not moving away from them, or −1 when none qualifies. Deterministic tie-break: the
+        /// LATER index wins (the <c>&lt;=</c> compare), matching the engine's original scan. Pure — the
+        /// caller owns the per-episode latch and the airborne/loose gate result passed in as
+        /// <paramref name="airborneLoose"/>.
+        /// <para>ERR-010-005 approach condition: the agent qualifies only when the ball's horizontal
+        /// velocity does not point away from them, <c>v_xy · (p_agent − p_ball)_xy ≥ 0</c> [m²/s]. Equality
+        /// keeps a ball directly overhead or with no horizontal motion eligible. Before this, a ball the
+        /// passer had just struck (still within head range) committed the passer: #441 §6.7 measured
+        /// 1,600 of 1,702 pass-attributed commits by the passer. No constant is added.</para></summary>
         public static int NearestHeaderCandidate(
-            in Vector3 ballPosition, bool airborneLoose,
+            in Vector3 ballPosition, in Vector3 ballVelocity, bool airborneLoose,
             AgentState[] agents, bool[] isGoalkeeper, bool[] isSentOff, int count)
         {
             if (!airborneLoose)
@@ -435,7 +443,9 @@ namespace TacticalDirector.MatchEngine
                 float dx = ap.x - ballPosition.x;
                 float dy = ap.y - ballPosition.y;
                 float dSq = dx * dx + dy * dy;
-                if (dSq <= nearestSq)
+                // ERR-010-005: skip an agent the ball is moving away from (dx, dy point ball → agent).
+                float closing = ballVelocity.x * dx + ballVelocity.y * dy;
+                if (dSq <= nearestSq && closing >= 0f)
                 {
                     nearestSq = dSq;
                     nearest = i;
@@ -491,4 +501,5 @@ namespace TacticalDirector.MatchEngine
 // |         |            |        | dz = 0, which a header never sees. No logic change.                |
 // | 1.5     | 2026-09-22 | —      | W3 / ERR-011-012: ClaimArmed no longer reuses the 2.5 m rush max as a claim floor. Loose + inside #11's contest radius arms; #11 reach geometry alone decides contact height. |
 // | 1.6     | 2026-09-22 | —      | Comment-only W3 sync: RushArmed's 2.5 m gate is explicitly the W1 rush ceiling, not a claim-height threshold; removes stale text saying W3 was still unwired. |
+// | 1.7     | 2026-11-20 | —      | ERR-010-005: NearestHeaderCandidate gains ballVelocity and the §4.2 approach condition v_xy · (agent − ball)_xy ≥ 0; a ball moving away (the passer's own pass, #441 §6.7) no longer selects that agent. No new constant, state, schema or RNG change. |
 #endregion
