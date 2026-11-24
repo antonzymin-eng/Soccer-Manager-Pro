@@ -1,6 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 20, 2026 — v1.12: Record the #44 T3 implementation and its fixture outcome contract.
+**Last Updated:** November 24, 2026 — v1.13: Engine lane item 4 ran and FAILED. With the shipped constants, KD-8's mean bar fails on the PM-2 engine (~10 goals/match), and the authorized refit also fails because of KD-7's `LambdaMax` clamp. No refit landed; owner decision ([open issue](open-issues.md#pm2-quick-sim-scale-mismatch)).
+
+**Last Updated (prior):** November 20, 2026 — v1.12: Record the #44 T3 implementation and its fixture outcome contract.
 
 **Last Updated (prior):** November 20, 2026 — v1.11: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
 
@@ -572,6 +574,11 @@ decided.
 4. **Quick-sim check for PM-2 (S/M).** After W8 C, #434/#440 and career-lane item 5 (#44 T3):
    recapture A4a on the PM-2 engine and check KD-8's mean bar; refit the means only if it fails.
    ERR-030-034's shape gap is stated as a known PM-2 limitation (D-09). This is not a freeze.
+   **Ran November 24, 2026 on `45d32d1`: FAILED; no refit landed; owner decision required**
+   ([artifact](round-resolution-corpus-pm2-check.md), [open issue](open-issues.md#pm2-quick-sim-scale-mismatch)).
+   Step 0 passed. With the shipped constants the mean bar fails (χ² 693.9 on 19 dof against 30.1),
+   because the engine now scores 10.28 goals/match at balanced strength (August: 2.70). The refit
+   D-09 allows also fails (χ² 180.4): 8 of 22 cells sit on KD-7's unfitted `LambdaMax` = 6.0 clamp.
 5. **#441, then W9/W10 (S/M, then conditional M/L).** See the [#441 post-C diagnosis](header-reachability-441-counters.md#67-current-main-rerun--november-20-2026). A
    gameplay repair needs a failing-before/passing-after composed regression. W9 after #441 and D-06;
    W10 after B→C closes. None of these blocks PM-2 (D-08).
@@ -1002,6 +1009,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.13 | November 24, 2026 | Engine lane item 4 run: A4a recaptured on `45d32d1`. With the shipped constants, KD-8's mean bar FAILS, and the D-09 refit also fails on KD-7's `LambdaMax` clamp. No `[GT]` moved; owner decision recorded as an open issue. |
 | v1.12 | November 20, 2026 | #44 T3 implementation and outcome contract recorded. T3 is independent of UI Toolkit T0a and precedes the PM-2 A4a recapture. |
 | v1.11 | November 20, 2026 | Record owner decision D-16 (UI Toolkit for menus and management screens; UGUI for the match pitch) in the decision register and §7; link the new design supplement. Owner answered Q1: the migration starts now, alongside PM-2; career-lane item 4 note records the PM-2 dependency and the owner-confirmed fallbacks (Q5, extended by Q6; PR #560 review). |
 | v1.10 | November 20, 2026 | C3: Career Home standings paged for keyboard reach at 200% after the second `52d1f000` run. |
