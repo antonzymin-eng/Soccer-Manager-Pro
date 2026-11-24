@@ -1,0 +1,25 @@
+# Source identity — pinned-host Unity run of PR #561 (codex/quick-sim-card-synthesis)
+
+commit: 79ee78548111e05eba53dd21d88a0d4ad21738e4 ("Merge main (#562, #564, #563) into PR #561")
+parents: c1c93a4b87b5317f3402ce0a66c80e95747189a8 (PR #561 head before the merge)
+         4e3c96054a034f81ac8556c55cde6572d506e0e7 (main with PR #563 merged)
+tree (root): df49d29f87167a31d4b66831e6d1fe1dc272e5ca
+tree src: 36fd908b0a8a61c8b279c6cdb149caa66d0e1d96
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 070170334b81ce03dfccc4f26025f1cbfd7a0f63
+tree docs/design: 8a4f312496175a4571f3853642c45eb147d0ac3d
+
+worktree: detached git worktree, sparse checkout of /Assets/ /Packages/ /ProjectSettings/ /src/ /docs/design/
+Assets/Scripts: directory junction -> <worktree>/src
+Library before compile: absent (new worktree; the compile rebuilt 1,150 of 1,203 build items)
+git status --short after all runs: 0 lines
+
+compile start: 2026-11-24T19:09:30Z
+compile end: 2026-11-24T19:11:04Z, exit 0
+full EditMode start: 2026-11-24T19:11:04Z (NUnit start 2026-11-24 19:11:18Z)
+full EditMode end: 2026-11-24T20:07:28Z (NUnit end 2026-11-24 20:07:23Z, 3,365 s), exit 2
+
+unity: 6000.4.9f1 (f7258d6eebbe), revision 16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+owner's Editor: open on the main checkout throughout; not attached to this worktree
