@@ -14,7 +14,7 @@ top of the VERSION HISTORY table. Do not edit historical entries.
 
 ## Header chain
 
-> **Last Updated:** November 24, 2026 — **v2.250 — ERR-002-001 review amendment (PR #563, merged with main `2d89e45a`).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.19 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.2 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`. These labels follow main's v1.18 / v1.1 (ERR-002-002, PR #564); the branch first used v1.18 / v1.1 and v2.248.
+> **Last Updated:** November 24, 2026 — **v2.250 — ERR-002-001 review amendment (PR #563, merged with main `2d89e45a`).** `src/agent-movement/AgentStateMachine.cs` v1.11: `EvaluateState` takes `isTracking` (no default, per AR-11). In DECELERATING a tracking agent whose command no longer demands braking re-enters SPRINTING / JOGGING by its speed. `AgentMovementSystem.cs` v1.19 passes `command.IsTracking`. `Tests/AgentMovementTrackingTests.cs` v1.2 adds `DeceleratingOntoASteadyPoint_AtItsSpeed_ReentersTheRunningBand`. Owner call under KD-W1 (November 24, 2026): `MatchEngineCloseChanceScenarios.cs` v1.3 loosens the cosine bound −0.16 → −0.26 and the share bound 0.42 → 0.37, and `MatchEngineKeeperContactScenarios.cs` v1.2 relaxes contacts > crossings to ≥; each still refuses its pre-fix world. These labels follow main's v1.18 / v1.1 (ERR-002-002, PR #564); the branch first used v1.18 / v1.1 and v2.248.
 
 > **Last Updated (prior):** November 23, 2026 — **v2.249 — W13 client review.** Browser intents carry marking scheme retention through the dispatcher, command queue and replay. `MatchEngine` v2.29 stages the tactic with the pending scheme when requested, and `ManagerAdaptation` v1.3 uses the same staging path. S0 validates the selector argument and tests both non-default schemes through the first tactical stride. The goalward run logs the minimum gap across physics ticks.
 
@@ -2992,7 +2992,7 @@ ERRs: ERR-031-014/015; ERR-028-028 widened. Round 5 returned 0 High and 1 Medium
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 2.250 | 2026-11-24 | — | ERR-002-001 review amendment (PR #563): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`). |
+| 2.250 | 2026-11-24 | — | ERR-002-001 review amendment (PR #563): a tracking agent leaves DECELERATING at the tracked speed (`AgentStateMachine.EvaluateState` `isTracking`); close-chance and keeper-contact bounds loosened (owner call, KD-W1). |
 | 2.249 | 2026-11-23 | — | W13: preserve browser marking schemes at stage time, test S0 kickoff and report per-frame goalward clearance. |
 | 2.248 | 2026-11-23 | — | W13: tracking acceleration, v31 marking schemes and preset retention, per-scheme invariants, §10 capture and cause-specific grounded counts. |
 | 2.247 | 2026-11-21 | — | W13 F5–F10: #2 tracking command (`Track`, v30 snapshot), #8 tracking MOVE (`MarkTargetVelocity`), #14 Step 8a tackle reconciliation and stand-off contact floor; `MarkMovementEnabled` default true. |
