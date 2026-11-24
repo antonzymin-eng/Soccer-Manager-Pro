@@ -1,7 +1,8 @@
 # Discipline & Suspensions #44 — Section 5: Test Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, following the M18 pass (v0.9 — reviewed-findings pass, three
+**Last Updated:** November 20, 2026 (v0.10 — Record quick-sim card verification at the season-loop entry point.)
+**Last Updated (prior):** August 16, 2026, following the M18 pass (v0.9 — reviewed-findings pass, three
 findings. **M-1:** T-DC-FOLD-003 gains the fifth seed/substitution-boundary test citation the M18 pass
 left out (`Constructor_OnPitchAgentIdCountOutOfRange_Throws`), matching `section-2.md` v0.16's
 count correction. **M-2(b):** T-DC-BAN-003 and §5.6's FR-DC-011 row gain the three roster-membership
@@ -57,7 +58,7 @@ return, ERR-044-005), **T-DC-SAV-003** (F2's negative-`PlayerId` refusal at both
 §5.6 updated to reflect the corrected table; §9's G14 re-checked against it and left unchanged — see
 that section's own version history for the verification note.)
 **Last Updated (prior):** July 24, 2026 (v0.3 — cross-set AR pass 3; prior v0.2 PASS-1, v0.1 initial)
-**Version:** 0.9
+**Version:** 0.10
 **Status:** APPROVED
 
 ---
@@ -68,7 +69,8 @@ that section's own version history for the verification note.)
   the same fixture unobserved (the `match-viewer` lock; FR-DC-003) —
   `SeasonLoopDisciplineTests.ARealEngineFixtureFoldsItsCardsOntoPlayerRecordsAndChangesNothingElse`.
   **The neutrality assertion alone is satisfied by a fold that never runs**, so that test pairs it
-  with a positive control (`tally.Count > 0` over a real 90-minute fixture) and an attribution check;
+  with a positive control (cards on the engine fixture's two rosters) and an attribution check
+  (the rest of the tally matches the quick-sim fixtures);
   a row asking only for digest-identity would be ERR-030-014's shape one layer up.
 - **T-DC-NEU-002** — a season with no threshold-crossing cards is byte-identical to pre-#44
   except #44's own sub-blob (the filter passes every squad through unchanged; FR-DC-018). The
@@ -380,9 +382,13 @@ one such case, **FR-DC-020**, tracked as a §9.2 follow-up.
 T-DC-SAV-003, and **F5** by the T-DC-BAN-004 withdrawal record (ERR-044-003 — a fail-loud #44 no
 longer performs; #30 §2.3 F9 owns the event).
 
-**Deferrals (§7.2), unchanged and out of scope for the map above:** the #30-owned quick-sim card
-synthesis (T3), #43 competition partitions over the FR-DC-012 key, and the #31 FR-TX-022 hygiene-hook
-wiring — each locked at its minimal boundary today.
+**Quick-sim coverage (T3).** `SeasonLoopDisciplineTests.QuickSimCards_FollowTheFieldedElevensAndSurviveSaveRestore`
+checks both XIs, opening-round scoreline parity, new ban timing, and save continuation.
+`SeasonLoopTests.PermutedFixtureOrderWithinARound_YieldsAnIdenticalTable` checks the tally alongside
+the table when the fixture order is reversed.
+
+**Deferrals (§7.2).** #43 competition partitions over the FR-DC-012 key and the #31 FR-TX-022
+hygiene-hook wiring remain at their minimal boundaries.
 
 #region VersionHistory
 | Version | Date | Author | Notes |
@@ -396,4 +402,5 @@ wiring — each locked at its minimal boundary today.
 | 0.7 | 2026-08-16 | — | **Final fixer pass, M10 (third and final correction) + a version-row ordering fix.** §5.4's residue paragraph was itself stale, a third time: v0.6's "the real residue is `T-DC-BAN-004`, recorded not fixed" was true when written but `AvailabilityTests.cs` v1.4 (L6, the SAME day, August 15) removed that id too — verified directly against the file's current header (`§5 T-DC-VIEW-002, T-DC-BAN-005`, no retired id of either kind). The residue paragraph is deleted and replaced with a one-line dated closure note per this file's own annotate-in-place convention; nothing is left to record. `spec-error-log.md`'s `ERR-044-006` row (which still carries the original, also-false, "line 7 / T-DC-VIEW-001" claim) is annotated in place in the same commit — see that entry. **Also fixed:** this table's v0.5 row was published ahead of v0.4 (`tools/recurring-defect-lint.py`'s out-of-order-version check) — the two rows are swapped above into chronological order; no row's content changed, only its position. |
 | 0.8 | 2026-08-16, latest of all | — | **Reviewed-findings pass, finding M18.** Four refusals landed and unit-tested in `CardLedgerFoldTests.cs` had no §5.2 citation: **T-DC-FOLD-003** extended with the seed/substitution boundary refusals (`ERR-044-021`/`ERR-044-022`) — `Constructor_SeedMapsOnePlayerToTwoAgentIds_ThrowsAndNamesBothIdsAndThePlayer`, `Substitution_OutgoingEqualsIncoming_Throws`, `Substitution_WithAnOccupiedOnPitchIncoming_ThrowsInsteadOfDestroyingTheOutgoingsMapping`, `Substitution_WithABenchOutgoing_Throws`; new **T-DC-FOLD-005 (F7, `ERR-044-020`)** — `ObserveTick_SkippedTick_ThrowsAndNamesBothTicks`, `ObserveTick_AfterPartialTickFailure_LatchesAndRefusesEvenAConsecutiveTick`. §5.6's **FR-DC-002** row corrected `Construction` → `Test + Construction`, naming T-DC-FOLD-005 as what now carries the row's "lossless" clause. `section-2.md` v0.15 in the same commit adds the matching §2.3 F1/F7 rows. |
 | 0.9 | 2026-08-16, following the M18 pass | — | **Reviewed-findings pass, three findings.** **M-1:** T-DC-FOLD-003 gains the fifth seed/substitution-boundary citation the M18 pass's "four" miscount left out — `Constructor_OnPitchAgentIdCountOutOfRange_Throws` (`ERR-044-022`'s `onPitchAgentIdCount` range guard), landed by a parallel fixer the same day; `section-2.md` v0.16 corrects the matching count in place. **M-2(b):** closes the one still-open item of `ERR-044-014`'s "RECORDED, NOT FIXED" list — T-DC-BAN-003 gains the three roster-membership tests (`OnClubFixturePlayed_ServesByRosterMembership_NotByThePackedIdDerivation`, `..._OverAPackedRoster_ServesExactlyWhatTheRetiredDerivationServed`, `..._NullClubPlayerIds_Throws`), which existed and were green at the `ERR-044-014` landing but had never been cited here; §5.6's FR-DC-011 row updated to name them. **L-B:** T-DC-INT-001's FR-DC-020 sub-row re-derives its `grep -nE "\b(float\|double\|decimal)\b" src/discipline/*.cs` count — five lines at the August 15, 2026 measurement, ten today, all ten still prose — and drops reliance on the exact number for the property the row actually asserts. See `spec-error-log.md`'s `ERR-044-014` row for the M-2(b) closure note. |
+| 0.10 | 2026-11-20 | — | Record quick-sim card verification at the season-loop entry point. |
 #endregion

@@ -1,6 +1,8 @@
 # Path to Playable — Implementation Roadmap
 
-**Last Updated:** November 20, 2026 — v1.11: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
+**Last Updated:** November 20, 2026 — v1.12: Record the #44 T3 implementation and its fixture outcome contract.
+
+**Last Updated (prior):** November 20, 2026 — v1.11: Record owner decision D-16: UI Toolkit becomes the client rendering technology for menus and management screens, with UGUI kept for the match pitch and effects-heavy pieces. The migration starts now, alongside PM-2 (Q1); the #38 amendment and the remaining questions are open in the [UI Toolkit presentation design](ui-toolkit-presentation-design.md).
 
 **Last Updated (prior):** November 20, 2026 — v1.10: C3's Career Home standings are paged for keyboard reach at 200% (the #551 fix), after a second pinned-host run at `52d1f000` found them unreachable by keyboard. C3 row updated.
 
@@ -600,13 +602,20 @@ decided.
    even if T0a or T1 later succeeds. **Residual risk:** a pending T0b approval, or a delay in scheduling
    host sessions, still holds unbuilt season screens; neither is timeboxed
    ([UI Toolkit presentation design §4.1](ui-toolkit-presentation-design.md#41-pm-2-dependency-and-fallbacks)).
-5. **#44 T3 (M).** Quick-sim card synthesis for league-wide discipline. It stays in PM-2: today
-   suspensions apply to one club in twenty. **Cross-lane dependency (v0.85; PM-2 placement
-   owner-confirmed November 2, 2026):** synthesis draws on #30's existing `0x22` stream (FR-DC-019,
-   #44 §8), never a #44 stream. It changes quick-sim availability and therefore later quick-sim
-   results, so its contract must declare whether existing fixture outcomes move, and it lands **before**
-   engine-lane item 4's quick-sim recapture (item 6 before the v0.86 renumbering). A later landing
-   reopens that capture and check, and it must also precede the depth phase's governed recapture.
+5. **#44 T3 (M).** Quick-sim card synthesis for league-wide discipline is implemented in #30.
+   This work is independent of D-16 T0a. Cards derive from separate keyed draws on the existing
+   `0x22` domain. For a fixed key and XI ratings, the scoreline is identical. Later fixture
+   scores can move once a new ban changes the available XI. Already-played outcomes are retained.
+   In a 380-fixture Linux comparison against `c7861ed3` (20 clubs, seed `0x5EED1EA6D0DEC0DE`),
+   T3 changed two scorelines with discipline wired, and each match kept its original winner.
+   The discipline-unwired comparison changed zero scorelines. Reproduce each side with
+   `bash tools/quick-sim-card-impact.sh <checkout>` using `c7861ed3` for the base and this branch
+   for T3. The CSV hashes are `2775c43979049c2a5a2ffc3f454bcb10c05cfdae780e0caeb48d00273995d1ed`
+   (base) and `eb44baaddb6a9ddc8cabc4e9ea470f907eeca31863db8a78bb760f5289c19f24` (T3).
+   See [#30 §3.4.1](../specs/season-competition-loop/section-3.md#quick-sim-cards-44-t3).
+   **Merge #44 T3 before the PM-2 A4a quick-sim recapture** (engine-lane item 4, formerly step 6)
+   and before the depth-phase recapture. The recapture uses an engine baseline containing this
+   change.
 
 **Host scheduling.** Per D-01a and D-12: #526 validation completed first; W8 C engine bookings as ready; short
 client-only slots between engine jobs in isolated worktrees; the frozen Linux pre-C/B→C captures on
@@ -993,6 +1002,7 @@ which is now the critical path to **PM-1** and to any calibrated table:
 
 | Version | Date | Change |
 |---------|------|--------|
+| v1.12 | November 20, 2026 | #44 T3 implementation and outcome contract recorded. T3 is independent of UI Toolkit T0a and precedes the PM-2 A4a recapture. |
 | v1.11 | November 20, 2026 | Record owner decision D-16 (UI Toolkit for menus and management screens; UGUI for the match pitch) in the decision register and §7; link the new design supplement. Owner answered Q1: the migration starts now, alongside PM-2; career-lane item 4 note records the PM-2 dependency and the owner-confirmed fallbacks (Q5, extended by Q6; PR #560 review). |
 | v1.10 | November 20, 2026 | C3: Career Home standings paged for keyboard reach at 200% after the second `52d1f000` run. |
 | v1.9 | November 20, 2026 | Step 9 and the engine lane point at the current #441 evidence after W8 C, #434 and #440 A′. W9 still depends on #441. |

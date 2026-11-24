@@ -1,6 +1,7 @@
 // File:     src/season-save/RoundResolutionModel.cs
 // Created:  2026-07-26
-// Modified: 2026-07-26
+// Modified: 2026-11-20 (#44 T3 review: make probability boundaries testable.)
+// Modified: 2026-11-20 (#44 T3: deterministic card summaries for the selected quick-sim XIs.)
 // Author:   —
 // Spec:     Season & Competition Loop #30 §3.4.1 (FR-SN-013a), FR-SN-027; League Bootstrap design
 //           supplement KD-7 (model shape) + KD-8 (calibration); path-to-playable roadmap C1/C1a;
@@ -13,7 +14,12 @@
 // Season-cadence only (a handful of arithmetic ops per fixture, called from the world-tick loop), so
 // the 60 Hz zero-alloc rules do not apply.
 
+using System;
+using System.Collections.Generic;
+
 using UnityEngine;
+
+using TacticalDirector.Discipline;
 
 namespace TacticalDirector.SeasonSave
 {
@@ -179,6 +185,49 @@ namespace TacticalDirector.SeasonSave
             return k;
         }
 
+        /// <summary>Checks the quick-sim card probabilities before advancing a discipline-wired round.</summary>
+        internal static void RequireCardProbabilities(float yellow, float red)
+        {
+            if (!(yellow >= 0f && red >= 0f && yellow <= 1f - red))
+            {
+                throw new InvalidOperationException(
+                    "QuickSimYellowProbability and QuickSimStraightRedProbability must be non-negative and sum to at most 1.");
+            }
+        }
+
+        /// <summary>Buffers at most one card per starter from the two quick-sim XIs.</summary>
+        internal static CardLedgerFold SynthesizeCards(
+            in Fixture fixture, ulong seasonSeed, int seasonNumber, int[] homeXi, int[] awayXi,
+            float yellow, float red)
+        {
+            ulong key = FixtureKey(
+                seasonSeed, seasonNumber, fixture.RoundIndex, fixture.HomeClubId, fixture.AwayClubId);
+            var cards = new List<CardLedgerFold.PlayerCard>();
+            AddStarterCards(cards, homeXi, Mix(key ^ SeasonLoopConstants.QUICK_SIM_HOME_CARD_KEY), red, red + yellow);
+            AddStarterCards(cards, awayXi, Mix(key ^ SeasonLoopConstants.QUICK_SIM_AWAY_CARD_KEY), red, red + yellow);
+            return cards.Count == 0
+                ? null
+                : CardLedgerFold.FromPlayerCards(DisciplineConstants.LeagueCompetitionKey, cards);
+        }
+
+        private static void AddStarterCards(
+            List<CardLedgerFold.PlayerCard> cards, int[] playerIds, ulong sideKey, float red, float redOrYellow)
+        {
+            foreach (int playerId in playerIds)
+            {
+                // Another starter's selection cannot shift this player's draw.
+                float draw = UnitFloat(sideKey ^ (uint)playerId);
+                if (draw < red)
+                {
+                    cards.Add(new CardLedgerFold.PlayerCard(playerId, DisciplineConstants.CardKindRed));
+                }
+                else if (draw < redOrYellow)
+                {
+                    cards.Add(new CardLedgerFold.PlayerCard(playerId, DisciplineConstants.CardKindYellow));
+                }
+            }
+        }
+
         /// <summary>
         /// The fixture key: a pure function of the season and the fixture's identity, with the #16 season
         /// domain tag folded in first so these draws are domain-separated from every other subsystem's.
@@ -244,4 +293,6 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | site, ERR-030-001), exp-shaped lambdas with safety clamps,         |
 // |         |            |        | inverse-CDF Poisson quantile with a MAX_GOALS_PER_SIDE cap, the    |
 // |         |            |        | per-fixture managed matchSeed, and a fail-loud non-finite gate.    |
+// | 1.1 | 2026-11-20 | — | #44 T3: separate keyed card draws for each starter on both sides. |
+// | 1.2 | 2026-11-20 | — | #44 T3 review: take probabilities as explicit validation and synthesis inputs. |
 #endregion

@@ -1,7 +1,8 @@
 # Discipline & Suspensions #44 — Section 1: Introduction
 
 **Created:** July 24, 2026
-**Last Updated:** August 15, 2026, yet later still again (v0.5 — reviewed-findings pass: **`ERR-044-007`**
+**Last Updated:** November 20, 2026 (v0.6 — #44 T3 extends discipline coverage to quick-sim fixtures.)
+**Last Updated (prior):** August 15, 2026, yet later still again (v0.5 — reviewed-findings pass: **`ERR-044-007`**
 (M2) corrected KD-4's `FilterAvailable(in Squad) → Squad)` signature — the method has never taken `in
 Squad` alone; it is `FilterAvailable(Squad squad, DisciplineState state, int competitionId)`, verified
 against `src/discipline/Availability.cs` — omitting `state`/`competitionId` misstated it as a predicate
@@ -24,7 +25,7 @@ made explicit)
 decrements per played club fixture the player did NOT appear in, not per played fixture full stop;
 matters only in the extremis tier, #30 §2.3 F9's depleted-squad back-fill)
 **Last Updated (prior):** July 24, 2026 (v0.1 — initial)
-**Version:** 0.5
+**Version:** 0.6
 **Status:** APPROVED
 
 ---
@@ -49,11 +50,9 @@ perturbs the match digest — the `match-viewer` lock); (b) **no-trigger identit
 no threshold-crossing cards is byte-identical to pre-#44 except #44's own sub-blob); (c)
 **determinism** (same events ⇒ same bans ⇒ same filtered squads).
 
-**Minimal coverage (stated honestly):** quick-sim fixtures produce no cards (FR-SN-013a resolves a
-scoreline — grep-verified), so minimal discipline accrues **only from engine-resolved fixtures**
-(the managed club's — covering its own and its opponents' players in those matches).
-Deterministic, asymmetric by construction; evened by the deferred #30-owned quick-sim synthesis
-(§7).
+**PM-2 coverage:** discipline accrues in both engine-resolved and quick-sim fixtures when #44 is
+wired. The engine provides its event ledger. Quick-sim provides a player-attributed summary from
+the #30 model (Season & Competition Loop §3.4.1). Both use #44's existing commit rules.
 
 ## 1.2 Out of scope (owned elsewhere, referenced as seams)
 
@@ -158,4 +157,5 @@ throughout; no float.
 | 0.3 | 2026-08-15 | — | **`ERR-044-009`**, reviewed-findings pass: KD-2's "absorbed by the fold either way and re-verified at T-phase" closing sentence restated onto the verified `MatchEngine.SubstitutePlayer` synthetic bench-id formula — the T-phase re-verification it promised ran at T2 and failed (`ERR-044-001`), and this row was the one site left citing the disproven assumption after `appendices.md` v0.3 corrected the sibling hedge. See `spec-error-log.md` `ERR-044-009`. |
 | 0.4 | 2026-08-15 | — | **`ERR-044-008`**, reviewed-findings pass: §1.2's `#37` bullet corrected — "one tap feeds both when built" is the identical refuted claim fixed at §4.3/§7.3/§8.1, found here on a full-file sweep for other instances; restated to name #44's own `IDisciplineTickLedgerTap`. See `spec-error-log.md` `ERR-044-008`. |
 | 0.5 | 2026-08-15 | — | **Reviewed-findings pass.** **`ERR-044-007`:** KD-4's `FilterAvailable(in Squad) → Squad)` signature corrected to the landed three-parameter form (`Squad squad, DisciplineState state, int competitionId`) — verified against `src/discipline/Availability.cs`; the old form misstated the method as a predicate over `Squad` alone rather than over the tally. **`ERR-044-006`:** KD-4's "byte-identity-locked (the #32 T-SC-VIEW-001 class)" clause removed — §9 G6 withdrew the identical parenthetical the same day, tracing it to `T-DC-VIEW-001`, a test deleted as tautological at C1/C2 AR round 1 and never replaced (§5.4); replaced with G6's construction argument. See `spec-error-log.md` `ERR-044-006`, `ERR-044-007`. |
+| 0.6 | 2026-11-20 | — | #44 T3 extends discipline coverage to quick-sim fixtures. |
 #endregion

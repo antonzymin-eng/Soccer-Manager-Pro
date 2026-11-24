@@ -1,4 +1,5 @@
 // File:     src/discipline/DisciplineConstants.cs
+// Modified: 2026-11-20 (#44 T3 review: distinguish the threshold from measured card rates.)
 // Created:  2026-08-13
 // Modified: 2026-08-15, later still (reviewed findings pass, L2/L4 — v1.5: L2 — CardKindRed's and
 //           CardKindSecondYellow's doc comments still said "Single-consumer mirror … as CardKindYellow",
@@ -182,11 +183,10 @@ namespace TacticalDirector.Discipline
         /// added and the count is reduced by this threshold, residual kept (§3.2, FR-DC-007).
         /// Config key <c>[discipline] YellowAccumulationThreshold</c>.
         /// <para>
-        /// Illustrative pending the balance pass. Worth knowing where it sits: at the engine's last
-        /// measured yellow rate a Stage-0 starter accrues yellows of the same order as this threshold
-        /// over a managed season, i.e. the dial sits near the mean of the distribution it cuts — the
-        /// most sensitive place it could sit. Do not read that as a reason to move it (KD-W1); read it
-        /// as the reason the balance pass needs the per-player histogram, not the mean.
+        /// Illustrative pending the balance pass. At the PM-2 quick-sim defaults a player who starts
+        /// all 38 fixtures expects about 1.7 yellows, so crossings are uncommon. The engine's measured
+        /// rate has varied. The foul/card balance pass needs per-player distributions from both paths
+        /// to assess how often this threshold is reached.
         /// </para>
         /// <para>Guarded <c>&gt;= 1</c> at <see cref="DisciplineRules"/>'s accumulation site: at 0 the
         /// residual subtraction never terminates the crossing and every yellow bans.</para>
@@ -293,4 +293,5 @@ namespace TacticalDirector.Discipline
 // |         |            |        | referencing the old name updated. #44 Appendix A's own ALL_CAPS   |
 // |         |            |        | row is unchanged (docs/ is not this pass's tree) and is reported. |
 // | 1.6     | 2026-09-16 | —      | W2 is active; the cited foul/card calibration remains pre-tackle and must be re-measured before any separate retuning pass. |
+// | 1.7 | 2026-11-20 | — | #44 T3 review: describe the provisional quick-sim exposure at the accumulation threshold. |
 #endregion
