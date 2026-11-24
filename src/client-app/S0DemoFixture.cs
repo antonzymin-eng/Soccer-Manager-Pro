@@ -100,15 +100,15 @@ namespace TacticalDirector.ClientApp
             return new S0DemoFixture(homeSquad, awaySquad, identities);
         }
 
-        /// <summary>Builds from Balanced and changes only home Mentality; away retains AI/default profile.</summary>
-        public MatchSetup BuildSetup(Mentality mentality)
+        /// <summary>Builds the home setup tactic with the selected mentality and marking scheme.</summary>
+        public MatchSetup BuildSetup(Mentality mentality, MarkingScheme markingScheme = MarkingScheme.Mixed)
         {
             if (!Enum.IsDefined(typeof(Mentality), mentality)) throw new ArgumentOutOfRangeException(nameof(mentality));
             TeamTactic b = TeamTactic.Balanced;
             var home = new TeamTactic(mentality, b.Formation, b.Tempo, b.Width, b.Passing, b.Pressing,
                 b.LineOfEngagement, b.DefensiveLine, b.DefensiveWidth, b.TransitionWon, b.TransitionLost,
                 b.OffsideTrap, b.TriggerPressMask, b.FocusPlay, b.GkDistribution, b.TimeWasting,
-                b.MarkingOrientation, b.DismarkIntensity, b.BuildUpStructure, b.RotationFreedom);
+                b.MarkingOrientation, b.DismarkIntensity, b.BuildUpStructure, b.RotationFreedom, markingScheme: markingScheme);
             return new MatchSetup(S0DemoConstants.SEED, _home, _away, home, b,
                 ManagerMode.Human, ManagerMode.AI, gkHeadingEnabled: false);
         }

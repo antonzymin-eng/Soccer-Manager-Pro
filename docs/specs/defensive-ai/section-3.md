@@ -1,8 +1,8 @@
 # Defensive AI Specification #14 — Section 3: Core Formulas and Algorithms
 
 **Created:** May 17, 2026
-**Last Updated:** November 21, 2026 (v0.16 — W13-F8 / F9: §3.13.1 contact floor on the stand-off (`ERR-014-012`); §3.13 Step 8a reconciles tackle requests with the final assignments (`ERR-014-010` amendment 2); §3.13.1 Pace now cites the #8 tracking MOVE (`ERR-008-029`). Prior: v0.15 — A′ / `ERR-014-011`: new §3.6.5.8 BallLoose release — geometry knock and same-frame carrier fence; §3.6.5.2 and §3.6.5.5 point to it. Prior: v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
-**Version:** 0.15
+**Last Updated:** November 23, 2026 (v0.17 — W13.2 / ERR-021-011: apply team-owned invariant limits and record Invariant 2 demotions. ERR-002-002 resolves the tight goalward contact.) Prior: November 21, 2026 (v0.16 — W13-F8 / F9: §3.13.1 contact floor on the stand-off (`ERR-014-012`); §3.13 Step 8a reconciles tackle requests with the final assignments (`ERR-014-010` amendment 2); §3.13.1 Pace now cites the #8 tracking MOVE (`ERR-008-029`). Prior: v0.15 — A′ / `ERR-014-011`: new §3.6.5.8 BallLoose release — geometry knock and same-frame carrier fence; §3.6.5.2 and §3.6.5.5 point to it. Prior: v0.14 — W13.1c final pass: §3.13.1 records that the `MARK_STANDOFF_TIGHT_M` 1.0 m stand-off is at or below body contact against a runner (open issue W13-F8). v0.13: "Pace" wording.)
+**Version:** 0.17
 **Status:** DRAFT
 **Source:** `outline-detailed.md` v1.0
 
@@ -1205,6 +1205,11 @@ Applied BEFORE directive publication (FR-DA-024).
 
 ### 3.10.2 The Invariants (three standing, one gated)
 
+W13.2 uses the counts below for Mixed and for the legacy Zonal assignment path.
+With marking movement enabled, ManOriented substitutes its scheme row for the
+minimum and cap in Invariants 1 and 2, including the final invariant check.
+See §3.13.1 and the uncalibrated catalogue entries in §6.1.
+
 | # | Invariant | Enforcement |
 |---|-----------|-------------|
 | 1 | `count(DEFENSE-line agents in ZONAL) >= MIN_BACKLINE_AGENTS` | Demote the most-recently-assigned non-ZONAL DEFENSE-line agent |
@@ -1376,6 +1381,13 @@ Break.
 
 Result: 4 MAN_MARK assignments published. Agent 111 reverts to ZONAL
 (#12 baseline slot).
+
+**ManOriented variant (W13.2).** Two DEFENSE-line agents remain ZONAL and six midfield
+markers hold distinct in-range assignments. Their target threats in ascending marker ID order
+are 0.62, 0.55, 0.71, 0.48, 0.59 and 0.64. With the cap of five, Invariant 2 demotes
+the marker on the 0.48 threat and records one cap demotion. The other five retain MAN_MARK.
+The away team runs the same example in its own goal-left canonical frame.
+
 
 ---
 
@@ -1692,6 +1704,13 @@ resolved May 18, 2026.
 
 ### 3.13.1 Per-Agent Mark-Target Composition (W13.1, `ERR-014-010`; FR-DA-038)
 
+**Per-team marking scheme (W13.2).** With marking movement enabled, Mixed uses the standard
+invariant limits. Zonal keeps legacy assignments for tackle processing and emits no marking
+movement target. ManOriented uses the same movement and one-marker-per-opponent rule with
+`ManOrientedMinBacklineAgents` [GT] (default 2) and `ManOrientedMaxManMarkAssignments` [GT]
+(default 5). `MarkingOrientation` remains the independent candidate-radius dial.
+
+
 **Purpose.** §3.13 publishes a per-agent `MarkAssignment`, but its `targetPosition` is
 the *opponent's own position* (§2.2.2) — a marker sent there arrives on top of his man,
 not between him and the goal. §4.4.4 / §4.5.1 said the orchestrator "composes the
@@ -1746,10 +1765,9 @@ governs. Strength 1 + 20 ⇒ 0.9475 m. The floor never exceeds the 2.0 m ordinar
 [0.805, 2.0] m for the default constants. *Measured (non-certifying Linux, W13 marking rig, both teams, Strength 10).*
 Against a stationary man the tight marker settles 0.95 m from him, goal-side on 15 / 15 strides; pre-fix he was at
 0.82–1.11 m, goal-side 12 / 15 home and 4 / 15 away. Against a 2.6 m/s upfield runner he stays at 1.05–1.17 m,
-goal-side every stride; pre-fix he was not goal-side on 54 / 60 strides away. *Residual (recorded):* against a man
-who accelerates from rest toward goal, the tight marker's minimum gap is 0.82 m. That is 0.02 m inside the two
-radii, caused by #2's walking acceleration (#2 §3.5.3.1 residual). The resulting contact is not a knockdown, but
-its collision response differs between the home and away runs.
+goal-side every stride; pre-fix he was not goal-side on 54 / 60 strides away. The W13 follow-up uses #2's
+tracking acceleration for a moving point during launch and walking. The tight goalward case clears the two
+body radii at every physics tick in both directions at runner speeds of 3 and 5 m/s.
 
 Both are `[GT]`, **UN-CALIBRATED** (KD-W1: a new dial on a surface
 that has never moved a defender; it is the calibration pass's input, not its output).
@@ -1809,3 +1827,4 @@ W13 default flip (owner decision OD-2, November 21, 2026)**, after the W13-F5..F
 | 0.14 | November 12, 2026 | AI agent (W13.1c final pass) | §3.13.1 stand-off paragraph gains the W13-F8 known limitation (the 1.0 m tight stand-off is at / below body contact; measured separations). No value or formula change. |
 | 0.15 | November 18, 2026 | AI agent (A′, owner decision D1) | `ERR-014-011`: new §3.6.5.8 "BallLoose release" — the knock velocity from closing speed and carrier momentum (three un-calibrated `[GT]`, one `[FIXED]` direction guard), the frame-local carrier fence on first touch, pickup and keeper hand contact, its lifetime and non-serialization, worked examples and correctness-only acceptance. §3.6.5.2's `BALL_LOOSE` row and §3.6.5.5 point to it; the constant index gains four rows. Spec and code in the same commit. |
 | 0.16 | November 21, 2026 | AI agent (W13 blockers) | `ERR-014-010` amendment 2 (W13-F9): §3.13 Step 8a drops a tackle request whose agent's final assignment no longer targets that opponent; the §3.10.2 known limitation becomes the resolved paragraph; not switch-gated (default behaviour changes). `ERR-014-012` (W13-F8): §3.13.1 contact floor `s_eff = max(s, r_marker + r_man + d_tol)` computed by the composition root (`[CROSS #2]` radii and settle tolerance; no new constant); the W13-F8 known limitation replaced by measured values and the goalward-runner residual. §3.13.1 "Pace" re-pointed to `MarkTargetVelocity` and the #8 §3.5.6 tracking MOVE (`ERR-008-029`). "Activation" records the default flip (OD-2): `MarkMovementEnabled` default `true`. Spec + code, same commit. |
+| 0.17 | 2026-11-23 | — | W13.2 / ERR-021-011: apply team-owned invariant limits and record Invariant 2 demotions. ERR-002-002 resolves the tight goalward contact. |

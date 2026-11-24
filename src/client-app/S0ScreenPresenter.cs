@@ -254,6 +254,16 @@ namespace TacticalDirector.ClientApp
             Revision++;
         }
 
+        /// <summary>The selected marking scheme on the setup screen.</summary>
+        public MarkingScheme SetupMarkingScheme => _coordinator.DraftMarkingScheme;
+
+        /// <summary>Selects a marking scheme for the home team before kickoff.</summary>
+        public void SelectSetupMarkingScheme(MarkingScheme scheme)
+        {
+            _coordinator.SelectMarkingScheme(scheme);
+            Revision++;
+        }
+
         /// <summary>Named Cancel, with no session constructed.</summary>
         public void CancelSetup()
         {

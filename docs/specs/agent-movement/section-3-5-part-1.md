@@ -3,8 +3,8 @@
 **Purpose:** Defines all classes, structs, and enums used by the Agent Movement System. This is the authoritative reference for data contracts between the movement system and external systems (Collision System, Perception, Animation, Tactical AI). Every public-facing data structure referenced in Sections 3.1-3.4 is defined here with full field documentation and usage notes.
 
 **Created:** February 10, 2026, 3:45 PM PST  
-**Updated:** November 21, 2026 (v1.5 — ERR-002-001: §3.5.3.1 tracking command)  
-**Version:** 1.5  
+**Updated:** November 23, 2026 (v1.6 — ERR-002-002: moving-track launch and walking acceleration)
+**Version:** 1.6
 **Status:** Draft — ERR-007 resolved (AM-002-001 applied)  
 **Dependencies:** Section 3.1 (State Machine), Section 3.2 (Locomotion & PerformanceContext), Section 3.3 (Directional Movement), Section 3.4 (Turning & Momentum)
 
@@ -902,6 +902,30 @@ public struct MovementCommand
 
 ### 3.5.3.1 Tracking command (ERR-002-001, November 21, 2026)
 
+**Launch and walking acceleration (ERR-002-002).** The match engine opts an outfield
+player into the physical curve using the player's active `TightMarking` instruction
+(#21 §3.4). For an opted-in tracking command, use the physical curve in IDLE (with
+movement intent) or WALKING when its age is at most
+`TRACK_EXTRAPOLATION_MAX_S` ([FIXED], 0.2 s), its target speed exceeds
+`MIN_VELOCITY_MAGNITUDE` ([FIXED], 0.001 m/s), and the capped command speed exceeds
+the current speed. Use the §3.2.3 curve with directional coefficient `k_dir`:
+
+```text
+v(t + Δt) = min(v_cmd, clamp(v_phys × (1 − exp(−k_dir × Δt)) + v(t) × exp(−k_dir × Δt),
+                            0, MAX_SPEED_CLAMP))
+```
+
+`v(t)`, `v_cmd` and `v_phys` are speeds in m/s, with `0 ≤ v(t) < v_cmd ≤ v_phys`
+on this branch. `v_phys` is the physical ceiling before the command cap.
+`k_dir ≥ 0` is in s⁻¹, `Δt = 1/60 s`, and the result lies in
+`[v(t), min(v_cmd, MAX_SPEED_CLAMP)]` for valid runtime inputs.
+For a fresh 1 m/s target and a marker at 0.3 m/s with `v_phys = 8 m/s`,
+`v_cmd = 1 m/s` and `k_dir = 2 s⁻¹`, the next speed is about 0.552 m/s.
+The usual 2 m/s² walking rate would yield 0.333 m/s on that frame.
+Ordinary marking, walking brakes and stationary or stale tracking commands use the
+usual walk rates. The batch update takes optional per-agent opt-in flags. The
+match engine derives them from the active player tactics already in the snapshot.
+
 **Why.** A `MovementCommand` carries a destination and a locomotion band, but no speed in m/s and no arrival
 policy: the band ceiling is the only speed control, and nothing brakes on arrival. Measured on W13's marking rig
 (both teams), a marker therefore (a) circled a stationary mark point at a constant 2.20 m/s, never settling
@@ -942,8 +966,9 @@ point, which is moving at this velocity" with a band alone.
    - **DECELERATING:** the §3.2.5 braking step, floored at `min(speed, commandSpeed)` — a tracking agent brakes to the
      tracked speed, not to rest, and never accelerates while DECELERATING (the §3.1 machine re-enters JOGGING once
      `commandSpeed > speed + CommandSpeedHysteresis`).
-   - IDLE / WALKING / STUMBLING / GROUNDED: unchanged (they already move toward `min(topSpeed, commandSpeed)` or
-     ignore it).
+   - **IDLE / WALKING:** use the launch and walking acceleration rule above when it qualifies.
+     Otherwise apply the existing linear rates.
+   - **STUMBLING / GROUNDED:** use their existing state-specific speed rules.
 
 Physical constraints are not bypassed: turn-rate limits, the state machine and its OscillationGuard, fatigue,
 collision knockdown and the safety step all apply exactly as for any other command.
@@ -965,10 +990,9 @@ closer, 0. (ii) Point 0.5 m ahead moving 3.0 m/s along the same line: `3.0 + √
 0.05 m from the point. 2.6 / 3.5 / 5.0 m/s upfield runner: 0 command changes, 0 guard locks, peak gap 2.17 m for
 a 2.0 m stand-off. Goalward runner: 0 GROUNDED strides, minimum gap 1.76 m.
 
-**Residual (recorded, not fixed).** From rest, the IDLE launch and WALKING accelerations (2.0 m/s², §3.2.4) are
-not changed by this section; a point that accelerates from rest at ≥ 2 m/s² therefore gains up to ~0.2 m on the
-agent before he reaches JOGGING (the feed-forward is up to one heartbeat old). Against W13's 1.0 m TightMarking
-stand-off that is a 0.02 m transient body overlap.
+**Goalward contact regression.** The previous tight-marking rig reached a 0.82 m gap,
+0.02 m inside two Strength-10 radii. The rolling test now checks clearance at every physics
+tick for both teams at runner speeds of 3 and 5 m/s, using the 1.0 m stand-off.
 
 **Snapshot.** The held command is cross-tick state; its three tracking fields are serialized as the trailing
 block of the match-engine world state (schema v30) and round-trip through `ReconstructFromSnapshot`'s full-field
@@ -980,3 +1004,9 @@ DRIBBLE, PRESS, INTERCEPT and keeper movement keep their existing run-through be
 
 ---
 
+## Version History
+
+| Version | Date | Author | Notes |
+|---|---|---|---|
+| 1.5 | 2026-11-21 | — | ERR-002-001 specifies the tracking command. |
+| 1.6 | 2026-11-23 | — | ERR-002-002 specifies the capped physical curve for tight markers tracking moving targets during launch and walking. |

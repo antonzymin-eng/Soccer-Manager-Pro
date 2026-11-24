@@ -68,7 +68,7 @@ namespace TacticalDirector.MatchClientCore.Tests
             var invalid = (ManagerCommand)constructors[0].Invoke(new object[]
             {
                 (ManagerCommandKind)99, 0, 0, default(TeamTactic), default(PlayerTactic), 0, 0,
-                default(SubstitutionReason)
+                default(SubstitutionReason), false
             });
             var queue = new ManagerCommandQueue();
 

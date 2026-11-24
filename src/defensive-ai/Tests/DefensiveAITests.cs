@@ -1330,41 +1330,72 @@ namespace TacticalDirector.DefensiveAI.Tests
     [TestFixture]
     internal class InvariantEnforcerTests
     {
-        private static DefensiveSnapshot BuildInvariantSnapshot(int poolCount)
+        private static DefensiveSnapshot BuildInvariantSnapshot(int poolCount, LineId line = LineId.Midfield, int team = 0)
         {
             DefensiveAgentSnapshot[] agents = new DefensiveAgentSnapshot[poolCount * 2];
             for (int i = 0; i < poolCount; i++)
             {
-                // MIDFIELD line so invariant 1 (backline minimum) is vacuous and this snapshot
-                // isolates invariant 2 (MAN_MARK cap). With DEFENSE-line agents the AR-2 H-2 full
-                // enforcement would demote to satisfy the backline first, conflating the two.
                 agents[i] = SnapshotBuilder.MakeAgent(
                     entityId: i + 10,
-                    teamId: 0,
+                    teamId: team,
                     position: new Vector2(30.0f + i * 2.0f, 34.0f),
                     baselineSlot: new Vector2(30.0f + i * 2.0f, 34.0f),
-                    line: LineId.Midfield);
+                    line: line);
                 // Matching opponent for each defender.
                 agents[poolCount + i] = SnapshotBuilder.MakeAgent(
                     entityId: 100 + i,
-                    teamId: 1,
+                    teamId: 1 - team,
                     position: new Vector2(32.0f + i * 2.0f, 34.0f),
                     firstTouch: 12f - i);  // Varying threat: first opp is highest.
             }
 
-            return SnapshotBuilder.Build(agents);
+            var snapshot = SnapshotBuilder.Build(agents);
+            snapshot.DefensiveTeamId = team;
+            return snapshot;
+        }
+
+        [TestCase(0, TacticalInstructions.MarkingScheme.Mixed, 3)]
+        [TestCase(1, TacticalInstructions.MarkingScheme.Mixed, 3)]
+        [TestCase(0, TacticalInstructions.MarkingScheme.ManOriented, 2)]
+        [TestCase(1, TacticalInstructions.MarkingScheme.ManOriented, 2)]
+        public void BacklineMinimum_FollowsTheDefendingTeamsScheme(int team,
+            TacticalInstructions.MarkingScheme scheme, int minimum)
+        {
+            int[] pool = { 10, 11, 12, 13 };
+            DefensiveSnapshot snapshot = BuildInvariantSnapshot(pool.Length, LineId.Defense, team);
+            snapshot.MarkMovementActive = true;
+            snapshot.MarkingScheme = scheme;
+            var assignments = new MarkAssignment[pool.Length];
+            for (int i = 0; i < pool.Length; i++)
+            {
+                assignments[i] = new MarkAssignment
+                {
+                    AgentEntityId = pool[i],
+                    Mode = MarkMode.ManMark,
+                    TargetEntityId = 100 + i,
+                    TargetPosition = snapshot.Agents[pool.Length + i].Position,
+                    ValidThroughTick = 1,
+                };
+            }
+
+            Assert.That(InvariantEnforcer.Enforce(snapshot, pool, pool.Length, 1, assignments, out int capDemotions), Is.True);
+            Assert.That(System.Array.FindAll(assignments, assignment => assignment.Mode == MarkMode.Zonal).Length,
+                Is.EqualTo(minimum));
+            Assert.That(capDemotions, Is.Zero);
         }
 
         /// <summary>T-DA-045 — Invariant 2 violation: lowest-threat MAN_MARK demoted.</summary>
-        [Test]
-        public void T_DA_045_MaxManMarkDemotesLowestThreat()
+        [TestCase(TacticalInstructions.MarkingScheme.Mixed, 4)]
+        [TestCase(TacticalInstructions.MarkingScheme.ManOriented, 5)]
+        public void T_DA_045_MaxManMarkDemotesLowestThreat(TacticalInstructions.MarkingScheme scheme, int cap)
         {
-            int poolCount = 5;
+            const int poolCount = 6;
             DefensiveSnapshot snapshot = BuildInvariantSnapshot(poolCount);
-            int[] pool = new int[] { 10, 11, 12, 13, 14 };
+            snapshot.MarkMovementActive = true;
+            snapshot.MarkingScheme = scheme;
+            int[] pool = { 10, 11, 12, 13, 14, 15 };
 
-            // All five in MAN_MARK; opponents have varying firstTouch (threat).
-            // Lowest-threat opp: entityId 104, firstTouch=8 (12 - 4).
+            // Every assignment has a distinct opponent, so only Invariant 2 can reduce this census.
             MarkAssignment[] assignments = new MarkAssignment[poolCount];
             for (int i = 0; i < poolCount; i++)
             {
@@ -1378,7 +1409,7 @@ namespace TacticalDirector.DefensiveAI.Tests
                 };
             }
 
-            bool result = InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments);
+            bool result = InvariantEnforcer.Enforce(snapshot, pool, poolCount, 1, assignments, out int demotions);
 
             int manMarkCount = 0;
             for (int i = 0; i < poolCount; i++)
@@ -1387,8 +1418,8 @@ namespace TacticalDirector.DefensiveAI.Tests
             }
 
             Assert.IsTrue(result, "Enforcer must return true (invariants satisfied after demotion).");
-            Assert.AreEqual(DefensiveAIConstants.MaxManMarkAssignments, manMarkCount,
-                "MAN_MARK count must equal MAX_MAN_MARK_ASSIGNMENTS after enforcement.");
+            Assert.AreEqual(cap, manMarkCount, "The selected scheme's cap applies.");
+            Assert.AreEqual(poolCount - cap, demotions, "Count only Invariant 2 demotions.");
         }
 
         /// <summary>T-DA-047 — Invariant 3 violation: over-displaced assignment demoted.</summary>

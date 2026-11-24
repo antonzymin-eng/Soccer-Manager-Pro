@@ -100,6 +100,29 @@ namespace TacticalDirector.AgentMovement.Tests
 
         // ── closed loop through AgentMovementSystem.Update ───────────────────────
 
+        [TestCase(AgentMovementState.IDLE, 0.0f)]
+        [TestCase(AgentMovementState.WALKING, 0.3f)]
+        public void MovingTrack_UsesPhysicalAccelerationOnlyWhenRequested(AgentMovementState state, float speed)
+        {
+            var system = new AgentMovementSystem();
+            var attrs = PlayerAttributes.CreateDefault();
+            var perf = PerformanceContext.CreateNeutral();
+            var ordinary = AgentState.CreateAtPosition(new Vector2(20.0f, 34.0f), Vector2.right);
+            ordinary.CurrentState = state;
+            ordinary.Speed = speed;
+            ordinary.Velocity = speed * Vector2.right;
+            var tight = ordinary;
+            var command = MovementCommand.Track(ordinary.Position, Vector2.right, 0.0f);
+
+            system.Update(ref ordinary, in attrs, in perf, in command, Dt, 0.0f, false, 0.0f);
+            system.Update(ref tight, in attrs, in perf, in command, Dt, 0.0f, false, 0.0f,
+                accelerateMovingTrack: true);
+
+            Assert.AreEqual(speed + LocomotionConstants.WALK_ACCELERATION * Dt, ordinary.Speed, 1e-5f);
+            Assert.Greater(tight.Speed, ordinary.Speed);
+            Assert.LessOrEqual(tight.Speed, 1.0f);
+        }
+
         private struct Sim
         {
             public AgentState State;
@@ -198,4 +221,5 @@ namespace TacticalDirector.AgentMovement.Tests
 #region VersionHistory
 // | Version | Date       | Author | Notes                   |
 // | 1.0     | 2026-11-21 | —      | W13-F5/F6/F7: tracking-command law, settle, follow, staleness, determinism tests. |
+// | 1.1     | 2026-11-23 | —      | ERR-002-002: ordinary and accelerated low-speed tracking use distinct rates. |
 #endregion

@@ -81,7 +81,7 @@ namespace TacticalDirector.MatchEngine
             // v27 own-release handling restriction, queued offence/contact and indirect taker;
             // v28 exact per-keeper 64-bit hand-control start frame;
             // v29 kickoff formation/Duty state; v30 (W13-F5/F6/F7) the tracking half of each held MovementCommand.
-            Assert.AreEqual(30u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
+            Assert.AreEqual(31u, MatchEngineConstants.SNAPSHOT_SCHEMA_VERSION,
                 "SNAPSHOT_SCHEMA_VERSION drifted — bump it intentionally only with a field-set/order change.");
         }
 
@@ -629,6 +629,25 @@ namespace TacticalDirector.MatchEngine
                 baseline.CurrentSnapshotDigest, perturbed.CurrentSnapshotDigest,
                 "Staging a non-Balanced MarkingOrientation left the digest unchanged — the v11 field is not " +
                 "in the digest preimage.");
+        }
+
+        [Test]
+        public void MarkingScheme_FeedsSnapshotDigest()
+        {
+            const ulong seed = 123;
+            var baseline = new MatchEngine(seed);
+            baseline.RunTick();
+            TeamTacticConfig mixed = TeamTacticFileLoader.Parse("[away]\nmarkingScheme = Mixed");
+            baseline.SetTeamTactic(1, mixed.ForTeam(1));
+            baseline.RunTick();
+            byte[] expected = baseline.CurrentSnapshotDigest;
+
+            var changed = new MatchEngine(seed);
+            changed.RunTick();
+            TeamTacticConfig config = TeamTacticFileLoader.Parse("[away]\nmarkingScheme = Zonal");
+            changed.SetTeamTactic(1, config.ForTeam(1));
+            changed.RunTick();
+            Assert.That(changed.CurrentSnapshotDigest, Is.Not.EqualTo(expected));
         }
 
         [Test]

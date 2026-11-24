@@ -123,12 +123,16 @@ namespace TacticalDirector.DefensiveAI
         /// W13.1 (ERR-014-010) per-tick input: true when the composition root will CONSUME this tick's
         /// assignments as per-agent mark targets (§3.13.1) — i.e. the engine's mark-movement switch is on
         /// for this tick. It activates anti-chaos Invariant 4 (one marker per opponent, §3.10.2) in
-        /// <see cref="InvariantEnforcer"/>; while <c>false</c> (the class-field default, and the only value
-        /// the shipped engine writes) Invariant 4 does not run, so assignments and tackle intents are exactly
-        /// the pre-W13.1 ones. A per-tick input like every other field here: set by the producer before
+        /// <see cref="InvariantEnforcer"/>. The off switch and Zonal scheme use the legacy sequence of
+        /// assignment invariants. A per-tick input set by the producer before
         /// <see cref="DefensiveAITick.Tick"/>, never read across ticks, NOT serialized.
         /// </summary>
         public bool MarkMovementActive;
+
+        /// <summary>The enabled movement scheme. Mixed also supplies legacy assignment limits.</summary>
+        public MarkingScheme MarkingScheme;
+
+        internal (int Backline, int ManMarks) MarkingLimits => DefensiveAIConstants.LimitsFor(MarkingScheme);
 
         /// <summary>
         /// Constructs a snapshot with a pre-allocated agents array of the given capacity.

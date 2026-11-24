@@ -659,7 +659,10 @@ not.
 - **F10** — explained. Mirror rounding was amplified by the flip and the orbit. Home and away are now
   stride-identical, except where bodies touch.
 
-Residual: `w13-tight-goalward-contact` (0.02 m transient overlap; #2's 2.0 m/s² walking acceleration).
+**November 23 follow-up.** Tight goalward contact is resolved. W13.2 activates per-team marking
+schemes, and the six-seed frozen same-schema identity check passed. Distance tuning is deferred
+under KD-W1. The current-schema §10 capture and descriptive pilots are tracked in the
+[W13 follow-up validation](w13-follow-up-validation.md).
 
 The former `[Explicit]` descriptions are now asserted regressions in `MatchEngineMarkingTests`.
 `MarkMovementEnabled` defaults to **true** (OD-2).

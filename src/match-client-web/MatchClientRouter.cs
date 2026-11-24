@@ -293,9 +293,8 @@ namespace TacticalDirector.MatchClientWeb
         {
             int teamId = RequireTeam(args);
 
-            // Only the dials the browser exposes are read; the rest keep their Balanced identity, so
-            // an omitted dial is explicitly "unchanged from the neutral baseline" rather than an
-            // accidental value.
+            // Omitted browser dials take their Balanced values. The command resolves the team's
+            // marking scheme on the sim thread after any earlier queued changes.
             TeamTactic b = TeamTactic.Balanced;
             var tactic = new TeamTactic(
                 mentality:          ParseEnum(args, "mentality", b.Mentality),
@@ -319,7 +318,7 @@ namespace TacticalDirector.MatchClientWeb
                 buildUpStructure:   b.BuildUpStructure,
                 rotationFreedom:    b.RotationFreedom);
 
-            return ManagerIntent.SetTeamTactic(teamId, in tactic);
+            return ManagerIntent.SetTeamTactic(teamId, in tactic, preserveMarkingScheme: true);
         }
 
         private static ManagerIntent BuildSubstitution(Dictionary<string, string> args)
@@ -436,4 +435,5 @@ namespace TacticalDirector.MatchClientWeb
 // |         |            |        | / RestartBanner carriers. B6 was authored in parallel against  |
 // |         |            |        | the loose-field shape the P1 AR-1 M-6 restructure replaced —   |
 // |         |            |        | a semantic merge conflict: textually clean, five CS1061s.      |
+// | 1.2     | 2026-11-23 | —      | Preserve the team's scheme when applying browser tactic dials. |
 #endregion

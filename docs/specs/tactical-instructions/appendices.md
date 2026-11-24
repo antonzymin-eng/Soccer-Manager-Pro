@@ -1,8 +1,8 @@
 # Tactical Instructions Specification #21 — Appendices
 
 **Created:** June 20, 2026
-**Last Updated:** July 10, 2026 (v0.5 — ERR-021-005/006/007 back-prop Appendix B appends)
-**Version:** 0.5
+**Last Updated:** November 23, 2026 (v0.6 — ERR-021-011: append the scheme ordinals to active and pending team tactics in world schema v31.) Prior: July 10, 2026 (v0.5 — ERR-021-005/006/007 back-prop Appendix B appends)
+**Version:** 0.6
 **Status:** APPROVED (June 20, 2026)
 
 ---
@@ -66,7 +66,7 @@ All cells ∈ [0.5, 2.0] (T-TI-U-029). Magnitudes illustrative; directions are t
 When match-engine Phase D serializes tactics, the order is: **TeamTactic** (Mentality, Formation, Tempo,
 Width, Passing, Pressing, LineOfEngagement, DefensiveLine, DefensiveWidth, TransitionWon, TransitionLost,
 OffsideTrap, TriggerPressMask, FocusPlay, GkDistribution, TimeWasting, **MarkingOrientation**,
-**DismarkIntensity**, **BuildUpStructure**, **RotationFreedom**) → **per agent PlayerTactic**
+**DismarkIntensity**, **BuildUpStructure**, **RotationFreedom**, **MarkingScheme**) → **per agent PlayerTactic**
 (Role, Duty, then PlayerInstructions: RiskyPasses, ShootTendency, DribbleTendency, CrossTendency,
 PositioningFreedom, CloseDown, TightMarking, MarkTargetEntityId, SetPieceRoles). Enums serialize as their
 `byte` ordinal; the order above is digest-load-bearing and locked by T-TI-EXP-004. Any reorder/field add
@@ -98,6 +98,10 @@ and is **not** independently serialized by this layer (§3.4), so restore cannot
 pre-tactics baseline; FR-TI-031 identity is asserted on the world-state subset (DET-002), not the full
 payload.
 
+W13.2 appends `MarkingScheme` (i32) after `RotationFreedom` in each active and pending
+team tactic. Ordinals are `Mixed = 0`, `Zonal = 1` and `ManOriented = 2`. The default is
+Mixed. Match-engine world schema v31 carries the new field.
+
 ## Appendix C — Worked example (full tactic → behaviour)
 
 Team set **Attacking / Wide / High press / High line**, an `InsideForward` (Attack duty) in the
@@ -121,4 +125,5 @@ attacking third evaluating SHOOT:
 | 0.3 | 2026-06-20 | — | PASS-2 fix pass: A.3 gains `TempoActionBias[5][7]` + `TempoBreadthScalar[5]` (M-2); Appendix B notes the DefensiveLine-dial serialization (M-1) and the world-state-subset digest identity (H-1). |
 | 0.4 | 2026-07-07 | — | Cheap-item addition: `MarkingOrientation` appended to Appendix B field order + `MarkingOrientationScalar` A.3 row (FR-TI-033); `SNAPSHOT_SCHEMA_VERSION` 10 → 11. |
 | 0.5 | 2026-07-10 | — | Back-props ERR-021-005/006/007: `DismarkIntensity`/`BuildUpStructure`/`RotationFreedom` appended to the Appendix B field order (#23 → #24 → #25, pinned); per-landing schema-bump note. No scalar tables added here — owning specs hold them. |
+| 0.6 | 2026-11-23 | — | ERR-021-011: append the scheme ordinals to active and pending team tactics in world schema v31. |
 #endregion

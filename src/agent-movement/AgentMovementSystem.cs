@@ -6,6 +6,7 @@
 // Spec:     Agent Movement #2 §4.4, §3.5.3.1, ERR-002-001, Code Standards #20
 // Purpose:  Per-frame pipeline (60 Hz) that sequences all locomotion steps for one agent.
 
+using System;
 using UnityEngine;
 using Unity.Profiling;
 
@@ -54,7 +55,8 @@ namespace TacticalDirector.AgentMovement
             float dt,
             float currentTime,
             bool isCollisionKnockdown,
-            float collisionForce)
+            float collisionForce,
+            bool accelerateMovingTrack = false)
         {
             using var _ = s_updateMarker.Auto();
 
@@ -254,6 +256,13 @@ namespace TacticalDirector.AgentMovement
             float kBase = AgentLocomotion.CalculateBaseAccelK(effectiveAccel);
             float kDir = AgentDirectionalMovement.ApplyDirectionalToAccelK(kBase, directionalMult);
 
+            // Tight markers need to catch the sampled velocity before entering the jogging band.
+            // Ordinary tracking and stationary-target arrivals use the linear walk rate.
+            float minTrackSpeed = MovementThresholds.MIN_VELOCITY_MAGNITUDE;
+            bool accelerateToMovingTrack = accelerateMovingTrack && command.IsTracking
+                && currentTime - command.IssueTimeS <= LocomotionConstants.TRACK_EXTRAPOLATION_MAX_S
+                && command.TargetVelocity.sqrMagnitude > minTrackSpeed * minTrackSpeed
+                && topSpeed > state.Speed;
             float newSpeed = state.Speed;
 
             switch (state.CurrentState)
@@ -266,18 +275,23 @@ namespace TacticalDirector.AgentMovement
                     // fired). With movement intent (moving commandSpeed AND a non-degenerate
                     // target offset — AR-13 M-2), accelerate at the walking rate until the
                     // IDLE→WALKING transition takes over; otherwise decay as before.
-                    newSpeed = hasMovementIntent
-                        ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
-                        : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
+                    if (hasMovementIntent && accelerateToMovingTrack)
+                        newSpeed = TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt);
+                    else
+                        newSpeed = hasMovementIntent
+                            ? Mathf.MoveTowards(state.Speed, topSpeed, LocomotionConstants.WALK_ACCELERATION * dt)
+                            : Mathf.MoveTowards(state.Speed, 0.0f, MovementThresholds.MAX_ACCELERATION * dt);
                     break;
 
                 case AgentMovementState.WALKING:
                 {
-                    // §3.1.6 / §3.2.4: WALKING uses linear accel/decel (separate rates), not the exponential curve.
+                    // §3.5.3.1 supplies the moving-track acceleration exception to the linear walk rates.
                     float walkRate = state.Speed > topSpeed
                         ? LocomotionConstants.WALK_DECELERATION
                         : LocomotionConstants.WALK_ACCELERATION;
-                    newSpeed = Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
+                    newSpeed = accelerateToMovingTrack
+                        ? TrackRunningSpeed(state.Speed, physicalTopSpeed, topSpeed, kDir, dt)
+                        : Mathf.MoveTowards(state.Speed, topSpeed, walkRate * dt);
                     break;
                 }
 
@@ -421,7 +435,8 @@ namespace TacticalDirector.AgentMovement
             bool[] isCollisionKnockdown,
             float[] collisionForces,
             float dt,
-            float currentTime)
+            float currentTime,
+            ReadOnlySpan<bool> accelerateMovingTracks = default)
         {
             using var _ = s_updateAllAgentsMarker.Auto();
 
@@ -437,7 +452,8 @@ namespace TacticalDirector.AgentMovement
             // Debug.Assert compiles out in release builds (zero hot-path cost).
             Debug.Assert(attrs.Length == states.Length && perfs.Length == states.Length
                 && commands.Length == states.Length && isGoalkeeper.Length == states.Length
-                && isCollisionKnockdown.Length == states.Length && collisionForces.Length == states.Length,
+                && isCollisionKnockdown.Length == states.Length && collisionForces.Length == states.Length
+                && (accelerateMovingTracks.IsEmpty || accelerateMovingTracks.Length == states.Length),
                 "UpdateAllAgents: all arrays must have the same length as states.");
 
             for (int i = 0; i < states.Length; i++)
@@ -448,7 +464,8 @@ namespace TacticalDirector.AgentMovement
                 }
 
                 Update(ref states[i], attrs[i], perfs[i], commands[i], dt, currentTime,
-                       isCollisionKnockdown[i], collisionForces[i]);
+                       isCollisionKnockdown[i], collisionForces[i],
+                       !accelerateMovingTracks.IsEmpty && accelerateMovingTracks[i]);
             }
         }
 
@@ -766,4 +783,5 @@ namespace TacticalDirector.AgentMovement
 // |         |            |        | desired velocity; JOGGING / SPRINTING accelerate on the physical curve clamped at the tracked    |
 // |         |            |        | speed and brake at MinDecelerationFloor above it; DECELERATING brakes to the tracked speed, not  |
 // |         |            |        | to rest. Non-tracking commands take exactly the prior path.                                     |
+// | 1.18    | 2026-11-23 | —      | ERR-002-002: tight markers tracking fresh moving targets use the capped physical curve in IDLE and WALKING. |
 #endregion

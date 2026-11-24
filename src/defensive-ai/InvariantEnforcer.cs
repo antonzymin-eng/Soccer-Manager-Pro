@@ -63,7 +63,12 @@ namespace TacticalDirector.DefensiveAI
             int               poolCount,
             int               currentTick,
             MarkAssignment[]  assignments)
+            => Enforce(snapshot, poolBuffer, poolCount, currentTick, assignments, out _);
+
+        internal static bool Enforce(DefensiveSnapshot snapshot, int[] poolBuffer, int poolCount,
+            int currentTick, MarkAssignment[] assignments, out int capDemotions)
         {
+            capDemotions = 0;
             for (int pass = 0; pass < MaxPasses; pass++)
             {
                 bool changed = false;
@@ -77,7 +82,9 @@ namespace TacticalDirector.DefensiveAI
                 if (!snapshot.MarkMovementActive)
                 {
                     // --- Invariant 2: maximum MAN_MARK assignments ---
-                    changed |= EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                    int demotions = EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                    capDemotions += demotions;
+                    changed |= demotions != 0;
 
                     // --- Invariant 3: maximum displacement ---
                     changed |= EnforceMaxDisplacement(snapshot, poolBuffer, poolCount, currentTick, assignments);
@@ -92,7 +99,9 @@ namespace TacticalDirector.DefensiveAI
                     // Demotions are monotonic, so no step can re-violate an earlier one.
                     changed |= EnforceMaxDisplacement(snapshot, poolBuffer, poolCount, currentTick, assignments);
                     changed |= EnforceOneMarkerPerOpponent(snapshot, poolBuffer, poolCount, currentTick, assignments);
-                    changed |= EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                    int demotions = EnforceMaxManMark(snapshot, poolBuffer, poolCount, currentTick, assignments);
+                    capDemotions += demotions;
+                    changed |= demotions != 0;
                 }
 
                 if (!changed)
@@ -134,8 +143,8 @@ namespace TacticalDirector.DefensiveAI
                 }
 
                 // Satisfied, or unsatisfiable (too few DEFENSE-line agents to ever reach the floor).
-                if (defensiveZonal >= DefensiveAIConstants.MinBacklineAgents
-                 || defensiveTotal < DefensiveAIConstants.MinBacklineAgents)
+                if (defensiveZonal >= snapshot.MarkingLimits.Backline
+                 || defensiveTotal < snapshot.MarkingLimits.Backline)
                     return demotedAny ? InvariantStep.Demoted : InvariantStep.Satisfied;
 
                 // Find lowest-threat non-ZONAL DEFENSE-line assignment that is not an emergency
@@ -172,15 +181,15 @@ namespace TacticalDirector.DefensiveAI
 
         // ── Invariant 2: MaxManMarkAssignments ───────────────────────────────
 
-        /// <summary>Demotes lowest-threat MAN_MARK assignments to ZONAL until the cap is met. Returns true if any demotion occurred.</summary>
-        private static bool EnforceMaxManMark(
+        /// <summary>Demotes lowest-threat MAN_MARK assignments to ZONAL until the cap is met. Returns the number of demotions.</summary>
+        private static int EnforceMaxManMark(
             DefensiveSnapshot snapshot,
             int[]             poolBuffer,
             int               poolCount,
             int               currentTick,
             MarkAssignment[]  assignments)
         {
-            bool demotedAny = false;
+            int demotions = 0;
 
             while (true)
             {
@@ -188,8 +197,8 @@ namespace TacticalDirector.DefensiveAI
                 for (int p = 0; p < poolCount; p++)
                     if (assignments[p].Mode == MarkMode.ManMark) manMarkCount++;
 
-                if (manMarkCount <= DefensiveAIConstants.MaxManMarkAssignments)
-                    return demotedAny; // Satisfied.
+                if (manMarkCount <= snapshot.MarkingLimits.ManMarks)
+                    return demotions; // Satisfied.
 
                 // Demote lowest-threat MAN_MARK assignment.
                 int   bestPoolIdx  = -1;
@@ -209,10 +218,10 @@ namespace TacticalDirector.DefensiveAI
                 }
 
                 if (bestPoolIdx < 0)
-                    return demotedAny; // Defensive guard — unreachable while manMarkCount > cap.
+                    return demotions; // Defensive guard — unreachable while manMarkCount > cap.
 
                 DemoteToZonal(snapshot, poolBuffer[bestPoolIdx], currentTick, ref assignments[bestPoolIdx]);
-                demotedAny = true;
+                demotions++;
             }
         }
 
@@ -330,7 +339,7 @@ namespace TacticalDirector.DefensiveAI
 
         // ── Post-loop verification ────────────────────────────────────────────
 
-        private static bool AreAllSatisfied(
+        internal static bool AreAllSatisfied(
             DefensiveSnapshot snapshot,
             int[]             poolBuffer,
             int               poolCount,
@@ -364,9 +373,9 @@ namespace TacticalDirector.DefensiveAI
                 }
             }
 
-            bool inv1 = defensiveZonal >= DefensiveAIConstants.MinBacklineAgents
-                     || defensiveTotal < DefensiveAIConstants.MinBacklineAgents;
-            bool inv2 = manMarkCount   <= DefensiveAIConstants.MaxManMarkAssignments;
+            bool inv1 = defensiveZonal >= snapshot.MarkingLimits.Backline
+                     || defensiveTotal < snapshot.MarkingLimits.Backline;
+            bool inv2 = manMarkCount   <= snapshot.MarkingLimits.ManMarks;
             bool inv4 = !snapshot.MarkMovementActive
                      || !HasDuplicateMarkTarget(poolCount, assignments);
             return inv1 && inv2 && inv4;
@@ -434,4 +443,5 @@ namespace TacticalDirector.DefensiveAI
 // |         |            |        |   behaviour unchanged.                                                                              |
 // | 1.5     | 2026-11-12 | —      | W13.1 review M2 (ERR-014-010 amendment): with MarkMovementActive the invariant order is 1, 3, 4, 2 (was 1, 2, 3, 4), so  |
 // |         |            |        |   duplicate markers no longer count against the MAN_MARK cap; with it false the order is exactly 1, 2, 3 as before.      |
+// | 1.6     | 2026-11-23 | —      | W13.2: apply per-scheme limits and count Invariant 2 demotions. |
 #endregion

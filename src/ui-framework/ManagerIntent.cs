@@ -47,6 +47,9 @@ namespace TacticalDirector.UiFramework
         /// <summary>The team tactic to stage (<see cref="IntentKind.SetTeamTactic"/>).</summary>
         public readonly TeamTactic NewTeamTactic;
 
+        /// <summary>Whether this tactic update leaves the team's marking scheme selected independently.</summary>
+        public readonly bool PreserveMarkingScheme;
+
         /// <summary>The player tactic to stage (<see cref="IntentKind.SetPlayerTactic"/>).</summary>
         public readonly PlayerTactic NewPlayerTactic;
 
@@ -67,12 +70,14 @@ namespace TacticalDirector.UiFramework
             in PlayerTactic newPlayerTactic,
             int outSlotIndex,
             int benchIndex,
-            SubstitutionReason reason)
+            SubstitutionReason reason,
+            bool preserveMarkingScheme = false)
         {
             Kind            = kind;
             TeamId          = teamId;
             AgentId         = agentId;
             NewTeamTactic   = newTeamTactic;
+            PreserveMarkingScheme = preserveMarkingScheme;
             NewPlayerTactic = newPlayerTactic;
             OutSlotIndex    = outSlotIndex;
             BenchIndex      = benchIndex;
@@ -80,8 +85,8 @@ namespace TacticalDirector.UiFramework
         }
 
         /// <summary>Intent to change <paramref name="teamId"/>'s team tactic.</summary>
-        public static ManagerIntent SetTeamTactic(int teamId, in TeamTactic tactic) =>
-            new ManagerIntent(IntentKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default);
+        public static ManagerIntent SetTeamTactic(int teamId, in TeamTactic tactic, bool preserveMarkingScheme = false) =>
+            new ManagerIntent(IntentKind.SetTeamTactic, teamId, 0, tactic, default, 0, 0, default, preserveMarkingScheme);
 
         /// <summary>Intent to change <paramref name="agentId"/>'s player tactic.</summary>
         public static ManagerIntent SetPlayerTactic(int agentId, in PlayerTactic tactic) =>
@@ -113,4 +118,5 @@ namespace TacticalDirector.UiFramework
 // |         |            |        | this type carries no channel dependency.                       |
 // | 1.1     | 2026-10-18 | —      | §5-P7: payload-free factories for the three season kinds        |
 // |         |            |        | (AdvanceRound / AdvanceDay / StartNextSeason).                 |
+// | 1.2     | 2026-11-23 | —      | ERR-021-011: carry the marking scheme retention choice for team updates. |
 #endregion
