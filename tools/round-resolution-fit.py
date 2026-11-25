@@ -3,6 +3,7 @@
 # Created: 2026-07-26
 # Modified: 2026-08-12 (A4a run: resolution + dispersion diagnostics, --wdl-csv)
 # Modified: 2026-08-12 (ERR-030-033: KD-8 mean bar re-specified; KD-7a successor diagnostics)
+# Modified: 2026-11-24 (--hold-params: score shipped constants without refitting — PM-2 check)
 # Purpose: Fit the Season & Competition Loop #30 round-resolution model's three parameters
 #          (BaseGoals, GoalRatingSlope, HomeAdvantageRating) against the engine-simulated
 #          corpus produced by RoundResolutionCalibrationHarness, and emit the
@@ -11,7 +12,8 @@
 #          (calibration methodology); path-to-playable roadmap item A4a.
 # Usage:   python3 tools/round-resolution-fit.py rows1.csv [rows2.csv ...] \
 #              [--out docs/tracking/round-resolution-corpus.md] \
-#              [--engine-sha <sha>] [--schema-version <n>]
+#              [--engine-sha <sha>] [--schema-version <n>] \
+#              [--hold-params BASE,SLOPE,HOME]   # score these constants; do NOT refit
 #
 # No third-party dependencies on purpose: the fit must be re-runnable on any host that can
 # generate the corpus, including the pinned certification host, without a package install.
@@ -68,6 +70,29 @@ FOOTBALL_GOALS_PER_MATCH = 2.7
 
 class CorpusError(ValueError):
     """A deterministic, user-actionable corpus validation failure."""
+
+
+def parse_held_params(raw):
+    """
+    Parse --hold-params "BASE,SLOPE,HOME" into three finite floats.
+
+    Held mode scores the SHIPPED constants against a fresh corpus without refitting (KD-8 / D-09: before
+    PM-2 the means are refitted only if this check fails). The mean bar keeps dof = cells - 3 even
+    though nothing is fitted here: that is the bar as KD-8 pins it, and for an independent corpus it is
+    the stricter reading, so a held PASS is never easier to earn than a fitted one.
+    """
+    parts = [part.strip() for part in raw.split(",")]
+    if len(parts) != 3:
+        raise CorpusError(f"--hold-params needs exactly three comma-separated values, got {raw!r}")
+    try:
+        values = tuple(float(part) for part in parts)
+    except ValueError as error:
+        raise CorpusError(f"--hold-params: invalid number in {raw!r}") from error
+    if not all(math.isfinite(v) for v in values):
+        raise CorpusError(f"--hold-params values must be finite, got {raw!r}")
+    if values[0] <= 0.0:
+        raise CorpusError(f"--hold-params BASE must be positive, got {values[0]}")
+    return values
 
 
 def lam(base, slope, signed_edge):
@@ -434,9 +459,12 @@ def main():
     # fit. The objective is sample-weighted, so folding a deepened bucket into it would quietly re-weight
     # the whole grid toward whichever bucket happens to have been measured hardest.
     ap.add_argument("--wdl-csv", nargs="*", default=[])
+    # Score these constants instead of fitting new ones (see parse_held_params).
+    ap.add_argument("--hold-params", default=None, metavar="BASE,SLOPE,HOME")
     args = ap.parse_args()
 
     try:
+        held = parse_held_params(args.hold_params) if args.hold_params is not None else None
         rows = read_rows(args.csv)
         wdl_rows = read_rows(args.wdl_csv)
     except CorpusError as error:
@@ -447,14 +475,15 @@ def main():
         return 1
 
     summary = summarise(bucket(rows))
-    base, slope, home_adv = fit(summary)
+    base, slope, home_adv = held if held is not None else fit(summary)
     res = resolution(summary)
     bar = mean_bar(summary, (base, slope, home_adv))
     succ = successor_diagnostics(summary)
     corr, corr_se, corr_n = pooled_correlation(rows)
 
     print(f"corpus: {len(rows)} matches across {len(summary)} buckets")
-    print(f"fit: BaseGoals={base:.4f} GoalRatingSlope={slope:.4f} HomeAdvantageRating={home_adv:.4f}")
+    print(f"{'held (NOT refitted)' if held is not None else 'fit'}: BaseGoals={base:.4f} "
+          f"GoalRatingSlope={slope:.4f} HomeAdvantageRating={home_adv:.4f}")
     print(f"objective={objective([base, slope, home_adv], summary):.6f}")
     print()
     hdr = (f"{'bucket':>7} {'n':>4} {'meanD':>7} {'corpH':>6} {'modH':>6} {'dH':>6} {'seH':>6} "
@@ -682,10 +711,17 @@ def write_artifact(args, rows, summary, params, worst, corpus_wdl, model_wdl_v, 
         f.write("**Non-certifying.** These are engine *results*, not timings or determinism proofs, so the\n")
         f.write("Linux gate host is a legitimate capture platform — unlike `FR-PO-052` perf baselines or the\n")
         f.write("`FR-DS-009-GATE` determinism KAT, which require the pinned Windows/Unity tuple.\n\n")
-        f.write("## Fitted parameters\n\n")
-        f.write("Least squares over the three KD-7 parameters against the per-bucket means below.\n")
-        f.write("`LambdaMin` / `LambdaMax` are safety clamps and are deliberately **not** fitted.\n\n")
-        f.write("| Constant | Fitted value |\n|---|---|\n")
+        if args.hold_params is not None:
+            f.write("## Held parameters (scored, not refitted)\n\n")
+            f.write("These are the shipped constants, scored against this corpus **without** refitting\n")
+            f.write("(`--hold-params`). The mean bar keeps `dof = cells − 3` although nothing is fitted:\n")
+            f.write("that is the bar as KD-8 pins it, and the stricter reading for an independent corpus.\n\n")
+            f.write("| Constant | Held value |\n|---|---|\n")
+        else:
+            f.write("## Fitted parameters\n\n")
+            f.write("Least squares over the three KD-7 parameters against the per-bucket means below.\n")
+            f.write("`LambdaMin` / `LambdaMax` are safety clamps and are deliberately **not** fitted.\n\n")
+            f.write("| Constant | Fitted value |\n|---|---|\n")
         f.write(f"| `QuickSimBaseGoals` | {base:.4f} |\n")
         f.write(f"| `QuickSimGoalRatingSlope` | {slope:.4f} |\n")
         f.write(f"| `QuickSimHomeAdvantageRating` | {home_adv:.4f} |\n\n")
@@ -882,3 +918,8 @@ if __name__ == "__main__":
 # |         |            |        | candidate families — a shared-swing family needs it clearly      |
 # |         |            |        | negative) and NB2's draw share at the acceptance bucket (the     |
 # |         |            |        | number that stops NB2 being mistaken for a fix to the draws).    |
+# | 1.5     | 2026-11-24 | —      | --hold-params BASE,SLOPE,HOME: score the shipped constants       |
+# |         |            |        | against a recaptured corpus WITHOUT refitting (roadmap engine    |
+# |         |            |        | lane item 4 / D-09: refit only if KD-8's mean bar fails). The    |
+# |         |            |        | bar is unchanged, dof stays cells - 3 (stricter for held-out),   |
+# |         |            |        | and the artifact labels the parameters as held, not fitted.      |

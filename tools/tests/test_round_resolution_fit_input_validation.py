@@ -94,5 +94,57 @@ class RoundResolutionFitInputValidationTests(unittest.TestCase):
             self.assertEqual(MODULE.read_rows([path]), [{"d": -0.5, "h": 0, "a": 20}])
 
 
+class RoundResolutionFitHeldParamsTests(unittest.TestCase):
+    """--hold-params scores the shipped constants without refitting (PM-2 quick-sim check, D-09)."""
+
+    def test_parses_three_finite_values(self):
+        self.assertEqual(MODULE.parse_held_params("1.2325, 0.2162,0.4996"), (1.2325, 0.2162, 0.4996))
+
+    def test_rejects_malformed_held_params(self):
+        cases = (
+            ("1,2", "exactly three"),
+            ("1,2,3,4", "exactly three"),
+            ("1,x,3", "invalid number"),
+            ("1,nan,3", "finite"),
+            ("0,0.2,0.5", "BASE must be positive"),
+        )
+        for raw, message in cases:
+            with self.subTest(raw=raw):
+                with self.assertRaisesRegex(MODULE.CorpusError, message):
+                    MODULE.parse_held_params(raw)
+
+    def test_held_mode_scores_the_given_constants_and_labels_the_artifact(self):
+        import contextlib
+        import io
+        import sys
+
+        rows = ["dSquad,homeGoals,awayGoals"]
+        for d in (-1, 0, 1):
+            for i in range(4):
+                rows.append(f"{d + 0.01 * i:.2f},{(i + d + 1) % 4},{(i + 2) % 3}")
+        with tempfile.TemporaryDirectory() as directory:
+            corpus = Path(directory) / "corpus.csv"
+            corpus.write_text("\n".join(rows) + "\n", encoding="utf-8")
+            out = Path(directory) / "artifact.md"
+            argv = ["round-resolution-fit.py", str(corpus), "--hold-params", "0.9,0.3,0.7",
+                    "--out", str(out)]
+            buffer = io.StringIO()
+            saved = sys.argv
+            try:
+                sys.argv = argv
+                with contextlib.redirect_stdout(buffer):
+                    self.assertEqual(MODULE.main(), 0)
+            finally:
+                sys.argv = saved
+            printed = buffer.getvalue()
+            self.assertIn("held (NOT refitted): BaseGoals=0.9000 GoalRatingSlope=0.3000 "
+                          "HomeAdvantageRating=0.7000", printed)
+            artifact = out.read_text(encoding="utf-8")
+            self.assertIn("## Held parameters (scored, not refitted)", artifact)
+            self.assertNotIn("## Fitted parameters", artifact)
+            self.assertIn("| `QuickSimBaseGoals` | 0.9000 |", artifact)
+            self.assertIn("| `QuickSimHomeAdvantageRating` | 0.7000 |", artifact)
+
+
 if __name__ == "__main__":
     unittest.main()

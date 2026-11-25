@@ -1,0 +1,14 @@
+Fixed source commit 4e3c96054a034f81ac8556c55cde6572d506e0e7
+Fixed Git tree b4494d99aebdafdf1b2520aa51a614aa6b465e48
+Fixed src tree edd98278ffeab17849c0a3218a2f35f19ca6770a
+Pre-fix control commit 2d89e45a9b34343f55086b2ab02e9f2d4468515c
+Pre-fix control Git tree 22505ecde2e91b9268ff0c8d24f49c3d0cc9b661
+Pre-fix control src tree 2544adb0cbdbeec9b7c17804a43d907707f47339
+Measurement fixture blob on both builds 281430ae84bcdaacb8c9e22e6d6f472ed8523c1d
+Clean tracked source trees, schema v31 on both builds
+Build configuration Release, generated .NET shim projects
+SDK 8.0.426
+Microsoft.AspNetCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 8.0.32 [/workspace/.cloud-tools/dotnet/shared/Microsoft.NETCore.App]
+Build host Linux / x86_64
+Fixed and control MatchEngine builds completed with 0 errors and 3 CS0649 warnings each.
