@@ -1,15 +1,17 @@
 // File:     src/client-app/tests/CareerSessionTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-25
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-1/2), roadmap C4,
 //           Season & Competition Loop #30 §4 (save/resume), Player Progression #28 KD-4, Code Standards #20
 // Purpose:  Locks the career session: the C4 new-game chain produces a full composition and an
 //           autosave, a resumed career continues exactly as the uninterrupted one would, autosave
 //           follows rounds and rolls only, manual saves cannot target the autosave slot, and a caller
-//           error on Resume never invalidates a healthy slot.
+//           error on Resume never invalidates a healthy slot, and a save that no longer matches its
+//           sidecar is invalidated so Continue moves on.
 
 using System;
+using System.IO;
 
 using NUnit.Framework;
 
@@ -84,6 +86,30 @@ namespace TacticalDirector.ClientApp.Tests
             Assert.AreEqual(CareerSlotState.Ready, temp.Slots.Describe(CareerSaveSlot.Manual1).State,
                 "a caller error is not the save's fault.");
             Assert.DoesNotThrow(() => CareerSession.Resume(temp.Slots, CareerSaveSlot.Manual1, RoundResolutionMode.QuickSimAll));
+        }
+
+        [Test]
+        public void Continue_WithASaveThatNoLongerMatchesItsSidecar_MarksItDamaged_AndThenPicksTheNextSlot()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            uint manual1Day = temp.Slots.Describe(CareerSaveSlot.Manual1).WorldDay;
+            session.Progress();
+            session.SaveTo(CareerSaveSlot.Manual2);
+            Assert.AreNotEqual(manual1Day, temp.Slots.Describe(CareerSaveSlot.Manual2).WorldDay);
+
+            // Manual2 is the latest slot, but its file now holds Manual1's (valid) save.
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual1), temp.Slots.SavePath(CareerSaveSlot.Manual2), overwrite: true);
+
+            Assert.Throws<InvalidDataException>(() =>
+                CareerSession.ContinueLatest(temp.Slots, RoundResolutionMode.QuickSimAll));
+            Assert.AreEqual(CareerSlotState.Damaged, temp.Slots.Describe(CareerSaveSlot.Manual2).State);
+            Assert.IsFalse(temp.Slots.RestoreDamaged(CareerSaveSlot.Manual2),
+                "a mismatched save cannot be restored to Ready.");
+
+            CareerSession resumed = CareerSession.ContinueLatest(temp.Slots, RoundResolutionMode.QuickSimAll);
+            Assert.AreEqual(manual1Day, resumed.Loop.CurrentWorldDay, "Continue moves on to Manual1.");
         }
 
         [Test]
@@ -186,4 +212,6 @@ namespace TacticalDirector.ClientApp.Tests
 // | 1.1     | 2026-10-27 | —      | PR 519 review 2: +1 lock — an undefined mode on Resume leaves  |
 // |         |            |        | the slot Ready (9 locks).                                      |
 // | 1.2     | 2026-10-30 | —      | PR 521 merge: new careers wire #31; resume preserves its blob. |
+// | 1.3     | 2026-11-25 | —      | +1 lock — Continue marks a digest-mismatched save Damaged and  |
+// |         |            |        | the next Continue picks the older intact slot.                 |
 #endregion

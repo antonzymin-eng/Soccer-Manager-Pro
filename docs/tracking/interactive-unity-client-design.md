@@ -1,6 +1,8 @@
 # Interactive Unity Client — High-Level Implementation Plan
 
-**Last Updated:** November 20, 2026 (v0.44 — §5-P7b career startup accepted on the pinned host; Career on in the tracked scene.)
+**Last Updated:** November 25, 2026 (v0.45 — §5-P7 D-P7-2: a career load checks the save against its sidecar digest and marks a mismatched slot Damaged.)
+
+**Last Updated (prior):** November 20, 2026 (v0.44 — §5-P7b career startup accepted on the pinned host; Career on in the tracked scene.)
 
 **Last Updated (prior):** November 18, 2026 (v0.43 — §5-P7 cooperative career shutdown and write admission.)
 
@@ -699,7 +701,7 @@ authority the code below implements:
 | ID | Decision | Implementation consequence |
 |---|---|---|
 | **D-P7-1** new-game options | The world seed is generated; the player picks a club from the generated league; the board objective is the bootstrap default (top half). No seed entry in Early Access. | `NewCareerSetup.Prepare(seed)` / `Select(club)` / `Start()`. The seed is a parameter: the host binding supplies entropy, this assembly reads no clock and no `System.Random`. |
-| **D-P7-2** save promise | One autosave slot, written when a career is created and after every played round and every season roll, plus three manual slots. **Continue** loads the most recently written loadable slot directly; **Load** opens a picker. | `CareerSaveSlots` (four slots; `.tdsave` + client-owned `.slot` sidecar; store-wide monotonic write sequence decides "latest" without clock or file timestamps). `CareerSession` autosaves; `LoadCareerSource.TryContinue/TryLoad`. |
+| **D-P7-2** save promise | One autosave slot, written when a career is created and after every played round and every season roll, plus three manual slots. **Continue** loads the most recently written loadable slot directly; **Load** opens a picker. | `CareerSaveSlots` (four slots; `.tdsave` + client-owned `.slot` sidecar; store-wide monotonic write sequence decides "latest" without clock or file timestamps; since v0.45 a load refuses a save that no longer matches its sidecar's recorded digest, and the slot is marked Damaged). `CareerSession` autosaves; `LoadCareerSource.TryContinue/TryLoad`. |
 | **D-P7-3** progress semantics | **Day-granular.** The primary action advances one day; the match appears when its day arrives. | `CareerProgress.NextAction` — exactly one legal action, derived from #30's own guards (table below). |
 | **D-P7-4** mandatory blockers before progress | **None.** The lineup is the existing auto-selection (`LineupSelector` behind #30's availability filter). Progress is disabled only while an operation is running. | `CareerSession.IsBusy` / `CareerHomeViewModel.IsProgressBlocked`. |
 | **D-P7-5 = D-10** incompatible-save promise | **Saves are breakable through PM-3** (roadmap C4 / D6 / D-10, decided October 18, 2026). *Extended November 3, 2026 (roadmap D-10, v0.86): breakable until the owner's release-readiness checkpoint (D-14; no Early Access planned).* A format-version bump rejects older saves; no migration path is authored (#50 stays parked). | A slot whose sidecar records another `SEASON_SAVE_FORMAT_VERSION`, or another version of any sub-blob nested in the save (each is gated independently, so an inner bump leaves the outer version alone), is `CareerSlotState.Incompatible`: listed with what it was, never loaded, never Continued, freely overwritten. A Ready slot whose save fails to decode anyway is invalidated to `Damaged`, so it cannot keep winning Continue. |
@@ -1184,6 +1186,7 @@ is built to avoid.
 ## Version History
 
 | Version | Date | Notes |
+| 0.45 | 2026-11-25 | §5-P7 D-P7-2: `CareerSaveSlots.Load` checks the save's SHA-256 against the sidecar before decoding; a mismatch is an unloadable save (slot marked Damaged, Continue moves on). Chosen over a backup fallback (no backup survives a committed write) and over relying on #30's decoder (a changed value still decodes). Pinned-host check outstanding. |
 | 0.44 | 2026-11-20 | §5-P7b: startup checklist items 6–8 passed on the pinned host at `52d1f000`; the tracked scene enables Career. |
 | 0.43 | 2026-11-18 | §5-P7 cooperative career shutdown, discard of unfinished rounds and writer admission. Pinned host acceptance remains open. |
 | 0.42 | 2026-11-05 | T5: §5-P8 as built after AR-2 T1–T4; owner preflight, visible projection failures and regression coverage. |
