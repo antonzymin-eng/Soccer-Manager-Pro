@@ -1,0 +1,28 @@
+# Source identity — pinned-host Unity run of the TickHeartbeatEvent fix (fix/eventsystem-heartbeat-mono)
+
+commit: e8d007aa6921254cdddd4ca5e3b700b77aabdfd4 ("fix(event-system): give TickHeartbeatEvent a reserved byte so Mono sizes it 1")
+parent: 212589a77fc392916c37ea329e9df1ccdf9e9217 (main after PR #565)
+tree (root): 2969f71a49354698d8d6ab7e2eaad07369f8a993
+tree src: 45c99fd6d2b12422fcc6d2dac7cdb95d59641922
+tree Packages: d71ce2b8dcdf897a4088717b7847023315f9423b
+tree ProjectSettings: 5dec802e2a7397b9e02b933200a8db0860bc5eea
+tree Assets: 070170334b81ce03dfccc4f26025f1cbfd7a0f63
+tree docs/design: 8a4f312496175a4571f3853642c45eb147d0ac3d
+
+worktree: detached git worktree, sparse checkout of /Assets/ /Packages/ /ProjectSettings/ /src/ /docs/design/
+Assets/Scripts: directory junction -> <worktree>/src
+Library before compile: absent (new worktree; the compile rebuilt 1,150 of 1,203 build items)
+
+run order (all on the same worktree and Library):
+1. compile: ended 2026-11-24T23:58:47Z, 78 s wall, exit 0
+2. EventSystem only, with the fix: NUnit 2026-11-24T23:59:06Z, exit 2 (one existing inconclusive)
+3. EventSystem only, without the fix: src/event-system/TickHeartbeatEvent.cs checked out from 212589a7
+   (the only file changed); Unity recompiled EventSystem and its dependants (60 items); NUnit
+   2026-11-24T23:59:36Z, exit 2 (8 failed). The file was then checked out back from e8d007aa.
+4. full EditMode, no filter: Unity recompiled the restored file (60 items); start 2026-11-24T23:59:51Z,
+   NUnit 2026-11-25T00:00:11Z to 00:56:24Z (3,373 s), end 2026-11-25T00:56:29Z, exit 2 (inconclusives only)
+git status --short after all runs: 0 lines
+
+unity: 6000.4.9f1 (f7258d6eebbe), revision 16197005
+host: owner's Windows 11 Home 10.0.26300 (x64) machine, Mono scripting backend
+owner's Editor: not attached to this worktree

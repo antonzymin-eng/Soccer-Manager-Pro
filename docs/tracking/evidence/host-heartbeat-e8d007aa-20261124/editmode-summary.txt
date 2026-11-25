@@ -1,0 +1,74 @@
+# EditMode summary â€” fix at e8d007aa (TickHeartbeatEvent reserved byte)
+# Generated from the redacted NUnit XML in this directory. Per-assembly counts, then every failed or inconclusive case with its message.
+
+## Full EditMode, every assembly, no filter (editmode-results.xml.xz)
+### editmode-results.xml: total=5178 passed=4928 failed=0 inconclusive=3 skipped=247 start=2026-11-25 00:00:11Z end=2026-11-25 00:56:24Z duration=3373.1584705
+  TacticalDirector.AgentMovement.Tests.dll: total=110 passed=110 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.AttackingAI.Tests.dll: total=90 passed=67 failed=0 inconclusive=0 skipped=23
+  TacticalDirector.BallPhysics.Tests.dll: total=120 passed=120 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.ClientApp.Tests.dll: total=305 passed=302 failed=0 inconclusive=0 skipped=3
+  TacticalDirector.ClubFinances.Tests.dll: total=70 passed=70 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.CollisionSystem.Tests.dll: total=49 passed=40 failed=0 inconclusive=0 skipped=9
+  TacticalDirector.DecisionTree.Tests.dll: total=158 passed=154 failed=0 inconclusive=0 skipped=4
+  TacticalDirector.DefensiveAI.Tests.dll: total=191 passed=163 failed=0 inconclusive=0 skipped=28
+  TacticalDirector.DeterministicSim.Tests.dll: total=91 passed=90 failed=0 inconclusive=0 skipped=1
+  TacticalDirector.Discipline.Tests.dll: total=151 passed=151 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.EventSystem.Tests.dll: total=66 passed=55 failed=0 inconclusive=1 skipped=10
+  TacticalDirector.FirstTouch.Tests.dll: total=79 passed=71 failed=0 inconclusive=0 skipped=8
+  TacticalDirector.GoalkeeperMechanics.Tests.dll: total=138 passed=111 failed=0 inconclusive=0 skipped=27
+  TacticalDirector.HeadingMechanics.Tests.dll: total=90 passed=75 failed=0 inconclusive=0 skipped=15
+  TacticalDirector.InjuriesMedical.Tests.dll: total=76 passed=76 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.LivingWorld.Tests.dll: total=129 passed=129 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.Localization.Tests.dll: total=67 passed=67 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchAnalytics.Tests.dll: total=59 passed=59 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchClientCore.Tests.dll: total=192 passed=192 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchClientWeb.Tests.dll: total=64 passed=64 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.MatchEngine.Tests.dll: total=1153 passed=1115 failed=0 inconclusive=1 skipped=37
+  TacticalDirector.MatchViewer.Tests.dll: total=78 passed=78 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PassMechanics.Tests.dll: total=107 passed=95 failed=0 inconclusive=0 skipped=12
+  TacticalDirector.PerceptionSystem.Tests.dll: total=69 passed=54 failed=0 inconclusive=0 skipped=15
+  TacticalDirector.PerformanceOptimization.Tests.dll: total=10 passed=10 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PlayerDatabase.Tests.dll: total=50 passed=50 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PlayerProgression.Tests.dll: total=193 passed=193 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.PositioningAI.Tests.dll: total=156 passed=143 failed=0 inconclusive=0 skipped=13
+  TacticalDirector.PressingAI.Tests.dll: total=91 passed=65 failed=0 inconclusive=0 skipped=26
+  TacticalDirector.ProjectConstants.Tests.dll: total=26 passed=26 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.SeasonSave.Tests.dll: total=573 passed=569 failed=0 inconclusive=0 skipped=4
+  TacticalDirector.ShotMechanics.Tests.dll: total=102 passed=89 failed=0 inconclusive=1 skipped=12
+  TacticalDirector.TacticalInstructions.Tests.dll: total=59 passed=59 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.TestingStrategy.Tests.dll: total=33 passed=33 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.TrainingSystem.Tests.dll: total=52 passed=52 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.Transfers.Tests.dll: total=79 passed=79 failed=0 inconclusive=0 skipped=0
+  TacticalDirector.UiFramework.Tests.dll: total=52 passed=52 failed=0 inconclusive=0 skipped=0
+  INCONCLUSIVE TacticalDirector.EventSystem.Tests.EventBusWiringSmokeTests.Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable [0.006508 s]: Golden digest not yet pinned. Observed sha256=de1e5d82327d5b74e5b9483ac04fd277862847b77c54157eca0702c583d2faa6 — pin atomically with the AM #2 registrar landing.
+  INCONCLUSIVE TacticalDirector.MatchEngine.MatchEngineTackleTests.ATackleFoulIsGivenAsASlideTackleAndNotJudgedTwice [0.001547 s]: too few connecting challenges to judge the share (won=5 loose=15 foul=4 missed=77 dispossessions=20)   Expected: greater than 30   But was:  24
+  INCONCLUSIVE TacticalDirector.ShotMechanics.Tests.BodyMechanicsTests.BM007_PoorMechanicsHighPower_StumbleTriggered [0.000452 s]: BM-007: Could not produce Score < StumbleThreshold under test inputs; skip stumble check.
+
+## EventSystem only, with the fix (eventsystem-results.xml.xz)
+### eventsystem-results.xml: total=66 passed=55 failed=0 inconclusive=1 skipped=10 start=2026-11-24 23:59:06Z end=2026-11-24 23:59:06Z duration=0.1747951
+  TacticalDirector.EventSystem.Tests.dll: total=66 passed=55 failed=0 inconclusive=1 skipped=10
+  INCONCLUSIVE TacticalDirector.EventSystem.Tests.EventBusWiringSmokeTests.Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable [0.016410 s]: Golden digest not yet pinned. Observed sha256=de1e5d82327d5b74e5b9483ac04fd277862847b77c54157eca0702c583d2faa6 — pin atomically with the AM #2 registrar landing.
+
+## EventSystem only, TickHeartbeatEvent.cs restored to main 212589a7, same worktree and Library (eventsystem-without-fix-results.xml.xz)
+### eventsystem-without-fix-results.xml: total=66 passed=47 failed=8 inconclusive=1 skipped=10 start=2026-11-24 23:59:36Z end=2026-11-24 23:59:36Z duration=0.1789494
+  TacticalDirector.EventSystem.Tests.dll: total=66 passed=47 failed=8 inconclusive=1 skipped=10
+  FAILED TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_DropPredicate_DropsWhenCountReachesMaxPerTick [0.003662 s]: System.InvalidOperationException : ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09. Call EventBusRegistrar.Initialize() before publishing.
+  FAILED TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_MultipleSubscribers_AllReceiveEvent [0.000530 s]: System.InvalidOperationException : ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09. Call EventBusRegistrar.Initialize() before publishing.
+  FAILED TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_Publish_DeliiversToSubscriber [0.000361 s]: System.InvalidOperationException : ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09. Call EventBusRegistrar.Initialize() before publishing.
+  FAILED TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_ResetPublicationCounts_AllowsPublishAgain [0.000344 s]: System.InvalidOperationException : ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09. Call EventBusRegistrar.Initialize() before publishing.
+  FAILED TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_Unsubscribe_PreventsSubsequentDelivery [0.000365 s]: System.InvalidOperationException : ERR_EVT_UNREGISTERED_ORDINAL (0x1706): Tier C struct size is 0 for ordinal 0x09. Call EventBusRegistrar.Initialize() before publishing.
+  INCONCLUSIVE TacticalDirector.EventSystem.Tests.EventBusWiringSmokeTests.Boot_PublishOnePerSpec_DrainTick_SerializeLedger_DigestStable [0.016542 s]: Golden digest not yet pinned. Observed sha256=de1e5d82327d5b74e5b9483ac04fd277862847b77c54157eca0702c583d2faa6 — pin atomically with the AM #2 registrar landing.
+  FAILED TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.AllSeededTierCRows_StructSizesAboveZero [0.001984 s]: TickHeartbeatEvent struct size must be > 0 (CLR min 1)   Expected: greater than 0   But was:  0
+  FAILED TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.IsRegistered_ReturnsTrue_ForFullySeededRows [0.000310 s]: TickHeartbeatEvent (0x09) must be IsRegistered=true   Expected: True   But was:  False
+  FAILED TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.TickHeartbeatEvent_StructSizeIsExactlyOne_AndMatchesRegistry [0.000801 s]: TickHeartbeatEvent must measure 1 byte on every runtime   Expected: 1   But was:  0
+
+## The eight cases the fix changes (without fix -> with fix)
+  TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_DropPredicate_DropsWhenCountReachesMaxPerTick: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_MultipleSubscribers_AllReceiveEvent: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_Publish_DeliiversToSubscriber: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_ResetPublicationCounts_AllowsPublishAgain: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.CosmeticChannelTests.TierC_Unsubscribe_PreventsSubsequentDelivery: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.AllSeededTierCRows_StructSizesAboveZero: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.IsRegistered_ReturnsTrue_ForFullySeededRows: Failed -> Passed (full run: Passed)
+  TacticalDirector.EventSystem.Tests.EventRegistrySchemaTests.TickHeartbeatEvent_StructSizeIsExactlyOne_AndMatchesRegistry: Failed -> Passed (full run: Passed)
+  other EventSystem cases with a different outcome between the arms: 0
