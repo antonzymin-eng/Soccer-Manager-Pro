@@ -1,7 +1,8 @@
 # Tactical Presets & AI-Manager Selection — Design Supplement
 
 > **Created:** July 7, 2026
-> **Last Updated:** July 8, 2026 (v0.5 — **PROMOTED**: candidate #26 authored as section files at
+> **Last Updated:** November 25, 2026 (v0.6 — Status header corrected to PROMOTED (#26); doc-only.)
+> **Prior:** July 8, 2026 (v0.5 — **PROMOTED**: candidate #26 authored as section files at
 > `IN REVIEW` — `docs/specs/tactical-presets/` (FR-TP) — completing §6 steps 1–3 (`SPEC_INDEX.md`
 > registry row added; RESERVED entry retired). The promoted spec resolves this note's §4 open
 > questions (Q1 → compose-only, Q2 → gate-not-clock, Q3 → explicit deferral, Q4 → UI deferral) and
@@ -20,9 +21,9 @@
 > per their own doc comments) from mid-match AI-manager adaptation, which must call
 > `MatchEngine.SetTeamTactic`/`SetPlayerTactic` directly.
 >
-> **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet
-> implemented). Parallel in status to the pre-promotion `tactical-instruction-layer-design.md`
-> (→ Spec #21). No code is authored from this note until it is reviewed and promoted.
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #26 (`docs/specs/tactical-presets/`, **APPROVED** Jul 10, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Author:** —
 > **Purpose:** Scope the "game model / AI-manager tactics" item from the July 7, 2026
 > tactical-theory cross-reference: the `TeamTacticConfig`/`PlayerTacticConfig` substrate
@@ -234,6 +235,7 @@ and its implementation, not further design-supplement content.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.6 | 2026-11-25 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (forward-looking; NOT a formal approved spec, NOT yet implemented)." although #26 was promoted and APPROVED (`SPEC_INDEX.md` row 26); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |
 | 0.5 | 2026-07-08 | PROMOTED — #26 section files authored at `IN REVIEW` (§6 steps 1–3 complete); `SPEC_INDEX.md` registry row added, RESERVED entry retired; §4 open questions resolved in the spec (Q1 compose-only / Q2 gate / Q3 deferral / Q4 UI deferral). §6 citation fix: "Specification Before Code" is a `README.md` heading, not root `CLAUDE.md`. |
 | 0.4 | 2026-07-07 | AR-2 fix (0H+0M+1L): KD-2 claimed goal-scored re-evaluation was available today with only red-card/substitution deferred; grepping `src/match-engine/MatchEngine.cs` shows zero producers for `GoalAwardedEvent`, `CardIssuedEvent`, or `SubstitutionEvent` (only `PossessionChangedEvent` is wired) — corrected to defer all three event-triggered points uniformly, with goal-scoring flagged as the likely first candidate once a producer lands. |
 | 0.3 | 2026-07-07 | Added §6 Implementation Plan — spec-promotion pipeline for #26 + T0–T4 code-landing sequence + explicit deferral note. |

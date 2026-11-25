@@ -1,9 +1,11 @@
 # Media & Press Interactions #35 — Design Supplement
 
 > **Created:** July 26, 2026
-> **Last Updated:** July 26, 2026 (v0.7 — #46 coordination: ERR-033-001 superseded by ERR-033-003; AR cycle CONVERGED at v0.6)
-> **Version:** 0.7
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
+> **Last Updated:** November 25, 2026 (v0.8 — Status header corrected to PROMOTED (#35); doc-only; prior July 26, 2026, v0.7 — #46 coordination: ERR-033-001 superseded by ERR-033-003; AR cycle CONVERGED at v0.6)
+> **Version:** 0.8
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #35 (`docs/specs/media-press-interactions/`, **APPROVED** Jul 27, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** **#35** · **FR prefix:** `FR-ME` · **Wave:** 6 · **Tier:** S4
 > **Promoted from:** `docs/tracking/spec-plans/spec-35-media-press-interactions.md` v0.1
 
@@ -510,7 +512,8 @@ exists today, independent of #35, and #35 merely cannot cite a step number until
 
 *(The last id assumes ERR-030-012 is taken by §8.0; both are #30-side and land together.)*
 
-**Coordination with #46 (`news-inbox-man-management-design.md`, authored second in this wave).** #35 v0.6
+**Coordination with #46 (`news-inbox-man-management-design.md`, authored second in this wave).**
+#35 v0.6
 filed this field as `MediaDeltaPermille`. #46 is the **second** producer of exactly this quantity — a
 bounded morale delta from an off-pitch manager action — and #33's FR-HS-024 names it the sole
 man-management writer, so the per-producer name does not survive: producer #3 would need a third field on an
@@ -630,3 +633,4 @@ The steps from here to `APPROVED`, per `spec-plans/README.md`:
 | v0.5 | July 26, 2026 | **AR-4 fix pass: 0H + 2M, both regressions introduced by earlier AR rounds — the case for re-reading the whole document each pass rather than the diff.** **M-1** — §8.3 still asserted “**#49** — nothing to change” while AR-1 had added **ERR-049-001** against #49 to §8.1: the two back-prop tables directly contradicted each other, and a reader working from §8.3 would have skipped the one change KD-2 depends on. §8.3 now scopes its claim to #49’s *core seam* and points at the single wording fix. **M-2** — §9’s identity test was still specified against *“no conference answered”*, the precondition AR-2 corrected in §3 and KD-9 but not here; since expiry answers conferences, a test built to it would either fail or prove less than it claims. Restated as KD-9’s condition (nothing queued, or every consequence `0`), with the trap named so it is not re-introduced. |
 | v0.6 | July 26, 2026 | **AR-5 sweep: 0H + 0M + 3L, all resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — KD-3 and the ERR-033-001 row still said the routed field is neutral *“until a conference is answered”*, the third and last instance of the precondition AR-2/AR-4 corrected elsewhere; the true condition is “until a **non-zero** delta is delivered”, since expiry answers conferences and a `0`-consequence answer records no row at all (§5). **L-2** — a dropped “that” in KD-2’s opening sentence. **L-3** — the ordinal-band boundary constant was tagged “`[GT]`-free `[FIXED]`”, a garbled construction from the AR-2 edit; it is simply `[FIXED]`. |
 | v0.7 | July 26, 2026 | **Cross-supplement coordination with #46** (authored second in Wave 6; no new AR round — the AR cycle converged at v0.6 and this changes a back-prop’s naming, not a decision). #46 is the second producer of the same bounded off-pitch morale delta, so `HumanSystemsDayInput.MediaDeltaPermille` does not generalize: producer #3 would need a third field on an approved struct. **ERR-033-001 is superseded by #46’s ERR-033-003** — one producer-agnostic `ExternalDeltaPermille`, summed across producers and clamped by the root before it reaches #33. KD-3’s mechanism is unchanged and is what #46 adopts; only the field’s name and arity move, while both specs are pre-promotion with no implementation behind either. |
+| v0.8 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)" although #35 was promoted and APPROVED (`SPEC_INDEX.md` row 35); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

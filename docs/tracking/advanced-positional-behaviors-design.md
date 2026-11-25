@@ -1,7 +1,8 @@
 # Advanced Positional Behaviors — Design Supplement
 
 > **Created:** July 7, 2026
-> **Last Updated:** July 8, 2026 (v0.4 — **PROMOTED**: all three candidates authored as section
+> **Last Updated:** November 25, 2026 (v0.5 — Status header corrected to PROMOTED (#23/#24/#25); doc-only.)
+> **Prior:** July 8, 2026 (v0.4 — **PROMOTED**: all three candidates authored as section
 > files at `IN REVIEW` — `docs/specs/dismarking-ai/` (#23, FR-DM), `docs/specs/build-up-structures/`
 > (#24, FR-BU), `docs/specs/positional-rotations/` (#25, FR-RO) — completing §6 steps 1–3 for all
 > three (`SPEC_INDEX.md` registry rows added; RESERVED entries retired). The promoted specs
@@ -16,10 +17,12 @@
 > `TransitionPlan` reference to the specific `TeamTactic.TransitionWon` field, verified against
 > `src/tactical-instructions/TeamTactic.cs`.
 >
-> **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet
-> implemented, **NOT** yet section-file drafted). Parallel in status to the pre-promotion
-> `tactical-instruction-layer-design.md` (→ Spec #21) and `living-world-system-design.md`
-> (→ Spec #22). No code is authored from this note until it is reviewed, split, and promoted.
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** (split three ways) per `SPEC_INDEX.md` to
+> Spec #23 (`docs/specs/dismarking-ai/`, **APPROVED** Jul 10, 2026);
+> Spec #24 (`docs/specs/build-up-structures/`, **APPROVED** Jul 10, 2026);
+> Spec #25 (`docs/specs/positional-rotations/`, **APPROVED** Jul 10, 2026).
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Author:** —
 > **Purpose:** Scope three related new-behavior-class items surfaced by the July 7, 2026
 > tactical-theory cross-reference (see root `CLAUDE.md` OPEN ISSUES, "four cheap-item tactical
@@ -249,6 +252,7 @@ candidate's own eventual spec and implementation work, not further design-supple
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.5 | 2026-11-25 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (forward-looking; NOT a formal approved spec, NOT yet implemented, NOT yet section-file drafted)." although #23/#24/#25 were promoted and APPROVED (`SPEC_INDEX.md` rows 23, 24, 25); it now records the promotion and names the specs as authoritative. Found by the November 2026 tracking-docs inventory review. |
 | 0.4 | 2026-07-08 | PROMOTED — #23/#24/#25 section files authored at `IN REVIEW` (§6 steps 1–3 complete for all three); `SPEC_INDEX.md` registry rows added, RESERVED entries retired. Promoted specs supersede this note on deviation (#24 KD-3 gating refinement recorded there). §6 citation fix: "Specification Before Code" is a `README.md` heading, not root `CLAUDE.md`. |
 | 0.3 | 2026-07-07 | Added §6 Implementation Plan — the per-candidate spec-promotion pipeline + recommended #23→#24→#25 sequencing rationale. Self-review of the plan caught the proposed `FR-PR-*` prefix for Rotations colliding with Pressing AI's (#13) existing prefix (grep-verified against `docs/specs/**/*.md`); corrected to `FR-RO-*`. |
 | 0.2 | 2026-07-07 | AR-1 fix (0H+0M+1L): KD-3 (and the parallel §1 table cell) cited a generic `TeamTactic.TransitionPlan` field as the build-up gating dial; the struct actually has no such field, only `TransitionWon`/`TransitionLost` (both backed by the `TransitionPlan` enum type). Corrected both citations to `TransitionWon` specifically, with the no-AI-consumer-yet claim re-verified by grep. |

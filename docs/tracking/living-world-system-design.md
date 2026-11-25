@@ -6,7 +6,8 @@
 > (`living-world/` / `TacticalDirector.LivingWorld`).
 >
 > **Created:** June 21, 2026
-> **Last Updated:** June 21, 2026 (v0.7 — recorded five §7 review decisions: §7.1 authoring corpus is
+> **Last Updated:** November 25, 2026 (v0.8 — Status header corrected to PROMOTED (#22); doc-only.)
+> **Last Updated (prior):** June 21, 2026 (v0.7 — recorded five §7 review decisions: §7.1 authoring corpus is
 > AI-generated as an offline tool (volume no longer the gate; curation/balance still to do); §7.2 full
 > inspector — time-scrub/replay-step + "why did this arc fire?" causal tracing, which adds a new §4
 > **provenance-at-spawn** constraint (arcs/interactions record trigger inputs + state-snapshot ref);
@@ -53,11 +54,9 @@
 > (L3/L4); minor trims (L1/L2). All seam claims fact-checked against source.)
 > **Last Updated (prior):** June 21, 2026 (v0.1 — initial draft)
 >
-> **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet
-> implemented). Targets **Stage 1+** (manager-facing meta layer), sequenced after the match engine
-> and the tactical-instruction layer (#21) land. No code is authored from this note until it is
-> reviewed and, if promoted, written up as a formal spec with FR-IDs, a §5 test plan, and a §9
-> approval checklist.
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #22 (`docs/specs/living-world/`, **APPROVED** Jun 22, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Author:** —
 > **Purpose:** Propose the **immersion layer** that sits on top of the already-canonical human-systems
 > model (`master-vol-2-human-systems.md`) to attack the central immersion failure of management games:

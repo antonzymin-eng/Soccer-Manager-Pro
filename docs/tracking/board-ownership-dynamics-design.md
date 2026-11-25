@@ -1,9 +1,11 @@
 # Board & Ownership Dynamics #45 — Design Supplement
 
 > **Created:** July 25, 2026
-> **Last Updated:** July 25, 2026 (v0.3 — AR-2 sweep, CONVERGENCE; prior v0.2 AR-1, v0.1 initial)
-> **Version:** 0.3
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
+> **Last Updated:** November 25, 2026 (v0.4 — Status header corrected to PROMOTED (#45); doc-only; prior July 25, 2026, v0.3 — AR-2 sweep, CONVERGENCE; prior v0.2 AR-1, v0.1 initial)
+> **Version:** 0.4
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #45 (`docs/specs/board-ownership-dynamics/`, **APPROVED** Jul 25, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** **#45** · **FR prefix:** `FR-BD` · **Wave:** 5 · **Tier:** S3
 > **Promoted from:** `docs/tracking/spec-plans/spec-45-board-ownership-dynamics.md` v0.1
 
@@ -407,3 +409,4 @@ The steps from here to `APPROVED`, per `spec-plans/README.md`:
 | v0.1 | July 25, 2026 | Initial supplement promoted from the one-page plan. Resolves KD-1..KD-8 against verified upstream source; records the #40 pre-existing seam (no back-prop), the KD-5 `JobSecurity` reconciliation (ERR-030-009), and the single-stream keyed-draw model that keeps #45 off the `MaxRngStreams` bound. |
 | v0.2 | July 25, 2026 | **AR-1 fix pass: 0H + 4M + 2L, all resolved.** **M-1** — the `ProjectBoardModifier` seam had no contract for a club #45 does not model, yet #30 settles finances **per club** and #40 fails loud on an unknown club; with the minimal tier modelling only the managed club, most clubs hit that seam every boundary. Replaced with `TryProjectBoardModifier(clubId, out …) → bool`, #30 substituting `Identity` on `false`, making "not modelled" a named legal state while preserving fail-loud for corrupt input. **M-2** — the KD-5 `JobSecurity` amendment changes a field serialized by #30's `WriteBoard`, so it carries a **`SEASON_STATE_FORMAT_VERSION` bump**; the supplement claimed the change without its save-format consequence. **M-3** — §10 asserted #45 references #33 at no tier, while §8.2 deferred a #33 morale read; resolved by pinning that input as **routed values, not an assembly reference**, so the DAG claim is unconditional and structurally testable. **M-4** — #33 sits at tick slot 3 and #45 at slot 8, so #45-produced board deltas reach #33 **one day stale**; pinned as an explicit contract (with the reorder alternative rejected: slots 1–7 are cited by number in six approved specs) rather than left implicit. **L-1** — added the non-fixture-day neutral-input semantics. **L-2** — noted the stream-entity sentinel needs no coordination with living-world's `-1`/`-2`, since stream keys are scoped by subsystem ordinal. |
 | v0.3 | July 25, 2026 | **AR-2 sweep: 0H + 0M + 3L, all resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — §2's preamble said "three upstream facts" over a five-item list. **L-2** — §5 did not state the sub-blob's APPEND-only discipline, so the deep tier's `TakeoverState` fields had no recorded placement rule or version-bump obligation. **L-3** — recorded that #45 does **not** define the "on track?" projection's semantics (including the degenerate pre-first-fixture table), since that is #30's FR-SN-015; stating the boundary now prevents a later ownership argument over a case neither spec had claimed. Added §12 promotion pipeline. |
+| v0.4 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)" although #45 was promoted and APPROVED (`SPEC_INDEX.md` row 45); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

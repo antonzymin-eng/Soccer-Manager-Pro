@@ -1,7 +1,8 @@
 # Tactical Instruction Layer — Design Supplement
 
 > **Created:** June 20, 2026
-> **Last Updated:** June 20, 2026 (v0.3 — second adversarial fix pass: "no migration" claim narrowed to
+> **Last Updated:** November 25, 2026 (v0.4 — Status header corrected to PROMOTED (#21); doc-only.)
+> **Last Updated (prior):** June 20, 2026 (v0.3 — second adversarial fix pass: "no migration" claim narrowed to
 > enum re-homing, translate-once snapshot rule pinned, FocusPlay/RoleWeightModifiers flagged as new
 > branches, mentality-collapse softened to open balance question; all supplement code references
 > fact-checked against source)
@@ -10,9 +11,9 @@
 > retained for history; the spec section files are authoritative. Folder/assembly naming reconciled
 > there (`tactical-instructions/` / `TacticalDirector.TacticalInstructions`).
 >
-> **Status:** DESIGN SUPPLEMENT (forward-looking; **NOT** a formal approved spec, **NOT** yet implemented).
-> Targets Stage 1 implementation, sequenced against the match-engine Phase C–F roadmap
-> (`match-engine-design.md`). No code is authored from this note until it is reviewed and approved.
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #21 (`docs/specs/tactical-instructions/`, **APPROVED** Jun 20, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Author:** —
 > **Purpose:** Define the manager-facing tactical instruction layer (formation → mentality →
 > team instructions → player roles & duties → individual instructions) that drives the already-built
@@ -342,4 +343,5 @@ units + a Mechanics closed-loop scenario each. T4 — feature units. All closed-
 | 0.1 | 2026-06-20 | — | Initial draft. Cross-checked FM tactical taxonomy against the implemented AI subsystems; enumerated missing enums, the role→weight table, and per-subsystem wiring; sequenced against match-engine Phase C–F. |
 | 0.2 | 2026-06-20 | — | Adversarial fix pass. H-1: enum-ownership rule (§2.1) — `tactics/` owns its own instruction enums (`TacticPassing`/`TacticPressing`/`TacticTriggerMask`/`TacticFormation`) and consumers translate at a downward seam; no upward reference, no migration of approved files. H-2: `RoleId` correctly attributed to `positioning-ai` (not `agent-movement`); §2.4 no longer "reuses" it — `PlayerRole` is a new distinct enum. M-1: new §2.5 routing table — Mechanics consumers (#12–#15) receive tactics via new fields on their own per-tick snapshots, only #8 via `TacticalContext`; §4 lists the snapshot-field additions. M-2: §3.5 pins the `Mentality`→`StyleProfile` mapping + risk-mult + line bias (7→3 collapse shown non-lossy in aggregate). M-3: §0 corrected — explicitly a design note, not template-complete; promotion needs §5/§9/FR-IDs. L: set-piece field fixed to `SetPieceDutyFlags` (no bogus "Forward"); §4 #14 defers man-mark precedence to §6.5 instead of asserting; illustrative-value caveat reinforced in §3 + §6.2. |
 | 0.3 | 2026-06-20 | — | Second adversarial fix pass + full code fact-check. M-1: §2.1 "no approved file migrated" narrowed to "no enum re-homed"; the four snapshot structs + `TacticalContext` edits are named as the accepted bounded surface. M-2: §2.5 pins that snapshots store the **translated local** enum (assembly maps once on tactic-change, not per agent per tick) — no hot-path mapping, Mechanics never reference `tactics`. M-3: `FocusPlay` + `RoleWeightModifiers` flagged as genuinely **new branches** (§2.3 exception, §3.1/§4) — `OptionGenerator` has no lateral hook (verified in source). L: `TimeWasting` range pinned `[0..4]`; §3.5 "non-lossy" softened to an open §6.2 balance question; §5 gains a per-stage verification line. Code fact-check: all supplement references (4 snapshot structs, `ContextModifierInputs`/`MarkDirective` fields, `StyleProfile` factories, `UtilityScorer` product, `OptionGenerator` lack-of-hook) verified against source — no corrections needed. |
+| 0.4 | 2026-11-25 | — | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (forward-looking; NOT a formal approved spec, NOT yet implemented)." although #21 was promoted and APPROVED (`SPEC_INDEX.md` row 21); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |
 #endregion

@@ -1,8 +1,9 @@
 # Match Analytics & Statistics (#37) — Design Supplement
 
-> **Created:** July 22, 2026 · **Last Updated:** July 22, 2026 (v0.2 — AR-1 fix + AR-2 convergence)
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` registry row).
-> Same governance class as `season-competition-loop-design.md` / `match-engine-design.md`.
+> **Created:** July 22, 2026 · **Last Updated:** November 25, 2026 (v0.3 — Status header corrected to PROMOTED (#37); doc-only; prior July 22, 2026 (v0.2 — AR-1 fix + AR-2 convergence))
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #37 (`docs/specs/match-analytics-statistics/`, **APPROVED** Jul 22, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** #37 · **Wave:** 1 · **Tier:** Stage 1 · **FR prefix:** `FR-AN`
 > **Determinism:** read-only / presentation — **no RNG stream, no domain tag, no `SubsystemOrdinal`**
 > (the `match-viewer` / analytics class).
@@ -221,3 +222,4 @@ the xG `[GT]` coefficients (Stage-2, #21 §9.2 precedent).
 |---|---|---|
 | v0.1 | July 22, 2026 | Initial supplement. KD-1 settled against verified source: the engine publishes 8 Tier A record types and no shot/pass/tackle/save events; no ledger reader exists. Scope = the derivable set + observational positional sample; shots/passes/tackles/xG-over-shots deferred to a producer-gated match-engine follow-up. KD-3 live two-tap aggregation, KD-4 view-model contract, KD-5 no-RNG determinism, KD-6 agent→team map, KD-7 read-only ledger tap = observation surface not producer. |
 | v0.2 | July 22, 2026 | **AR-1 (1M, fixed):** KD-2's "goals-only corpus feeds xG" was geometrically unsound — `GoalAwardedEvent.BallPosition` is the goal-line **crossing point** (verified against its own doc + the `MatchEngine` publish site), not the shot origin an xG-by-location model needs; rewrote KD-2 as **fully producer-gated** (model shape authored + unit-locked at T0, no valid Stage-1 live input; goal position → goal-location map, never xG), and aligned the §1.1 table note + T2 text. **AR-2 (0H+0M; L-only ⇒ CONVERGENCE):** re-read all KDs against source — added the KD-3 clarification that ledger records carry no tick field so the aggregator timestamps via per-tick observation of `MatchEngine.CurrentTick` (load-bearing for possession-share); re-verified the 9-publish-sites/8-types count, the no-reader claim, the agent→team map stability under subs, and the `FR-AN`/no-domain-tag identifiers. |
+| v0.3 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` registry row)." although #37 was promoted and APPROVED (`SPEC_INDEX.md` row 37); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

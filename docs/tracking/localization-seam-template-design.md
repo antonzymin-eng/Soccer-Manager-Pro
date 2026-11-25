@@ -1,7 +1,9 @@
 # Localization Seam + Template Contract #49 — Design Supplement
 
 > **Created:** July 23, 2026
-> **Status:** DESIGN SUPPLEMENT (pre-promotion; same governance class as `match-analytics-statistics-design.md` / `ui-client-framework-design.md`).
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #49 (`docs/specs/localization-accessibility/`, **APPROVED** Jul 23, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** #49 (Localization & Accessibility). **This supplement scopes the Wave-1 tier only** — the localization **seam + template contract**. Locales, translated content, and the a11y content surface are **Wave 8** (out of scope here; §0).
 > **Wave:** 1 (final item). **FR prefix (proposed):** FR-LC.
 > **Determinism:** none — read-only display transform. No RNG stream, no `DOMAIN_TAG_*`, no `SubsystemOrdinal` (the #37 / #38 posture).
@@ -199,3 +201,4 @@ The retrofit is behaviour-neutral because, for a fixed `(intent, selectionDraw, 
 |---|---|---|
 | v0.1 | 2026-07-23 | Initial design supplement — Wave-1 localization seam + template contract (KD-1..KD-7), grounded in `InteractionTextGenerator`/`InteractionSlots` (the one built producer) + #38 FR-UI-004/KD-5. Scope: seam + contract + #22 retrofit as forward design; locales + a11y content deferred to Wave 8. |
 | v0.2 | 2026-07-23 | Self-adversarial AR-1 (2H+1M+1L, all fixed). H-1: pinned the pre-draw validation split — intent-roster/slot/salience gates stay sim-side in `living-world` after the corpus migrates, preserving the no-cursor-on-refusal replay invariant + `variantCount ≥ 1` (no div-by-zero); new §2.1. H-2: resolved the §2↔KD-6 contradiction — the producer emits only its own native values; `LocalizedTextRequest`/`TextTemplateId` are assembled at the #49 boundary, not by the producer. M-1: the per-`EventKind` episode citation clause added to the contract (a second localizable string, selected by `EventKind` not the draw; migrates to #49, appended in `Render`). L-1: `ulong` draw width pinned to `DrawReserved`. §2/§5/§8 + KD-6 updated. |
+| v0.3 | 2026-11-25 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion; same governance class as `match-analytics-statistics-design.md` / `ui-client-framework-design.md`)." although #49 was promoted and APPROVED (`SPEC_INDEX.md` row 49); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

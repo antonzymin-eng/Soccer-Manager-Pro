@@ -1,9 +1,11 @@
 # National Teams & International Management #36 — Design Supplement
 
 > **Created:** July 26, 2026
-> **Last Updated:** July 26, 2026 (v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
-> **Version:** 0.6
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
+> **Last Updated:** November 25, 2026 (v0.7 — Status header corrected to PROMOTED (#36); doc-only; prior July 26, 2026, v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
+> **Version:** 0.7
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #36 (`docs/specs/national-teams-international/`, **APPROVED** Jul 27, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** **#36** · **FR prefix:** `FR-NT` · **Wave:** 6 · **Tier:** S5
 > **Promoted from:** `docs/tracking/spec-plans/spec-36-national-teams-international.md` v0.1
 > **Wave 6 siblings:** `media-press-interactions-design.md` (#35), `news-inbox-man-management-design.md` (#46)
@@ -451,3 +453,4 @@ to be weakened to "true at the minimal tier only" — the class of erosion that 
 | v0.4 | July 26, 2026 | **AR-3 fix pass: 0H + 2M, both regressions from the AR-2 fix.** **M-1** — AR-2 added the `NationPin` table to §5 but **not to KD-6’s enumeration of the sub-blob’s contents**, so an implementer following KD-6 would not serialize it — and a transferred player’s nationality would revert to the derivation of his new id on the next load, which is exactly the defect AR-2 introduced the pin to prevent. **M-2** — KD-7 still claimed nationality is *“derived and read by nothing”*, which contradicts §3: eligibility **is** the minimal tier, so it is read there. Replaced with the true and stronger claim — reading it moves no byte outside #36. |
 | v0.5 | July 26, 2026 | **AR-4 fix pass: 0H + 2M, both stale against the AR-2 fix.** **M-1** — §9 still justified the save/restore test with *“it must be, since nothing is stored”*, which stopped being true when AR-2 introduced the pin table; the unpinned case is the free one and the **pinned** case is the one that can regress, so the test now names both. **M-2** — §8.2 still deferred a nationality *“override table”* to #47 and §11 R-2 called it a standing option, but AR-2 already ships that table at approval for re-keys: #47 adds no #36 surface, and what it actually needs is a precedence policy between an authored edit and a re-key pin — recorded as its decision, cheap only because the surface is one table rather than two. |
 | v0.6 | July 26, 2026 | **AR-5 sweep: 0H + 0M + 2L, both resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — §6’s determinism bullet still read *“no stored copy to drift”*, the last of four places stale against AR-2’s pin table; restated so both paths (unpinned = nothing stored, pinned = exactly one entry written at a re-key) are covered, and so it is clear the pin is *why* the derivation alone is insufficient. **L-2** — §7’s surface table had no writer for `NationPin`: the mechanism was fully described in KD-1 but the one surface that creates the state fixing AR-2’s High was missing from the list. Added `OnPlayerReKeyed`, which also migrates the `CallUp`. |
+| v0.7 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)" although #36 was promoted and APPROVED (`SPEC_INDEX.md` row 36); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

@@ -1,9 +1,11 @@
 # New-Game Setup & Database Editor #47 — Design Supplement
 
 > **Created:** July 26, 2026
-> **Last Updated:** July 26, 2026 (v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
-> **Version:** 0.6
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
+> **Last Updated:** November 25, 2026 (v0.7 — Status header corrected to PROMOTED (#47); doc-only; prior July 26, 2026, v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
+> **Version:** 0.7
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #47 (`docs/specs/new-game-setup-db-editor/`, **APPROVED** Jul 27, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** **#47** · **FR prefix:** `FR-ED` · **Wave:** 7 · **Tier:** S2
 > **Promoted from:** `docs/tracking/spec-plans/spec-47-new-game-setup-db-editor.md` v0.1
 
@@ -378,3 +380,4 @@ have transitively depended on the whole sim to author a text file.
 | v0.4 | July 26, 2026 | **AR-3 fix pass: 0H + 2M + 1L, all resolved.** **M-1** — §9 still asserted that *"the two historical `SquadFileLoader` defects were both caught this way"*, the exact claim AR-2 corrected in KD-2 and did not propagate here — the same fix-one-place-miss-the-other pattern the full re-read keeps catching. **M-2** — §9's structural assertions listed sim-loop / `MatchEngine` / `Localization` but **not `season-save`**, which is the reference AR-1 specifically established #47 must not take (it transitively pulls `MatchEngine` and `LivingWorld`); the test that would catch a regression of AR-1's fix was missing from the test list. **L-1** — §5's `Clubs[]` comment read as though the artifact carried a strength field set to zero; clarified that it carries none and the constructed `Club` takes `StrengthDelta = 0`. |
 | v0.5 | July 26, 2026 | **AR-4 fix pass: 0H + 1M + 1L, both resolved.** **M-1** — KD-6 claimed authored club names sit outside #49 because *"FR-LC-001 governs user-facing interface text"*, which is an exemption FR-LC-001 does not grant: it says **all** user-facing text, and a club name is user-facing. Replaced with the accurate mechanism — proper nouns travel through the seam as `NamedSlotSet` **slot values** (exactly how #22 passes `SubjectName`/`OpponentName`), so the name is routed without being a `LocalizationKey` and without being translated. Satisfying a MUST beats arguing around it, and the corollary matters for §5: names are stored as authored, with no locale baked. **L-1** — KD-5 described `NewGameConfig` as carrying an *"optional authored database"* while §5 gave it a `HasAuthoredDb` flag; reconciled — the flag selects the branch and the artifact travels beside the config. |
 | v0.6 | July 26, 2026 | **AR-5 sweep: 0H + 0M + 2L, both resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — §3's minimal-tier row still said the setup parameters are *"everything `LeagueBootstrap.Generate` already accepts"*, the phrasing AR-2 corrected in KD-3 (the managed club is `CreateSeason`'s); pointed at KD-3 rather than restating it, so the two cannot drift again. **L-2** — the writer surface was typed `Write(in Squad)`, but `Squad` is a sealed **class**, where an `in` modifier is legal and meaningless. |
+| v0.7 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)" although #47 was promoted and APPROVED (`SPEC_INDEX.md` row 47); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |

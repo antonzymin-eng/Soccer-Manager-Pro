@@ -1,9 +1,11 @@
 # Match Presentation Depth #48 — Design Supplement
 
 > **Created:** July 26, 2026
-> **Last Updated:** July 26, 2026 (v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
-> **Version:** 0.6
-> **Status:** DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)
+> **Last Updated:** November 25, 2026 (v0.7 — Status header corrected to PROMOTED (#48); doc-only; prior July 26, 2026, v0.6 — AR-5 sweep: 0H+0M+2L, **CONVERGENCE**; prior v0.5 AR-4, v0.4 AR-3, v0.3 AR-2, v0.2 AR-1, v0.1 initial)
+> **Version:** 0.7
+> **Status:** DESIGN SUPPLEMENT → **PROMOTED** to Spec #48 (`docs/specs/match-presentation-depth/`, **APPROVED** Jul 27, 2026) per `SPEC_INDEX.md`.
+> This note is retained for history; the spec section files are authoritative where they deviate
+> from it. APPROVED does not mean implemented — check `SPEC_INDEX.md` and `docs/tracking/data-contract-index.md`.
 > **Candidate spec:** **#48** · **FR prefix:** `FR-MP` · **Wave:** 7 · **Tier:** S1 min → S2+ deep
 > **Promoted from:** `docs/tracking/spec-plans/spec-48-match-presentation-depth.md` v0.1
 
@@ -401,3 +403,4 @@ valid.
 | v0.4 | July 26, 2026 | **AR-3 fix pass: 0H + 1M + 2L, all resolved.** **M-1** — §10 asserted `#51 → { }` and, one clause later, that #51 **implements** #48's `ICueSink` — a self-contradiction in the section whose only job is precision, and the resolution matters beyond the typo: if #51 implemented it, the **audio framework would reference a presentation-depth spec**, inverting the layering and giving a Wave-8 spec a Wave-7 dependency. Fixed by putting a `CueSinkAdapter` in the client shell, so both of #48's outward seams (audio and localization) are inverted the same way and neither #51 nor `Localization` is referenced by #48. **L-1** — KD-6 claimed the roadmap "lists the presentation specs as taking no tag"; #48 in fact has no row and no `_RESERVED_` placeholder at all, so the honest statement is #46's: nothing to file, and nothing to promote later either. **L-2** — KD-7 said #48 "taps nothing" when depth is off, implying #48 owns the shared tap; it registers no *consumer* on a tap whose existence is #37's concern. |
 | v0.5 | July 26, 2026 | **AR-4 fix pass: 0H + 1M + 1L, both resolved.** **M-1** — §7 still gave `ICueSink.Emit` the direction **#48 → #51**, stale against AR-3's fix and contradicting both KD-4 and §10: #48 declares the seam and the **shell** adapter implements it, so #48 reaches #51 never. The surface table is where an implementer looks first, so a stale direction there outweighs a correct one in prose. **L-1** — `AnimationFrameView` was not marked a struct although the same `IViewModelSource<T>` constraint binds it. |
 | v0.6 | July 26, 2026 | **AR-5 sweep: 0H + 0M + 2L, both resolved — CONVERGENCE** (an L-only round closes the cycle). **L-1** — §11 R-3 required §1 to say plainly that #48 specifies triggers rather than content, and §1 did not; the scope table now disowns the asset surface explicitly, since "we specified when the line fires" reading as "we specified the commentary" is the misunderstanding R-3 exists to prevent. **L-2** — §9's replay-equivalence test was near-tautological for the in-session path and silent on the exported one, which is the path AR-2 showed can actually regress (it must carry what it cannot re-derive); split across both. |
+| v0.7 | November 25, 2026 | Status header corrected (doc-only; no design content changed). The `**Status:**` line still read "DESIGN SUPPLEMENT (pre-promotion — no section files, no `SPEC_INDEX.md` row)" although #48 was promoted and APPROVED (`SPEC_INDEX.md` row 48); it now records the promotion and names the spec as authoritative. Found by the November 2026 tracking-docs inventory review. |
