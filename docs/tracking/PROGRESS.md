@@ -1,7 +1,8 @@
 # Stage 0 Specification Progress Tracker
 
 **Created:** February 3, 2026, 10:35 PM PST  
-**Last Updated:** November 2, 2026 (**PR #527 / `ERR-020-008` verification amendment** — adds the governing Unity 6000.4.9f1 compile / supplemental Linux model and a Spec #19 §6.2.1 compatibility cross-reference. FR-CS-008 retains its C# 9.0 working ceiling. D5 remains partially resolved pending actual pinned-host compiler arguments and Platform Certification owner sign-off; D1 still awaits profiling. This is new verification text relative to main's October 10 activation-only erratum. A3.1a/A3.1b and A3.2b remain independently pending A3.4; this PR grants no architecture amendment approval.)
+**Last Updated:** November 25, 2026 (routing note appended to the scope note below; no status, count or milestone changed)  
+**Last Updated (prior):** November 2, 2026 (**PR #527 / `ERR-020-008` verification amendment** — adds the governing Unity 6000.4.9f1 compile / supplemental Linux model and a Spec #19 §6.2.1 compatibility cross-reference. FR-CS-008 retains its C# 9.0 working ceiling. D5 remains partially resolved pending actual pinned-host compiler arguments and Platform Certification owner sign-off; D1 still awaits profiling. This is new verification text relative to main's October 10 activation-only erratum. A3.1a/A3.1b and A3.2b remain independently pending A3.4; this PR grants no architecture amendment approval.)
 **Last Updated (prior):** October 30, 2026 (scope note added below; no status, count or milestone changed)  
 
 > **Scope note (October 30, 2026 — cross-document consistency review at `38395f8`).** This file tracks the
@@ -12,6 +13,8 @@
 > status, `docs/tracking/path-to-playable-roadmap.md` for implementation order and milestones, and
 > `docs/tracking/open-issues.md` for live blockers. Root `CLAUDE.md` still names this file as the authority
 > for schedule and milestones; changing that routing line is an owner decision and is not made here.
+> **Routing update (November 25, 2026):** the owner approved that change. Root `CLAUDE.md` and
+> `docs/agent-guides/project-reference.md` now name `path-to-playable-roadmap.md` for implementation order and milestones.
 
 **Last Updated (prior):** July 10, 2026, later same day (**Specs #23–#26 all `IN REVIEW → APPROVED`** —
 lead-developer R-01..R-05 sign-off granted on all four (checklists v0.4 with §9.5 gate tables +

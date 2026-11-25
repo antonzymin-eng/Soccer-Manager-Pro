@@ -95,7 +95,8 @@ Do not infer the mapping from the folder name:
 **Rules:**
 - Each spec folder contains ONLY current-version files. No version suffixes in filenames. Git tracks history.
 - `SPEC_INDEX.md` is the canonical source of truth for spec numbers, folder names, and approval status.
-- `PROGRESS.md` is the canonical source of truth for schedule and milestone tracking.
+- `path-to-playable-roadmap.md` is the canonical source for implementation order and milestones. `PROGRESS.md` is historical
+  except its Stage 0 spec count (see its October 30, 2026 scope note); routing changed November 25, 2026 by owner decision.
 - `src/CLAUDE.md` is the compact authoritative coding guide; this snapshot preserves its former expanded taxonomy and examples.
 - An APPROVED spec does not imply an implementation exists. Check `src/` first.
 
@@ -259,7 +260,7 @@ pass-mechanics/
 | Document | Location | Purpose |
 |----------|----------|---------|
 | `SPEC_INDEX.md` | `docs/specs/SPEC_INDEX.md` | Canonical spec numbering, folder mapping, approval status |
-| `PROGRESS.md` | `docs/tracking/PROGRESS.md` | Schedule, milestones, weekly log |
+| `PROGRESS.md` | `docs/tracking/PROGRESS.md` | Stage 0 spec tracker; schedule, milestones and weekly log are historical (not maintained since July 10, 2026) — use `path-to-playable-roadmap.md` |
 | `CHANGELOG.md` | `docs/tracking/CHANGELOG.md` | The `**Last Updated:**` entry chain (was the CLAUDE.md header) |
 | `open-issues.md` | `docs/tracking/open-issues.md` | Live blockers; `open-issues-resolved.md` holds closed entries |
 | `spec-error-log.md` | `docs/tracking/spec-error-log.md` | Cross-spec architectural errors and remediation status |

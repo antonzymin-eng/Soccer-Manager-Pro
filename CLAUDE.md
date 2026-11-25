@@ -28,7 +28,8 @@ and do not wire or harden an assembly-less specification ahead of its T0 landing
 Authoritative indexes:
 
 - Spec number, folder, and status: `docs/specs/SPEC_INDEX.md`.
-- Schedule and milestones: `docs/tracking/PROGRESS.md`.
+- Implementation order and milestones: `docs/tracking/path-to-playable-roadmap.md` (`PROGRESS.md` is
+  historical except its Stage 0 spec count).
 - Entity ownership and implementation pointer: `docs/tracking/data-contract-index.md`.
 - Match-engine dormant capabilities and tuning freeze: `docs/tracking/match-engine-wiring-backlog.md`.
 - File inventory: `docs/tracking/file-manifest.md`.
