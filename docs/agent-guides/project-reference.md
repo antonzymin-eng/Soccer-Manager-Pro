@@ -366,7 +366,7 @@ step invoke `adversarial-review` or `dotnet-gate` rather than restating them.
 - **Non-default formation/Duty sensitivity — player-facing controls blocked until marking is fixed and validated.** *Owning record: [open-issues.md](../tracking/open-issues.md#formation-duty-player-control-blocker).*
 
 - **#31 accepts any non-negative wage and relates none to #40's `WageBudget` (ERR-031-016). OPEN; owner decision.** *Owning record: [open-issues.md](../tracking/open-issues.md#transfer-wage-unbounded); client guard in place, #31 text untouched.*
-- **Career save body is not checked against its sidecar digest on load. OPEN; triage.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-save-body-not-verified-on-load).*
+- **Career save body is not checked against its sidecar digest on load. FIXED in `CareerSaveSlots` v1.10; OPEN until the pinned-host Unity check.** *Owning record: [open-issues.md](../tracking/open-issues.md#career-save-body-not-verified-on-load).*
 - **Spec #20 D5 — pinned Unity compiler language-version evidence remains open.** *Owning record: [open-issues.md](../tracking/open-issues.md#spec20-unity-language-evidence); working C# 9.0 ceiling remains active.*
 - **Players run about 12 km a match but stay within a few metres of one spot; keepers run as far as outfield players. MEASURED ON THREE SEEDS, CAUSE NOT LOCALIZED, NOT TUNED.** *Owning record: [open-issues.md](../tracking/open-issues.md#engine-players-hold-small-area).*
 - **Owner request: a full-screen pitch view for Match View. NOT DESIGNED, NOT SCHEDULED; returns to UX Gates A/B.** *Owning record: [open-issues.md](../tracking/open-issues.md#s0-fullscreen-pitch-request).*

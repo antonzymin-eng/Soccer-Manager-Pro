@@ -1,13 +1,14 @@
 // File:     src/client-app/tests/CareerSaveSlotsTests.cs
 // Created:  2026-10-18
-// Modified: 2026-10-30
+// Modified: 2026-11-25
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2, D-10), Code Standards #20
 // Purpose:  Locks the slot store: empty listing, write/describe round trip, sequence-based latest,
 //           D-10 incompatibility (listed, never loaded or continued) including nested sub-blob
 //           versions, damage detection and invalidation, no stray temporary files after a write, and a
 //           failed write never splitting the save from its sidecar, and recovery at open of a write
-//           interrupted between its two swaps, which keeps every file when a sidecar is unreadable.
+//           interrupted between its two swaps, which keeps every file when a sidecar is unreadable, and
+//           a load refusing a save whose bytes no longer match its sidecar's digest.
 
 using System;
 using System.IO;
@@ -575,6 +576,25 @@ namespace TacticalDirector.ClientApp.Tests
         }
 
         [Test]
+        public void Load_RefusesASaveWhoseBytesNoLongerMatchItsSidecar()
+        {
+            using var temp = new TempSlots();
+            CareerSession session = CareerTestSupport.StartQuick(temp.Slots);
+            session.SaveTo(CareerSaveSlot.Manual1);
+            session.Progress();
+            session.SaveTo(CareerSaveSlot.Manual2);
+
+            // A different but valid save under Manual2's sidecar: #30's decoder accepts it, so only the
+            // recorded digest can tell that the file is not the one this sidecar describes.
+            File.Copy(temp.Slots.SavePath(CareerSaveSlot.Manual1), temp.Slots.SavePath(CareerSaveSlot.Manual2), overwrite: true);
+
+            Assert.AreEqual(CareerSlotState.Ready, temp.Slots.Describe(CareerSaveSlot.Manual2).State,
+                "Describe reads the sidecar only; the digest is checked on load.");
+            Assert.Throws<InvalidDataException>(() => temp.Slots.Load(CareerSaveSlot.Manual2));
+            Assert.DoesNotThrow(() => temp.Slots.Load(CareerSaveSlot.Manual1), "an intact slot still loads.");
+        }
+
+        [Test]
         public void Constructor_RefusesAnEmptyDirectory()
         {
             Assert.Throws<ArgumentException>(() => new CareerSaveSlots(""));
@@ -603,4 +623,6 @@ namespace TacticalDirector.ClientApp.Tests
 // |         |            |        | write clears .damaged; held cleanup never fails a committed    |
 // |         |            |        | write; an unpaired sidecar backup is dropped (27 locks).       |
 // | 1.7     | 2026-10-30 | —      | PR 521 merge: #31 stamp drift and incompatibility locks.       |
+// | 1.8     | 2026-11-25 | —      | +1 lock — Load refuses a valid save whose bytes do not match   |
+// |         |            |        | its sidecar's digest; an intact slot still loads.              |
 #endregion

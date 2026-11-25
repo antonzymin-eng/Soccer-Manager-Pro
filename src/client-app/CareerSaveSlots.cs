@@ -1,6 +1,6 @@
 // File:     src/client-app/CareerSaveSlots.cs
 // Created:  2026-10-18
-// Modified: 2026-11-18
+// Modified: 2026-11-25
 // Author:   —
 // Spec:     docs/tracking/interactive-unity-client-design.md §5-P7 (D-P7-2 save promise, D-10 breakable
 //           saves through PM-3), ux-experience-architecture.md §7, Season & Competition Loop #30 §4
@@ -337,9 +337,21 @@ namespace TacticalDirector.ClientApp
             }
         }
 
-        /// <summary>Loads the season save in <paramref name="slot"/>.</summary>
+        /// <summary>
+        /// Loads the season save in <paramref name="slot"/>, after checking that the save is still the
+        /// one its sidecar describes byte for byte (the recorded SHA-256).
+        /// </summary>
         /// <exception cref="InvalidOperationException">The slot is not <see cref="CareerSlotState.Ready"/>.</exception>
-        /// <remarks>Decode failures from #30's codecs propagate unchanged; the caller reports them persistently.</remarks>
+        /// <exception cref="InvalidDataException">The save's bytes no longer match the digest its sidecar
+        /// records: the file changed after it was written (corruption, or another save copied over it).</exception>
+        /// <remarks>
+        /// The digest is checked here rather than in <see cref="Describe"/>, which reads sidecars only so
+        /// the picker never reads four whole saves to draw four rows. A mismatched slot therefore reads
+        /// Ready until a load is attempted; the caller invalidates it then, as for any other unloadable
+        /// save. #30's decoder cannot stand in for this check: a changed byte inside a value still decodes
+        /// into a valid but different career. Decode failures from #30's codecs propagate unchanged; the
+        /// caller reports them persistently.
+        /// </remarks>
         public SeasonSaveContents Load(CareerSaveSlot slot)
         {
             CareerSlotSummary summary = Describe(slot);
@@ -349,7 +361,14 @@ namespace TacticalDirector.ClientApp
                     "Slot " + slot + " is " + summary.State + " and cannot be loaded.");
             }
 
-            return SeasonSaveManager.Load(SavePath(slot));
+            string savePath = SavePath(slot);
+            if (!SidecarDescribes(slot, SidecarPath(slot), DigestOf(savePath)))
+            {
+                throw new InvalidDataException(
+                    "Slot " + slot + "'s save does not match the digest its sidecar records; the file has changed since it was written.");
+            }
+
+            return SeasonSaveManager.Load(savePath);
         }
 
         /// <summary>The season-save path of <paramref name="slot"/>.</summary>
@@ -513,7 +532,8 @@ namespace TacticalDirector.ClientApp
             && recorded == saveDigest;
 
         // Lower-case hex SHA-256 of a file's bytes (the S0DemoFixture/S0TextFormatter idiom). Off the
-        // hot path: once per write, and at open only for a slot an interrupted write left behind.
+        // hot path: once per write and per load, and at open only for a slot an interrupted write left
+        // behind.
         private static string DigestOf(string path)
         {
             using (FileStream stream = File.OpenRead(path))
@@ -761,4 +781,5 @@ namespace TacticalDirector.ClientApp
 // | 1.7     | 2026-10-30 | —      | PR 521 merge: include the #31 sub-blob in the D-10 stamp.      |
 // | 1.8 | 2026-11-18 | — | Reuse slot selection against an already-read scan. |
 // | 1.9 | 2026-11-18 | — | Admit all mutations through the owning career shutdown gate. |
+// | 1.10 | 2026-11-25 | — | Load refuses a save whose bytes no longer match its sidecar's recorded digest (InvalidDataException; the caller marks the slot Damaged). Pinned-host finding at cd3c7b99. |
 #endregion

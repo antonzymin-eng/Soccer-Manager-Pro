@@ -1,6 +1,8 @@
 # File Manifest (Post-Migration Baseline)
 
-**Last Updated:** November 24, 2026 (later still) — (v2.276; first recorded as v2.275, renumbered at the merge of main `f829720a`) **Owner decision D-17 recorded (documentation only).** Modified: `docs/tracking/path-to-playable-roadmap.md` v1.14; `docs/tracking/league-bootstrap-design.md` v1.14; `docs/tracking/round-resolution-corpus-pm2-check.md` v1.1; `docs/tracking/open-issues.md`; `docs/agent-guides/project-reference.md`; `docs/tracking/CHANGELOG.md`. No `src/` or tool file changed.
+**Last Updated:** November 25, 2026 — (v2.277) **Career save digest checked on load.** Modified: `src/client-app/CareerSaveSlots.cs` v1.10 (`Load` compares the save's SHA-256 with the sidecar's `saveDigest` and throws `InvalidDataException` on a mismatch); `src/client-app/tests/CareerSaveSlotsTests.cs` v1.8 (+1 lock); `src/client-app/tests/CareerSessionTests.cs` v1.3 (+1 lock); `docs/tracking/interactive-unity-client-design.md` v0.45; `docs/tracking/open-issues.md`; `docs/agent-guides/project-reference.md`; `docs/tracking/CHANGELOG.md`; `docs/tracking/CHANGELOG-src.md`. No new file or assembly.
+
+**Last Updated (prior):** November 24, 2026 (later still) — (v2.276; first recorded as v2.275, renumbered at the merge of main `f829720a`) **Owner decision D-17 recorded (documentation only).** Modified: `docs/tracking/path-to-playable-roadmap.md` v1.14; `docs/tracking/league-bootstrap-design.md` v1.14; `docs/tracking/round-resolution-corpus-pm2-check.md` v1.1; `docs/tracking/open-issues.md`; `docs/agent-guides/project-reference.md`; `docs/tracking/CHANGELOG.md`. No `src/` or tool file changed.
 
 **Last Updated (prior):** November 24, 2026 (later) — (v2.275; first recorded as v2.274, renumbered at the merge of main `f829720a`) **PM-2 quick-sim check (roadmap engine lane item 4).** New: `docs/tracking/round-resolution-corpus-pm2-check.md` v1.0, the held-out KD-8 mean-bar check on `45d32d1` (FAILED). Modified: `tools/round-resolution-fit.py` v1.5 (`--hold-params`, `parse_held_params`); `tools/tests/test_round_resolution_fit_input_validation.py` (`RoundResolutionFitHeldParamsTests`, 3 tests); `docs/tracking/round-resolution-corpus.md` (version history 1.1: re-capture trigger fired); `docs/tracking/league-bootstrap-design.md` v1.13; `docs/tracking/path-to-playable-roadmap.md` v1.13; `docs/tracking/open-issues.md` (new `pm2-quick-sim-scale-mismatch`); `docs/agent-guides/project-reference.md` (index and counts, 47/85); `docs/tracking/CHANGELOG.md`. No `src/` file and no assembly changed.
 
@@ -4033,7 +4035,7 @@ above BOTH `ui-framework` and `match-analytics`; host-free and CI-gated. Deliber
 
 ### `src/client-app/` — the client composition layer (roadmap B9c, August 7, 2026)
 
-Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7/P8; current v0.44). The home of the four screens' `ScreenId` catalogue and navigation graph —
+Not a numbered spec. Governed by `docs/tracking/interactive-unity-client-design.md` (§5-P5a/P5b/P7/P8; current v0.45). The home of the four screens' `ScreenId` catalogue and navigation graph —
 above `ui-framework` because FR-UI-010 forbids the framework hard-coding a screen and composition
 lives above what it wires (the `match-engine` precedent). Host-free and CI-gated; the P5b binding
 navigates only through `ClientScreenFlow`'s five moves.
@@ -4106,7 +4108,7 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `CareerSlotState.cs.meta` | Stable Unity asset identity |
 | `CareerSlotSummary.cs` | One Load Career picker row (sidecar facts) |
 | `CareerSlotSummary.cs.meta` | Stable Unity asset identity |
-| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, save digest and interrupted-write recovery at open (files kept when a sidecar is unreadable), sidecar backup on swap, durable sidecar write, temp cleanup, best-effort post-commit cleanup, reversible `MarkDamaged` / `RestoreDamaged` (a set-aside slot is never revived from stale backups) |
+| `CareerSaveSlots.cs` | Four-slot store: `.tdsave` + `.slot` sidecar with nested format stamp, sequence-based latest, pair-preserving swap with backup restore, save digest and interrupted-write recovery at open (files kept when a sidecar is unreadable), sidecar backup on swap, durable sidecar write, temp cleanup, best-effort post-commit cleanup, reversible `MarkDamaged` / `RestoreDamaged` (a set-aside slot is never revived from stale backups), `Load` refuses a save that does not match its sidecar digest |
 | `CareerSaveSlots.cs.meta` | Stable Unity asset identity |
 | `SeasonCommandDispatcher.cs` | The #38 Appendix C season dispatcher (ERR-038-005) routing through `CareerSession.Execute` |
 | `SeasonCommandDispatcher.cs.meta` | Stable Unity asset identity |
@@ -4130,9 +4132,9 @@ navigates only through `ClientScreenFlow`'s five moves.
 | `tests/ClientScreenFlowCareerTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerProgressTests.cs` | Progress rule with #30 positive controls; a full season + roll + season 2 (6) |
 | `tests/CareerProgressTests.cs.meta` | Stable Unity asset identity |
-| `tests/CareerSessionTests.cs` | New-game composition, autosave cadence, resume ≡ uninterrupted, Continue, a caller error never invalidates a slot (9) |
+| `tests/CareerSessionTests.cs` | New-game composition, autosave cadence, resume ≡ uninterrupted, Continue, a caller error never invalidates a slot, a digest-mismatched save is marked Damaged and Continue moves on (10) |
 | `tests/CareerSessionTests.cs.meta` | Stable Unity asset identity |
-| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged` / `RestoreDamaged` incl. sequence ties, interrupted-write recovery incl. a locked staged sidecar, a sidecar or save left only as its backup, stale backups beside a set-aside slot and an unpaired sidecar backup, held post-commit cleanup (27) |
+| `tests/CareerSaveSlotsTests.cs` | Slot store incl. D-10 Incompatible (outer, nested, older layout), Damaged, failed-write cleanup and pair preservation, stamp drift guard, `MarkDamaged` / `RestoreDamaged` incl. sequence ties, interrupted-write recovery incl. a locked staged sidecar, a sidecar or save left only as its backup, stale backups beside a set-aside slot and an unpaired sidecar backup, held post-commit cleanup, a load refusing a save that does not match its sidecar digest (28) |
 | `tests/CareerSaveSlotsTests.cs.meta` | Stable Unity asset identity |
 | `tests/CareerScreensTests.cs` | Career Home, season dispatcher, New Career, Load Career incl. corrupt-newest fallback (9) |
 | `tests/CareerScreensTests.cs.meta` | Stable Unity asset identity |
