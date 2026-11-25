@@ -1,7 +1,10 @@
 // File:     src/season-save/SeasonLoop.cs
 // Created:  2026-07-26
+// Modified: 2026-11-20 (#44 T3 review: route quick-sim probability preflight through the existing driver.)
+// Modified: 2026-11-20 (#44 T3: quick-sim returns synthetic cards for the regular #44 commit.)
 // Modified: 2026-11-18 (Cooperative career shutdown.)
 // Modified: 2026-11-05 (AR-2: T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006.)
+//           Prior: 2026-10-20 (AR round 5 L17/S-L2/S-L4/S-L5 — v1.46: doc comments only — Progression names the mutators' real visibility,
 //           the constructor/Restore/RollToNextSeason/SubmitTransferBid exception docs list every confirmed cause, ActiveMatch and
 //           AvailableTransferBudget are sim-thread-only, AvailableTransferBudget is the season CEILING.)
 //           Prior: 2026-10-20 (AR round 4 S4-L2/L3/L5 — v1.45: the constructor's KD-4 refusal is SeasonCalendar.RequireCursorInvariant; RollToNextSeason's
@@ -209,6 +212,9 @@ namespace TacticalDirector.SeasonSave
             /// </summary>
             void RequireCommittableConfig();
 
+            /// <summary>Validates the season model's card probabilities before a round that may quick-sim.</summary>
+            void RequireQuickSimCardProbabilities();
+
             /// <summary>
             /// One club's FR-DC-011 ban-serving decrement for a played fixture, over the club's own
             /// roster (<paramref name="clubPlayerIds"/> — ERR-044-014: #44 no longer derives club
@@ -220,8 +226,7 @@ namespace TacticalDirector.SeasonSave
             void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds);
 
             /// <summary>
-            /// Commits this fixture's folded cards (FR-DC-010). <paramref name="foldOrNull"/> is null on
-            /// the quick-sim path, which synthesizes no cards — serving still ran.
+            /// Commits this fixture's buffered cards (FR-DC-010). A cardless quick-sim may supply null.
             /// </summary>
             void CommitFixtureCards(CardLedgerFold foldOrNull);
         }
@@ -239,6 +244,10 @@ namespace TacticalDirector.SeasonSave
 
             /// <inheritdoc />
             public void RequireCommittableConfig() => CardLedgerFold.RequireCommittableConfig();
+
+            /// <inheritdoc />
+            public void RequireQuickSimCardProbabilities() => RoundResolutionModel.RequireCardProbabilities(
+                SeasonLoopConstants.QuickSimYellowProbability, SeasonLoopConstants.QuickSimStraightRedProbability);
 
             /// <inheritdoc />
             public void OnClubFixturePlayed(int clubId, int[] clubPlayerIds, int[] fieldedPlayerIds) =>
@@ -1117,6 +1126,10 @@ namespace TacticalDirector.SeasonSave
             if (_disciplineDriver != null)
             {
                 _disciplineDriver.RequireCommittableConfig();
+                if (Mode != RoundResolutionMode.FullEngine)
+                {
+                    _disciplineDriver.RequireQuickSimCardProbabilities();
+                }
             }
 
             // ERR-030-027: the fixture day's own career day-steps run BEFORE the round, in the same
@@ -1845,12 +1858,6 @@ namespace TacticalDirector.SeasonSave
                     out homeRosterIds, out awayRosterIds, out foldOrNull);
             }
 
-            // The quick-sim synthesizes no cards at all (#44 §1.1 / §7.2 — card generation is
-            // engine-only at minimal, and quick-sim synthesis is #30-owned and deferred to T3), so
-            // there is no fold on this branch. Ban SERVING still happens for both clubs, in
-            // PlayNextRound, which is what FR-DC-011's "regardless of resolution path" requires.
-            foldOrNull = null;
-
             Squad homeRoster = ResolveSquad(squads, fixture.HomeClubId);
             Squad awayRoster = ResolveSquad(squads, fixture.AwayClubId);
             Squad home = SelectAvailable(homeRoster);
@@ -1878,13 +1885,19 @@ namespace TacticalDirector.SeasonSave
             // (#28) all move ratings — and getting that wrong would silently resolve a season against stale
             // strengths. Selection is pure and the cost is microseconds against a season measured in
             // milliseconds; revisit only if profiling says otherwise.
-            return RoundResolutionModel.Resolve(
+            MatchResult result = RoundResolutionModel.Resolve(
                 in fixture,
                 _state.Seed,
                 _state.SeasonNumber,
                 SquadRating.StartingElevenMean(home),
                 SquadRating.StartingElevenMean(away),
                 worldDay);
+            foldOrNull = _disciplineDriver == null
+                ? null
+                : RoundResolutionModel.SynthesizeCards(
+                    in fixture, _state.Seed, _state.SeasonNumber, homeXi, awayXi,
+                    SeasonLoopConstants.QuickSimYellowProbability, SeasonLoopConstants.QuickSimStraightRedProbability);
+            return result;
         }
 
         /// <summary>
@@ -2593,4 +2606,6 @@ namespace TacticalDirector.SeasonSave
 // | 1.47 | 2026-11-05 | — | T1 owner diagnosis and budget headroom; ERR-031-017 / ERR-030-059 / ERR-038-006. |
 // | 1.48 | 2026-11-18 | — | Add opt-in stop checkpoints between complete season fixtures and match tick batches. |
 // | 1.49 | 2026-11-18 | — | Read the shutdown checkpoint interval from the season constant catalogue. |
+// | 1.50 | 2026-11-20 | — | #44 T3: quick-sim buffers both XIs' cards and commits them after ban serving. |
+// | 1.51 | 2026-11-20 | — | #44 T3 review: route the probability preflight through the existing discipline driver. |
 #endregion

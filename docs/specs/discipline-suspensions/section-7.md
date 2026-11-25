@@ -1,7 +1,8 @@
 # Discipline & Suspensions #44 — Section 7: Future Extensions & T-Phase Plan
 
 **Created:** July 24, 2026
-**Last Updated:** August 16, 2026, round 5 (v0.12 — annotation only, M1 of a round-5 reviewed-findings
+**Last Updated:** November 20, 2026 (v0.13 — PM-2 implements the quick-sim card portion of T3.)
+**Last Updated (prior):** August 16, 2026, round 5 (v0.12 — annotation only, M1 of a round-5 reviewed-findings
 pass. v0.11's "`AvailabilityComposition.cs` (two sites)" undercounts: the round-4 diff corrected THREE
 sites in that file, not two, and missed a NINTH entirely — `AvailabilityCompositionExtremisTests.cs`'s
 own `CapFallbackExtremis` comment, in a file that same commit edited. Real corrected-site total: nine
@@ -73,7 +74,7 @@ deferral bullet flagged as a now-LIVE owner decision — #30 §2.3 F9 makes a su
 reinstatable in extremis rather than an absolute bar — with the deferral queue recorded as the
 designed alternative)
 **Last Updated (prior):** July 24, 2026 (v0.2 — cross-set AR; prior v0.1 — initial)
-**Version:** 0.12
+**Version:** 0.13
 **Status:** APPROVED
 
 ---
@@ -94,15 +95,14 @@ designed alternative)
   re-key migration / retirement drop** hygiene on the FR-TX-022 hook / #28 lifecycle coordination did
   **not** land with the rest of T2 — `DisciplineRules.MigratePlayerId`/`DropPlayer` exist and are
   unit-tested but have zero production callers; see the §7.2 bullet below.
-- **T3** — deep: **#43 competition partitions** (per-`CompetitionId` tallies + per-competition
-  serving — a partition activation over the FR-DC-012 key); the **#30-owned quick-sim card
-  synthesis** coordination (keyed draws on #30's `0x22` stream, evening the minimal coverage
-  asymmetry — never a #44 stream); varying ban lengths by offence class.
+- **T3 (PM-2)** — #30 synthesizes quick-sim cards through keyed draws on its `0x22` domain.
+  #44 receives the player-attributed summary and applies its usual discipline rules. See
+  [#30 §3.4.1](../season-competition-loop/section-3.md#341-round-resolution-model-for-non-managed-fixtures-fr-sn-013a)
+  for synthesis and scoreline compatibility. T3's deeper competition partitions and offence-class
+  work remain in §7.2.
 
 ## 7.2 Deferred (recorded, not built)
 
-- **Quick-sim card synthesis** — #30-owned (its stream, its model); #44 folds whatever summary
-  #30's model emits, unchanged.
 - **Competition-scoped accumulation / cup-vs-league carry rules** — the #43 partition (FR-DC-012
   pre-shapes it); carry rules between competitions are a partition-policy table, deep.
 - **Offence classes / varying ban lengths** — richer `CardIssuedEvent` interpretation (e.g.
@@ -209,4 +209,5 @@ designed alternative)
 | 0.10 | 2026-08-16, later still | — | **`ERR-044-019` EXTENDED (annotated, not re-filed)** by **`ERR-030-046`**, an ESCALATED High filed at #30 `section-3.md` v2.9, which owns the rule. §7.2's ban-serving-under-squad-shortfall bullet carried `ERR-030-045`'s account: the forced-start residual reached two ways, and #30's within-tier key a **best-effort minimisation** of it. #30's rule is no longer an ordering key at all. Two successive keys — earliest roster position, then ascending selector rating — were defeated by the same class of defect: an **element-wise greedy decision of a set-valued constraint**, since a depleted club is completed by a SET of reinstatements, whether that set starts a banned player is a property of the SET, and `LineupSelector` decides it **per position**. The rating key failed on a squad thin in the globally *weakest* banned player's position — exactly the man it presses back first. Ruled rather than iterated (the no-third-identical-retry rule): a **capped exhaustive search** over subsets of the eligible candidates. The bullet now states the result as a **guarantee** — *a reinstated-suspended player starts only in a probe-verified forced start; every completing choice within the search bound starts at least as many* — i.e. the composed eleven carries the MINIMUM achievable number of them, zero whenever any completing choice benches them all. Residual restated as a two-item **list**: (i) forced starts, where the minimum is positive (banned sole goalkeeper the smallest case, a `k >= 2` every-completing-choice-starts-someone shortfall its generalisation); (ii) the **beyond-cap corner** above `[FIXED] SeasonSaveConstants.EXTREMIS_SEARCH_CANDIDATE_CAP` = 12 concurrent suspended candidates, unreachable at measured card rates, degrading to ascending-rank greedy with no minimality claim and self-healing as each commit lowers the count. Deliberately NOT an enumeration of routes into a forced start — that form has been falsified twice. The three-tier staging (stage 1 LANDED; youth call-ups and generated cover both blocked) and the NOT-chosen deferral queue are unchanged, and remain the only thing that deletes item (i). §2.3's mirror amended in the same commit (`section-2.md` v0.17). |
 | 0.11 | 2026-08-16, even later still | — | **Round-4 reviewed-findings pass over the `ERR-030-046` landing (Medium, residual wording only — per #30 `section-3.md` v2.10).** The beyond-cap corner bullet said the fallback "degrading to ascending-rank greedy with no minimality claim and self-healing as each commit lowers the count" — true only of the SEARCH resuming once `m` falls back inside the bound; false of the GUARANTEE, since a candidate this branch commits is never revisited, so the composition can remain above the minimum for that fixture even after the count recovers. Reworded to state both halves. No FR, staging, or guarantee text changed — this section states no rule of its own, only #44's mirror of #30's. Same wording fixed in the same pass at #30 `section-3.md` §3.4 (the Cap bullet and residual (ii)), `AvailabilityComposition.cs` (two sites) and `SeasonSaveConstants.cs`; §2.3's mirror corrected in the same commit (`section-2.md` v0.18). |
 | 0.12 | 2026-08-16, round 5 | — | **Annotation only (M1, round-5 reviewed-findings pass).** The row above's "`AvailabilityComposition.cs` (two sites)" undercounts the round-4 sweep: that diff corrected THREE sites in `AvailabilityComposition.cs` (~152, ~421, and the inline comment inside `ChooseSuspendedCandidate`'s Cap branch at ~528), not two, and missed a NINTH site entirely — `AvailabilityCompositionExtremisTests.cs`'s own `CapFallbackExtremis` comment still carried the pre-fix "self-heals" sentence in a file that same commit edited. Real corrected-site total: **nine** — #30 `section-3.md` §3.4's Cap bullet and residual (ii); `AvailabilityComposition.cs` ×3; `SeasonSaveConstants.cs`; `section-2.md`; this section; the test comment. Fixed at the test file (its v1.4) and annotated in place, not rewritten, at every other record of the undercount (`section-3.md` v2.11, `SeasonSaveConstants.cs` v1.11, `AvailabilityComposition.cs` v1.9, `section-2.md` v0.19, `spec-error-log.md`'s `ERR-030-046` annotation). No FR, staging, or guarantee text changed. |
+| 0.13 | 2026-11-20 | — | PM-2 implements the quick-sim card portion of T3. |
 #endregion

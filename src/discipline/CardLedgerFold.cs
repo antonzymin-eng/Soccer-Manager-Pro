@@ -1,5 +1,7 @@
 // File:     src/discipline/CardLedgerFold.cs
 // Created:  2026-08-13
+// Modified: 2026-11-20 (#44 T3 review: restrict card summary construction to the composing assembly.)
+// Modified: 2026-11-20 (#44 T3: accept player-attributed quick-sim card summaries.)
 // Modified: 2026-08-16, round 5 (round-5 reviewed-findings pass, L-t4, header only — v1.14; see version history)
 // Modified: 2026-08-16, latest of all, later still again (round-4 reviewed-findings pass, M-C — v1.13; see version history)
 // Modified: 2026-08-16, latest of all and later still (round-4 reviewed-findings pass, L-E — v1.12; see version history)
@@ -108,7 +110,7 @@ namespace TacticalDirector.Discipline
         // The fixture's cards in observation order, buffered until Commit. Order is the bus's canonical
         // publish order (tick, then intra-phase), which is what makes FR-DC-021 hold: the same fixture
         // always yields the same list, so it always yields the same tally.
-        private readonly List<CardAttribution> _pending = new List<CardAttribution>();
+        private readonly List<PlayerCard> _pending = new List<PlayerCard>();
 
         private bool _committed;
 
@@ -237,7 +239,38 @@ namespace TacticalDirector.Discipline
             _competitionId = competitionId;
         }
 
-        /// <summary>Cards folded so far this fixture. Zero for the overwhelming majority of fixtures.</summary>
+        private CardLedgerFold(int competitionId)
+        {
+            _competitionId = competitionId;
+            _occupancy = Array.Empty<int>();
+        }
+
+        /// <summary>
+        /// Buffers cards already attributed to player ids in a completed quick-sim fixture.
+        /// The caller supplies the order and commits once, after serving pre-existing bans.
+        /// </summary>
+        internal static CardLedgerFold FromPlayerCards(int competitionId, IReadOnlyList<PlayerCard> cards)
+        {
+            if (cards == null)
+            {
+                throw new ArgumentNullException(nameof(cards));
+            }
+
+            var fold = new CardLedgerFold(competitionId);
+            for (int i = 0; i < cards.Count; i++)
+            {
+                PlayerCard card = cards[i];
+                if (card.PlayerId < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(cards), card.PlayerId, "Player ids must be non-negative.");
+                }
+                RequireKnownCardKind(card.CardKind);
+                fold._pending.Add(card);
+            }
+            return fold;
+        }
+
+        /// <summary>Cards buffered for this fixture.</summary>
         public int PendingCardCount => _pending.Count;
 
         /// <summary>
@@ -283,6 +316,10 @@ namespace TacticalDirector.Discipline
                 throw new ArgumentNullException(nameof(tap));
             }
             RequireNotCommitted();
+            if (_occupancy.Length == 0)
+            {
+                throw new InvalidOperationException("A fold from a quick-sim card summary cannot observe engine ticks.");
+            }
             RequireNotFaulted();
             RequireConsecutive(tap.CurrentTick);
 
@@ -321,7 +358,7 @@ namespace TacticalDirector.Discipline
                 {
                     CardIssuedEvent card = tap.RecordAt<CardIssuedEvent>(i);
                     RequireKnownCardKind(card.CardKind);
-                    _pending.Add(new CardAttribution(OccupantOf(card.Recipient, "CardIssuedEvent.Recipient"), card.CardKind));
+                    _pending.Add(new PlayerCard(OccupantOf(card.Recipient, "CardIssuedEvent.Recipient"), card.CardKind));
                 }
 
                 // else: an ordinal #44 does not fold. Ignored (FR-DC-004).
@@ -452,7 +489,7 @@ namespace TacticalDirector.Discipline
 
             for (int i = 0; i < _pending.Count; i++)
             {
-                CardAttribution attribution = _pending[i];
+                PlayerCard attribution = _pending[i];
                 rules.ApplyCard(attribution.PlayerId, _competitionId, attribution.CardKind);
             }
 
@@ -616,9 +653,7 @@ namespace TacticalDirector.Discipline
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(cardKind), cardKind,
-                    "CardLedgerFold: CardIssuedEvent.CardKind must be 0 (yellow), 1 (red) or 2 (second " +
-                    "yellow) — F4. Refused at the tap rather than at Commit so the failure names the " +
-                    "tick's record, not a buffered copy of it.");
+                    "CardLedgerFold: CardKind must be 0 (yellow), 1 (red) or 2 (second yellow) (F4).");
             }
         }
 
@@ -633,12 +668,16 @@ namespace TacticalDirector.Discipline
         }
 
         /// <summary>One card, already attributed to a player — the buffered form held until <see cref="Commit"/>.</summary>
-        private readonly struct CardAttribution
+        internal readonly struct PlayerCard
         {
+            /// <summary>The player who received the card.</summary>
             internal readonly int PlayerId;
+
+            /// <summary>The #17 card kind ordinal.</summary>
             internal readonly byte CardKind;
 
-            internal CardAttribution(int playerId, byte cardKind)
+            /// <summary>Creates a card summary entry for a known player.</summary>
+            internal PlayerCard(int playerId, byte cardKind)
             {
                 PlayerId = playerId;
                 CardKind = cardKind;
@@ -821,4 +860,6 @@ namespace TacticalDirector.Discipline
 // |         |            |        | claim corrected"), verified against their own v1.5/v1.7 table     |
 // |         |            |        | rows above. No behaviour or detail change — the full narrative    |
 // |         |            |        | still lives in those rows, as the header itself says.              |
+// | 1.15 | 2026-11-20 | — | #44 T3: buffers player-attributed summaries for the existing commit path. |
+// | 1.16 | 2026-11-20 | — | #44 T3 review: keep card summary construction internal. |
 #endregion

@@ -3,6 +3,7 @@
 // Modified: 2026-07-27
 // Modified: 2026-08-12 (A4a: the three round-resolution [GT]s FITTED against the engine corpus)
 // Modified: 2026-11-18 (Catalogue the round cancellation interval.)
+// Modified: 2026-11-20 (#44 T3: quick-sim card keys and probabilities)
 // Author:   —
 // Spec:     Season & Competition Loop #30 Appendix A (constant catalogue); §3.2 (points);
 //           §3.1.1 (permutation seed); §3.5 (boundary roll); Code Standards #20
@@ -64,6 +65,12 @@ namespace TacticalDirector.SeasonSave
         /// <summary>[FIXED] Domain-separation constant for the AWAY side's goal draw. See
         /// <see cref="ROUND_RESOLUTION_HOME_SUBSTREAM"/>.</summary>
         public const ulong ROUND_RESOLUTION_AWAY_SUBSTREAM = 0x4E75C3A912B6D08FUL;
+
+        /// <summary>[FIXED] Fixture-key discriminator for home starters' quick-sim cards.</summary>
+        internal const ulong QUICK_SIM_HOME_CARD_KEY = 0x27AE3C510D65F829UL;
+
+        /// <summary>[FIXED] Fixture-key discriminator for away starters' quick-sim cards.</summary>
+        internal const ulong QUICK_SIM_AWAY_CARD_KEY = 0xD6B49580A31F27ECUL;
 
         /// <summary>
         /// [FIXED] Domain-separation constant for the per-fixture <c>matchSeed</c> a managed fixture's
@@ -225,6 +232,14 @@ namespace TacticalDirector.SeasonSave
         /// (league-bootstrap KD-7). Config key <c>[season-save] QuickSimLambdaMax</c>.</summary>
         public static readonly float QuickSimLambdaMax =
             Config.GetFloat("season-save", "QuickSimLambdaMax", 6.0f);
+
+        /// <summary>[GT] Probability of one yellow per quick-sim starter (#30 §3.4.1).</summary>
+        internal static readonly float QuickSimYellowProbability =
+            Config.GetFloat("season-save", "QuickSimYellowProbability", 0.045f);
+
+        /// <summary>[GT] Probability of one straight red per quick-sim starter (#30 §3.4.1).</summary>
+        internal static readonly float QuickSimStraightRedProbability =
+            Config.GetFloat("season-save", "QuickSimStraightRedProbability", 0.008f);
         #endregion
 
         #region EST
@@ -293,4 +308,5 @@ namespace TacticalDirector.SeasonSave
 // |         |            |        | over-dispersed at z=+5.4, which is a model-FAMILY gap no re-fit   |
 // |         |            |        | of these three closes). Locked by RoundResolutionFitLockTests.    |
 // | 1.5 | 2026-11-18 | — | Catalogue the matchday cancellation polling interval. |
+// | 1.6 | 2026-11-20 | — | #44 T3: side-specific fixture-key discriminators and starter card probabilities. |
 #endregion

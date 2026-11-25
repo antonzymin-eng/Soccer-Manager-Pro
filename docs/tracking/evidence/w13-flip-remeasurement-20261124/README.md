@@ -54,6 +54,8 @@ Per-match means over all cases (60 matches per arm). Change is relative to the m
 
 All 60 marking-off rows reproduced every shared gameplay counter from November 21. The six C0 marking-off rows also reproduced every knockdown anatomy counter. All 60 marking-on rows differed in at least one shared counter. The current marking-on arm still produces fewer goals, more shots, and about twice as many tackle attempts.
 
+The home/away split widened compared with November 21. With #563, marking reduced home goals by 20.4% and away goals by 6.8%, while home shots rose 10.1% and away shots rose 28.4%. C0 marking-on goals were 23 home and 24 away across six matches. In C1, the changed home F433 side scored 17 marking-on goals, down from 28 in the November 21 run.
+
 ## C0 knockdowns
 
 Per-match means over six both-F442 matches per arm. Every GROUNDED entry was tagged `COLLISION`.
