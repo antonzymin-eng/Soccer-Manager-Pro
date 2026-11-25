@@ -1,0 +1,67 @@
+rows=120 seeds=6 cases=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+hard stop nonFinite rows: 0
+
+== Per case, sum over seeds: off -> on ==
+case | goals0 | goals1 | shots0 | shots1 | passes0 | passes1 | poss0 | poss1 | tackleWon | tackleLoose | tackleFoul | tackleMissed | yellows | sentOff | markAgentStrides | groundedAgentTicks | guardLockEntries | wallSeconds
+C0 | 27->23 | 21->24 | 77->69 | 61->62 | 3941->3703 | 3937->3803 | 85903->83462 | 89786->89658 | 8->9 | 21->29 | 8->5 | 89->147 | 9->9 | 0->0 | 0->1114403 | 1288982->1953737 | 360327->292402 | 168->172
+C1 | 73->17 | 19->26 | 163->108 | 48->68 | 3726->3315 | 4004->3798 | 79574->74820 | 100801->91150 | 5->12 | 14->20 | 2->6 | 72->119 | 6->6 | 0->0 | 0->1139101 | 993084->1869243 | 370570->294727 | 165->172
+C2 | 24->32 | 43->19 | 61->88 | 114->116 | 4032->3791 | 3731->3323 | 99794->92202 | 75888->73636 | 4->6 | 14->28 | 3->8 | 51->116 | 6->6 | 0->0 | 0->1144491 | 1059262->1857914 | 368404->294440 | 145->143
+C3 | 42->43 | 17->13 | 102->155 | 44->56 | 5569->3745 | 3282->3636 | 113517->91669 | 78225->101843 | 0->9 | 3->23 | 3->6 | 11->129 | 7->5 | 1->1 | 0->1158994 | 826381->1678183 | 387648->292505 | 146->143
+C4 | 26->21 | 45->46 | 58->55 | 118->198 | 3172->3540 | 5568->3761 | 78536->101694 | 113528->93590 | 0->10 | 6->24 | 0->11 | 25->135 | 4->8 | 0->0 | 0->1155841 | 754639->1715014 | 392285->295285 | 144->142
+C5 | 13->13 | 20->22 | 45->55 | 74->87 | 3858->3934 | 3831->3851 | 87748->93457 | 84443->84046 | 6->6 | 10->31 | 2->6 | 80->134 | 7->5 | 1->0 | 0->1117705 | 1045683->1237719 | 372912->303237 | 144->142
+C6 | 20->23 | 12->15 | 65->85 | 29->48 | 3800->3904 | 4106->3975 | 81025->85411 | 89521->92695 | 7->7 | 14->23 | 2->6 | 85->151 | 5->10 | 0->0 | 0->1115725 | 993987->1245814 | 375495->302809 | 143->141
+C7 | 78->60 | 26->29 | 175->171 | 86->71 | 3764->3499 | 3943->3769 | 90606->84005 | 98369->92731 | 6->10 | 23->18 | 5->7 | 84->176 | 7->7 | 0->0 | 0->1126930 | 1997125->2544544 | 343063->279967 | 144->142
+C8 | 38->35 | 52->54 | 94->83 | 115->172 | 3862->3638 | 3753->3556 | 92995->88880 | 92572->89170 | 8->10 | 28->27 | 5->3 | 107->129 | 9->6 | 0->1 | 0->1139123 | 1961775->2480528 | 344858->279927 | 143->142
+C9 | 41->37 | 39->26 | 67->130 | 92->125 | 4407->4103 | 4400->3968 | 103004->106965 | 96799->101605 | 2->21 | 9->24 | 2->9 | 37->151 | 3->4 | 0->0 | 0->1163983 | 667746->1261267 | 389437->296428 | 144->143
+
+== Totals over all cases and seeds (per match means) ==
+goals0               off       6.37  on       5.07  delta  -20.4%
+goals1               off       4.90  on       4.57  delta   -6.8%
+shots0               off      15.12  on      16.65  delta  +10.1%
+shots1               off      13.02  on      16.72  delta  +28.4%
+passes0              off     668.85  on     619.53  delta   -7.4%
+passes1              off     675.92  on     624.00  delta   -7.7%
+poss0                off   15211.70  on   15042.75  delta   -1.1%
+poss1                off   15332.20  on   15168.73  delta   -1.1%
+tackleWon            off       0.77  on       1.67  delta +117.4%
+tackleLoose          off       2.37  on       4.12  delta  +73.9%
+tackleFoul           off       0.53  on       1.12  delta +109.4%
+tackleMissed         off      10.68  on      23.12  delta +116.4%
+yellows              off       1.05  on       1.10  delta   +4.8%
+sentOff              off       0.03  on       0.03  delta   +0.0%
+markAgentStrides     off       0.00  on  189604.93  delta   +nan%
+groundedAgentTicks   off  193144.40  on  297399.38  delta  +54.0%
+guardLockEntries     off   61749.98  on   48862.12  delta  -20.9%
+wallSeconds          off      24.76  on      24.71  delta   -0.2%
+
+== #434 sensitivity: changed team's aggregate goals (6 seeds), case vs C0 base, per arm ==
+C1 home F433        off: changed team goals 27 -> 73 (x2.70); opponent 21 -> 19
+C1 home F433        on : changed team goals 23 -> 17 (x0.74); opponent 24 -> 26
+C2 away F433        off: changed team goals 21 -> 43 (x2.05); opponent 27 -> 24
+C2 away F433        on : changed team goals 24 -> 19 (x0.79); opponent 23 -> 32
+C3 home F4231       off: changed team goals 27 -> 42 (x1.56); opponent 21 -> 17
+C3 home F4231       on : changed team goals 23 -> 43 (x1.87); opponent 24 -> 13
+C4 away F4231       off: changed team goals 21 -> 45 (x2.14); opponent 27 -> 26
+C4 away F4231       on : changed team goals 24 -> 46 (x1.92); opponent 23 -> 21
+C5 home all-Defend  off: changed team goals 27 -> 13 (x0.48); opponent 21 -> 20
+C5 home all-Defend  on : changed team goals 23 -> 13 (x0.57); opponent 24 -> 22
+C6 away all-Defend  off: changed team goals 21 -> 12 (x0.57); opponent 27 -> 20
+C6 away all-Defend  on : changed team goals 24 -> 15 (x0.62); opponent 23 -> 23
+C7 home all-Attack  off: changed team goals 27 -> 78 (x2.89); opponent 21 -> 26
+C7 home all-Attack  on : changed team goals 23 -> 60 (x2.61); opponent 24 -> 29
+C8 away all-Attack  off: changed team goals 21 -> 52 (x2.48); opponent 27 -> 38
+C8 away all-Attack  on : changed team goals 24 -> 54 (x2.25); opponent 23 -> 35
+C9 both F4231       off: changed team goals 48 -> 80 (x1.67); opponent 0 -> 0
+C9 both F4231       on : changed team goals 47 -> 63 (x1.34); opponent 0 -> 0
+
+== Max goals by one team in one match, per arm ==
+off 18.0
+on 14.0
+
+== Per-seed C0 scorelines off | on ==
+0123456789ABCDEF 7-2 | 6-2
+0F0F0F0F0F0F0F0F 4-4 | 2-5
+1111111111111111 3-4 | 6-2
+2222222222222222 3-2 | 1-6
+3333333333333333 4-2 | 2-6
+DEADBEEFCAFEBABE 6-7 | 6-3
