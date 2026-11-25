@@ -1,6 +1,6 @@
 // File:     src/event-system/tests/EventSystemTests.cs
 // Created:  2026-05-31
-// Modified: 2026-06-12
+// Modified: 2026-11-24
 // Author:   —
 // Spec:     Event System #17 §5, Code Standards #20
 // Purpose:  Unit tests for Event System. Tests Stage-0 activation criteria.
@@ -354,6 +354,20 @@ namespace TacticalDirector.EventSystem.Tests
                 "VfxImpactCue struct size must be > 0");
             Assert.Greater(EventRegistry.GetStructSize(ordUi),  0,
                 "UiNotificationCue struct size must be > 0");
+        }
+
+        [Test]
+        public void TickHeartbeatEvent_StructSizeIsExactlyOne_AndMatchesRegistry()
+        {
+            // Unity's Mono measured the former empty struct as 0 bytes, so 0x09 was never
+            // registered there. The reserved byte pins the size at 1 on both runtimes.
+            byte ordHB = EventRegistry.GetOrdinal<TickHeartbeatEvent>();
+            Assert.AreEqual(1, EventRegistry.SizeOfStruct<TickHeartbeatEvent>(),
+                "TickHeartbeatEvent must measure 1 byte on every runtime");
+            Assert.AreEqual(1, EventRegistry.GetStructSize(ordHB),
+                "Registry row 0x09 must store struct size 1");
+            Assert.IsTrue(EventRegistry.IsRegistered(ordHB),
+                "TickHeartbeatEvent (0x09) must be IsRegistered=true");
         }
     }
 
@@ -1148,4 +1162,7 @@ namespace TacticalDirector.EventSystem.Tests
 // |         |            |        | fixture-name order and legitimately registers the    |
 // |         |            |        | pass-mechanics rows, so the old assertion was        |
 // |         |            |        | order-dependent. Same FR-EVT-080 contract.           |
+// | 1.4     | 2026-11-24 | —      | New TickHeartbeatEvent_StructSizeIsExactlyOne_And-   |
+// |         |            |        | MatchesRegistry: pins the 0x09 size at 1, the value  |
+// |         |            |        | Unity Mono measured as 0 before the reserved byte.   |
 #endregion
